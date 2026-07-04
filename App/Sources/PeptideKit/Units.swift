@@ -47,6 +47,24 @@ public struct Mass: Codable, Hashable, Sendable, Comparable {
     public static func < (lhs: Mass, rhs: Mass) -> Bool { lhs.micrograms < rhs.micrograms }
 }
 
+/// A solution strength, stored canonically in micrograms per milliliter. Lets pre-mixed /
+/// compounded-pharmacy products (labeled e.g. "2.5 mg/mL") be dosed without reconstitution.
+public struct Concentration: Codable, Hashable, Sendable {
+    public var microgramsPerMilliliter: Double
+
+    public init(microgramsPerMilliliter: Double) { self.microgramsPerMilliliter = microgramsPerMilliliter }
+    public init(mgPerMl: Double) { self.microgramsPerMilliliter = mgPerMl * 1_000 }
+
+    /// Derive from a total mass dissolved in a volume (the reconstitution case).
+    public init(mass: Mass, inMilliliters volume: Double) {
+        self.microgramsPerMilliliter = volume > 0 ? mass.micrograms / volume : 0
+    }
+
+    public var milligramsPerMilliliter: Double { microgramsPerMilliliter / 1_000 }
+
+    public static func mgPerMl(_ v: Double) -> Concentration { Concentration(mgPerMl: v) }
+}
+
 /// Insulin-syringe scale. The overwhelmingly common standard is **U-100**
 /// (100 units per mL); U-50 and U-40 exist for niche cases.
 public enum SyringeScale: String, Codable, CaseIterable, Sendable {

@@ -224,6 +224,32 @@ do {
           "tirzepatide 2.5 mg flagged initiation-only")
 }
 
+// MARK: - Dosing from a known concentration (pre-mixed / pharmacy vials)
+section("Dosing calculator (pre-mixed)")
+do {
+    // Compounded semaglutide 2.5 mg/mL, 0.25 mg dose ⇒ 0.10 mL, 10 units; 2 mL vial ⇒ 20 doses.
+    let r = try DosingCalculator.draw(dose: .mg(0.25), concentration: .mgPerMl(2.5), totalVolumeMilliliters: 2)
+    check(approx(r.drawVolumeMilliliters, 0.10), "2.5 mg/mL @ 0.25 mg ⇒ 0.10 mL")
+    check(approx(r.syringeUnits, 10), "⇒ 10 units (U-100)")
+    check(r.dosesPerVial == 20, "2 mL @ 0.25 mg ⇒ 20 doses")
+    // mcg dosing on a research-peptide concentration.
+    let r2 = try DosingCalculator.draw(dose: .mcg(500), concentration: .mgPerMl(5))
+    check(approx(r2.syringeUnits, 10), "5 mg/mL @ 500 mcg ⇒ 10 units")
+    check(r2.dosesPerVial == nil, "no total volume ⇒ doses/vial nil")
+    // Concentration from mass + volume matches reconstitution.
+    let c = Concentration(mass: .mg(5), inMilliliters: 2)
+    check(approx(c.microgramsPerMilliliter, 2500), "Concentration(5mg in 2mL) == 2500 mcg/mL")
+}
+@MainActor func expectDosingThrow(_ expected: DosingError, _ label: String, _ body: () throws -> Void) {
+    checks += 1
+    do { try body(); failures += 1; print("  ✗ FAIL: \(label) (did not throw)") }
+    catch let e as DosingError where e == expected { print("  ✓ \(label)") }
+    catch { failures += 1; print("  ✗ FAIL: \(label) (threw \(error))") }
+}
+expectDosingThrow(.nonPositiveConcentration, "rejects zero concentration") {
+    _ = try DosingCalculator.draw(dose: .mg(1), concentration: .mgPerMl(0))
+}
+
 // MARK: - News feed contract
 section("News feed")
 do {
