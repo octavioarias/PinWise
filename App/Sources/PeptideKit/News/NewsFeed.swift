@@ -1,0 +1,164 @@
+import Foundation
+
+// The News feature's data contract. The app and the backend agree ONLY on this shape:
+// a backend pipeline publishes a `feed.json` matching `NewsFeed`; the app fetches and
+// renders it. Editorial rules (enforced in review + testable here): every item is a
+// NEUTRAL summary, carries at least one source citation, and carries a disclaimer.
+// The app never editorializes or recommends — it informs and links out.
+
+public enum NewsCategory: String, Codable, CaseIterable, Sendable {
+    case trialResults = "Trial results"
+    case regulatory = "Regulatory"
+    case safety = "Safety"
+    case newCompound = "New compound"
+    case guidance = "Guidance"
+    case general = "General"
+}
+
+/// A citation backing a news item — the transparency guarantee.
+public struct NewsSource: Codable, Hashable, Sendable, Identifiable {
+    public enum Kind: String, Codable, Sendable {
+        case trial, journal, preprint, regulatory, news
+    }
+    public var name: String
+    public var url: String
+    public var kind: Kind
+    public var id: String { url }
+
+    public init(name: String, url: String, kind: Kind) {
+        self.name = name
+        self.url = url
+        self.kind = kind
+    }
+}
+
+/// One curated feed item — a neutral, cited, dated summary.
+public struct NewsItem: Codable, Hashable, Sendable, Identifiable {
+    public var id: String
+    public var headline: String
+    public var summary: String
+    public var category: NewsCategory
+    /// Compounds referenced, for per-compound filtering (e.g. "Retatrutide").
+    public var compounds: [String]
+    public var sources: [NewsSource]
+    /// ISO-8601 timestamp (kept as String to stay portable/Codable without date strategies).
+    public var publishedAt: String
+    /// Editorial ranking score for the "Popular / Trending" view.
+    public var popularity: Int
+    /// Drives an opt-in push and a badge (major trial/regulatory/safety events).
+    public var isMajorUpdate: Bool
+    /// Per-item disclaimer, shown on every card and detail view.
+    public var disclaimer: String
+    /// Optional lead-image URL the pipeline attaches (e.g. an Open Graph image). Rendered as
+    /// an Apple-News-style thumbnail; the card falls back to a branded gradient when nil.
+    public var imageURL: String?
+
+    public init(
+        id: String, headline: String, summary: String, category: NewsCategory,
+        compounds: [String], sources: [NewsSource], publishedAt: String,
+        popularity: Int, isMajorUpdate: Bool, disclaimer: String, imageURL: String? = nil
+    ) {
+        self.id = id; self.headline = headline; self.summary = summary; self.category = category
+        self.compounds = compounds; self.sources = sources; self.publishedAt = publishedAt
+        self.popularity = popularity; self.isMajorUpdate = isMajorUpdate; self.disclaimer = disclaimer
+        self.imageURL = imageURL
+    }
+}
+
+/// The published feed document the app fetches.
+public struct NewsFeed: Codable, Hashable, Sendable {
+    public var version: Int
+    public var generatedAt: String
+    public var items: [NewsItem]
+
+    public init(version: Int, generatedAt: String, items: [NewsItem]) {
+        self.version = version; self.generatedAt = generatedAt; self.items = items
+    }
+
+    /// "Popular" view — items ranked by editorial score, high to low.
+    public var trending: [NewsItem] { items.sorted { $0.popularity > $1.popularity } }
+
+    /// Items mentioning a given compound (for the per-compound news filter).
+    public func items(mentioning compound: String) -> [NewsItem] {
+        items.filter { $0.compounds.contains(compound) }
+    }
+
+    /// Major updates only (push / badges).
+    public var majorUpdates: [NewsItem] { items.filter(\.isMajorUpdate) }
+}
+
+public extension NewsFeed {
+    /// A realistic seed feed — bundled for previews/offline first-launch and used as the
+    /// decode fixture that validates the contract. Content mirrors the verified research.
+    static let sampleJSON: String = #"""
+    {
+      "version": 1,
+      "generatedAt": "2026-07-04T12:00:00Z",
+      "items": [
+        {
+          "id": "reta-triumph1-2026-05",
+          "headline": "Retatrutide reports positive Phase 3 topline in obesity",
+          "summary": "Eli Lilly reported positive Phase 3 (TRIUMPH-1) topline results for retatrutide in obesity in May 2026. Retatrutide is investigational and not FDA-approved. Phase 2 dosing (1/4/8/12 mg weekly) was published in NEJM (2023).",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "ClinicalTrials.gov (Phase 2, NCT04881760)", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"},
+            {"name": "NEJM 2023", "url": "https://www.nejm.org/", "kind": "journal"}
+          ],
+          "publishedAt": "2026-05-21T00:00:00Z",
+          "imageURL": "https://example.com/retatrutide.jpg",
+          "popularity": 95,
+          "isMajorUpdate": true,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "fda-503b-bulks-2026-04",
+          "headline": "FDA proposes keeping semaglutide & tirzepatide off the 503B bulks list",
+          "summary": "On April 30, 2026 the FDA proposed keeping semaglutide, tirzepatide, and liraglutide off the 503B bulk drug substances list — a pending proposal, not a final ban. Shortage-based compounding enforcement discretion ended in 2025.",
+          "category": "Regulatory",
+          "compounds": ["Semaglutide", "Tirzepatide"],
+          "sources": [
+            {"name": "U.S. FDA", "url": "https://www.fda.gov/", "kind": "regulatory"}
+          ],
+          "publishedAt": "2026-04-30T00:00:00Z",
+          "popularity": 88,
+          "isMajorUpdate": true,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "compounded-glp1-units-safety",
+          "headline": "FDA: compounded GLP-1 dosing errors from non-standardized concentrations",
+          "summary": "The FDA has warned that non-standardized compounded GLP-1 concentrations have led to dosing errors, with some patients self-administering 5–20x the intended dose when dosing by 'units.' Always confirm the mg/mL concentration on the label.",
+          "category": "Safety",
+          "compounds": ["Semaglutide", "Tirzepatide"],
+          "sources": [
+            {"name": "U.S. FDA alert", "url": "https://www.fda.gov/", "kind": "regulatory"}
+          ],
+          "publishedAt": "2026-02-15T00:00:00Z",
+          "popularity": 72,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "bpc157-review-2026",
+          "headline": "Review: BPC-157 human evidence remains limited",
+          "summary": "A 2026 narrative review (Pharmaceutics) summarized BPC-157's biopharmaceutical challenges and translational barriers. Human evidence remains limited — no completed Phase II trial and fewer than 30 subjects across uncontrolled studies. BPC-157 is not FDA-approved.",
+          "category": "General",
+          "compounds": ["BPC-157"],
+          "sources": [
+            {"name": "Pharmaceutics 2026 (PMID 42198317)", "url": "https://pubmed.ncbi.nlm.nih.gov/42198317/", "kind": "journal"}
+          ],
+          "publishedAt": "2026-03-10T00:00:00Z",
+          "popularity": 60,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        }
+      ]
+    }
+    """#
+
+    /// Decodes the bundled sample feed. Throws if the fixture ever drifts from the model.
+    static func decodeSample() throws -> NewsFeed {
+        try JSONDecoder().decode(NewsFeed.self, from: Data(sampleJSON.utf8))
+    }
+}

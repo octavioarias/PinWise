@@ -1,0 +1,40 @@
+name: CI
+
+# Builds and tests PinWise in the cloud on a macOS runner (real Xcode + iOS SDK),
+# so the iOS app is verified even without local Xcode. Runs on every push/PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  domain-core:
+    name: Domain core (PeptideKit)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify dosing math (assertion harness)
+        working-directory: App
+        run: swift run pk-verify
+      - name: Run test suite
+        working-directory: App
+        run: swift test
+
+  ios-app:
+    name: Build iOS app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: App
+        run: xcodegen generate
+      - name: Build (iOS Simulator)
+        working-directory: App
+        run: |
+          xcodebuild build \
+            -project PinWise.xcodeproj \
+            -scheme PinWise \
+            -destination 'platform=iOS Simulator,name=iPhone 16'

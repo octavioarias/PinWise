@@ -1,0 +1,57 @@
+# XcodeGen spec — generates the PinWise iOS app project with one command.
+#   brew install xcodegen   # if needed
+#   cd App && xcodegen generate && open PinWise.xcodeproj
+# The app links the local PeptideKit package (this same directory) and compiles the
+# SwiftUI sources under iOSApp/. Keeps the manual-setup steps in iOSApp/README.md optional.
+name: PinWise
+options:
+  bundleIdPrefix: com.saphobio.pinwise
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  PeptideKit:
+    path: .
+
+targets:
+  PinWise:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOSApp
+        excludes:
+          - "**/*.md"
+    # XcodeGen GENERATES a complete Info.plist here (CFBundleIdentifier, CFBundleExecutable,
+    # versions, package type, ...) and merges in these custom keys. Do not hand-edit the file.
+    info:
+      path: iOSApp/Info.plist
+      properties:
+        CFBundleDisplayName: PinWise
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        NSHealthShareUsageDescription: "PinWise can display weight and body metrics you choose to share from Health, alongside your own logs. Your health data stays on your device."
+    dependencies:
+      - package: PeptideKit
+        product: PeptideKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saphobio.pinwise
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+        # App target uses Swift 5 language mode to avoid strict-concurrency friction during
+        # early iteration; PeptideKit stays on Swift 6. Bump to "6.0" once the UI settles.
+        SWIFT_VERSION: "5.0"
+
+# Explicit shared scheme so CI (`xcodebuild -scheme PinWise`) works headlessly.
+schemes:
+  PinWise:
+    build:
+      targets:
+        PinWise: all
+    run:
+      config: Debug
