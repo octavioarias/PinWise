@@ -127,10 +127,17 @@ enum Radius {
     static let pill: CGFloat = 999
 }
 
-/// Ambient deep-blue mesh used behind hero areas (iOS 18). Native — no image assets.
+/// Ambient blue mesh behind hero areas (iOS 18). Native — no image assets. Scheme-aware:
+/// deep saturated blue on dark; a soft blue wash on light so dark titles stay readable on top.
 struct HeroMesh: View {
+    @Environment(\.colorScheme) private var scheme
+
     var body: some View {
-        MeshGradient(
+        // On light, replace the deep `accent` with a pale blue so near-black titles keep contrast.
+        let deep = BrandColor.deepBlue               // adaptive: navy on dark, periwinkle on light
+        let glow = scheme == .dark ? BrandColor.accent : Color(hex: 0xBAC6FF)
+        let base = BrandColor.background
+        return MeshGradient(
             width: 3, height: 3,
             points: [
                 SIMD2<Float>(0, 0),   SIMD2<Float>(0.5, 0),   SIMD2<Float>(1, 0),
@@ -138,9 +145,9 @@ struct HeroMesh: View {
                 SIMD2<Float>(0, 1),   SIMD2<Float>(0.5, 1),   SIMD2<Float>(1, 1)
             ],
             colors: [
-                BrandColor.deepBlue,            BrandColor.accent,     BrandColor.deepBlue,
-                BrandColor.accent.opacity(0.7), BrandColor.deepBlue,   BrandColor.accent.opacity(0.5),
-                BrandColor.background,          BrandColor.background, BrandColor.background
+                deep,             glow,          deep,
+                glow.opacity(0.7), deep,         glow.opacity(0.5),
+                base,             base,          base
             ]
         )
     }

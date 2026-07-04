@@ -21,6 +21,8 @@ struct NewsView: View {
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
     @State private var category: NewsCategory?
+    @State private var searchActive = false
+    @FocusState private var searchFocused: Bool
     private var feed: NewsFeed { loader.feed }
 
     private var items: [NewsItem] { feed.trending }
@@ -42,20 +44,17 @@ struct NewsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    header
-                    searchBar
-                    categoryFilter
+                    masthead
 
-                    if isFiltering {
-                        resultsList
-                    } else {
-                        if let featured {
-                            SectionHeader(title: "Popular")
-                            newsLink(featured) { FeaturedNewsCard(item: featured) }
+                    if searchActive {
+                        VStack(spacing: Space.lg) {
+                            searchBar
+                            categoryFilter
                         }
-                        SectionHeader(title: "Latest")
-                        ForEach(latest) { item in newsLink(item) { NewsRow(item: item) } }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
+
+                    content
 
                     DisclaimerBanner(
                         text: "PinWise summarizes public research and regulatory updates and links to the original sources. Informational only — not medical advice."
@@ -69,22 +68,49 @@ struct NewsView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text("News")
-                .font(Typo.displayXL)
-                .foregroundStyle(BrandColor.textPrimary)
-            Text("The state of peptides.")
-                .font(Typo.displayL)
-                .textCase(.uppercase)
-                .foregroundStyle(BrandColor.textPrimary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(2)
-            Text("Your hub for what the science says — trials, results, and regulatory updates on peptides and performance medicine, summarized clearly and linked to the source.")
+    private var masthead: some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("News")
+                    .font(Typo.displayXL)
+                    .foregroundStyle(BrandColor.textPrimary)
+                Spacer()
+                Button {
+                    let willActivate = !searchActive
+                    withAnimation(.snappy) {
+                        searchActive = willActivate
+                        if !willActivate { searchText = ""; category = nil }
+                    }
+                    searchFocused = willActivate
+                } label: {
+                    Image(systemName: searchActive ? "xmark" : "magnifyingglass")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(BrandColor.textPrimary)
+                        .frame(width: 40, height: 40)
+                        .background(BrandColor.surfaceElevated, in: Circle())
+                        .overlay(Circle().strokeBorder(BrandColor.stroke, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(searchActive ? "Close search" : "Search news")
+            }
+            Text("Your hub for peptide and performance-medicine research — summarized clearly and linked to the source.")
                 .font(Typo.body)
                 .foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private var content: some View {
+        if isFiltering {
+            resultsList
+        } else {
+            if let featured {
+                SectionHeader(title: "Popular")
+                newsLink(featured) { FeaturedNewsCard(item: featured) }
+            }
+            SectionHeader(title: "Latest")
+            ForEach(latest) { item in newsLink(item) { NewsRow(item: item) } }
+        }
     }
 
     private var searchBar: some View {
@@ -92,6 +118,7 @@ struct NewsView: View {
             Image(systemName: "magnifyingglass").foregroundStyle(BrandColor.textSecondary)
             TextField("Search peptides, topics, or sources", text: $searchText)
                 .foregroundStyle(BrandColor.textPrimary)
+                .focused($searchFocused)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .submitLabel(.search)
