@@ -102,9 +102,16 @@ struct HeroMesh: View {
 }
 
 extension View {
-    /// Flat brand canvas (used by utility screens).
+    /// Bottom clearance so scrollable content always clears the floating tab bar (an overlay
+    /// that reserves no layout space). No-op on non-scrolling screens.
+    func tabBarClearance() -> some View {
+        contentMargins(.bottom, 90, for: .scrollContent)
+    }
+
+    /// Flat brand canvas (used by utility/detail screens).
     func screenBackground() -> some View {
-        background(BrandColor.background.ignoresSafeArea())
+        tabBarClearance()
+            .background(BrandColor.background.ignoresSafeArea())
     }
 
     /// A soft accent glow hugging the screen edges — ambient, non-interactive. Mirrors the
@@ -130,7 +137,7 @@ extension View {
 
     /// Canvas with an ambient deep-blue mesh at the top, faded into the background.
     func heroScreen() -> some View {
-        self
+        tabBarClearance()
             .background(alignment: .top) {
                 HeroMesh()
                     .frame(height: 340)

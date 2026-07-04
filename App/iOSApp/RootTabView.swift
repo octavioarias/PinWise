@@ -29,7 +29,7 @@ struct RootTabView: View {
             case .news: NewsView()
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             PinWiseTabBar(selected: $selected)
         }
         .tint(BrandColor.accent)
