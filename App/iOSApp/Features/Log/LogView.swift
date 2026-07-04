@@ -205,7 +205,7 @@ struct LogView: View {
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )
         context.insert(entry)
-        if let vial = vials.first(where: { $0.compoundName == compound.name && $0.dosesTaken < $0.totalDoses }) {
+        if let vial = vials.first(where: { $0.apiNames.contains(compound.name) && $0.dosesTaken < $0.totalDoses }) {
             vial.dosesTaken += 1
         }
         try? context.save()
