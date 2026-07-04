@@ -13,6 +13,6 @@ struct PinWiseApp: App {
         // Local-first store. To enable iCloud private-database sync later, add the iCloud
         // + CloudKit capability and a ModelConfiguration(cloudKitDatabase:) — the model is
         // already CloudKit-safe (see LoggedDose).
-        .modelContainer(for: LoggedDose.self)
+        .modelContainer(for: [LoggedDose.self, SavedProtocol.self])
     }
 }

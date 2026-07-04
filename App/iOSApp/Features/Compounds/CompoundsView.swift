@@ -7,8 +7,7 @@ import PeptideKit
 
 struct CompoundsView: View {
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
                     SectionHeader(title: "Compound library")
@@ -24,9 +23,8 @@ struct CompoundsView: View {
                 }
                 .padding(Space.lg)
             }
-            .heroScreen()
-            .navigationTitle("Protocols")
-        }
+        .heroScreen()
+        .navigationTitle("Compound library")
     }
 
     private var header: some View {

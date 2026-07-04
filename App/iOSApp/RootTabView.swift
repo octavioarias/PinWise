@@ -18,7 +18,7 @@ struct RootTabView: View {
             case .home: HomeView(selected: $selected)
             case .tools: ReconstitutionCalculatorView()
             case .log: LogView()
-            case .protocols: CompoundsView()
+            case .protocols: ProtocolsView()
             case .news: NewsView()
             }
         }
