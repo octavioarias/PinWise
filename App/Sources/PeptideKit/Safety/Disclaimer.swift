@@ -8,6 +8,9 @@ import Foundation
 /// NOTE: This is a first pass to be reviewed against the regulatory research findings
 /// (Isabella Cruz advisor doc) before launch.
 public enum Disclaimer {
+    /// Bump when the acceptance copy materially changes, to re-prompt users for consent.
+    public static let currentVersion = 1
+
     /// The short, always-visible line for calculator and dosing surfaces.
     public static let calculator = """
     For personal record-keeping only. This tool performs arithmetic on values you enter — \
