@@ -23,7 +23,7 @@ struct RootTabView: View {
         Group {
             switch selected {
             case .home: HomeView(selected: $selected)
-            case .tools: ReconstitutionCalculatorView()
+            case .tools: ToolsView()
             case .log: LogView()
             case .protocols: ProtocolsView()
             case .news: NewsView()

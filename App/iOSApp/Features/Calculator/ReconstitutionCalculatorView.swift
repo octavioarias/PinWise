@@ -2,7 +2,7 @@ import SwiftUI
 import Observation
 import PeptideKit
 
-// NOTE: iOS-app source for the Xcode project. Math delegates to the verified PeptideKit core.
+// NOTE: iOS-app source. Math delegates to the verified PeptideKit core. Pushed from ToolsView.
 
 /// Shared, mode-agnostic result the view renders.
 struct DoseDisplay: Equatable {
@@ -22,16 +22,13 @@ final class DoseCalculatorViewModel {
 
     var mode: Mode = .reconstitute
 
-    // Reconstitute inputs
     var vialMassText = "5"
     var vialMassUnit: MassUnit = .milligram
     var solventText = "2"
 
-    // Pre-mixed inputs (concentration in mg/mL; total volume optional)
     var concentrationText = "2.5"
     var totalVolumeText = ""
 
-    // Shared
     var doseText = "250"
     var doseUnit: MassUnit = .microgram
     var syringe: SyringeScale = .u100
@@ -52,17 +49,15 @@ final class DoseCalculatorViewModel {
                 }
                 let r = try ReconstitutionCalculator.calculate(
                     ReconstitutionInput(vialMass: Mass(vialMass, vialMassUnit),
-                                        solventVolumeMilliliters: solvent, desiredDose: desired, syringe: syringe)
-                )
+                                        solventVolumeMilliliters: solvent, desiredDose: desired, syringe: syringe))
                 result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
                                      concentrationMcgPerMl: r.concentrationMcgPerMl, dosesPerVial: r.dosesPerVial)
             case .premixed:
                 guard let mgPerMl = Double(concentrationText) else {
                     errorMessage = "Enter the concentration (mg/mL)."; return
                 }
-                let total = Double(totalVolumeText)   // optional
                 let r = try DosingCalculator.draw(dose: desired, concentration: .mgPerMl(mgPerMl),
-                                                  totalVolumeMilliliters: total, syringe: syringe)
+                                                  totalVolumeMilliliters: Double(totalVolumeText), syringe: syringe)
                 result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
                                      concentrationMcgPerMl: r.concentrationMcgPerMl, dosesPerVial: r.dosesPerVial)
             }
@@ -96,40 +91,34 @@ struct ReconstitutionCalculatorView: View {
     @State private var model = DoseCalculatorViewModel()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.lg) {
-                    Text("Dose calculator")
-                        .font(Typo.displayL).textCase(.uppercase)
-                        .foregroundStyle(BrandColor.textPrimary)
-                        .minimumScaleFactor(0.7).lineLimit(1)
-
-                    Picker("", selection: $model.mode) {
-                        ForEach(DoseCalculatorViewModel.Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if model.mode == .reconstitute { vialCard } else { concentrationCard }
-                    doseCard
-                    if let r = model.result { resultCard(r) }
-                    if let error = model.errorMessage { errorCard(error) }
-                    DisclaimerBanner(text: Disclaimer.calculator)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.lg) {
+                Picker("", selection: $model.mode) {
+                    ForEach(DoseCalculatorViewModel.Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
-                .padding(Space.lg)
+                .pickerStyle(.segmented)
+
+                if model.mode == .reconstitute { vialCard } else { concentrationCard }
+                doseCard
+                if let r = model.result { resultCard(r) }
+                if let error = model.errorMessage { errorCard(error) }
+                DisclaimerBanner(text: Disclaimer.calculator)
             }
-            .heroScreen()
-            .toolbar(.hidden, for: .navigationBar)
-            .onAppear { model.recalculate() }
-            .onChange(of: model.mode) { _, _ in model.recalculate() }
-            .onChange(of: model.vialMassText) { _, _ in model.recalculate() }
-            .onChange(of: model.solventText) { _, _ in model.recalculate() }
-            .onChange(of: model.concentrationText) { _, _ in model.recalculate() }
-            .onChange(of: model.totalVolumeText) { _, _ in model.recalculate() }
-            .onChange(of: model.doseText) { _, _ in model.recalculate() }
-            .onChange(of: model.vialMassUnit) { _, _ in model.recalculate() }
-            .onChange(of: model.doseUnit) { _, _ in model.recalculate() }
-            .onChange(of: model.syringe) { _, _ in model.recalculate() }
+            .padding(Space.lg)
         }
+        .heroScreen()
+        .navigationTitle("Dose calculator")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { model.recalculate() }
+        .onChange(of: model.mode) { _, _ in model.recalculate() }
+        .onChange(of: model.vialMassText) { _, _ in model.recalculate() }
+        .onChange(of: model.solventText) { _, _ in model.recalculate() }
+        .onChange(of: model.concentrationText) { _, _ in model.recalculate() }
+        .onChange(of: model.totalVolumeText) { _, _ in model.recalculate() }
+        .onChange(of: model.doseText) { _, _ in model.recalculate() }
+        .onChange(of: model.vialMassUnit) { _, _ in model.recalculate() }
+        .onChange(of: model.doseUnit) { _, _ in model.recalculate() }
+        .onChange(of: model.syringe) { _, _ in model.recalculate() }
     }
 
     private var vialCard: some View {
@@ -198,11 +187,7 @@ struct ReconstitutionCalculatorView: View {
                 }
                 HStack(spacing: Space.lg) {
                     StatTile(label: "Concentration", value: String(format: "%.0f mcg/mL", r.concentrationMcgPerMl))
-                    if let doses = r.dosesPerVial {
-                        StatTile(label: "Doses / vial", value: "\(doses)")
-                    } else {
-                        StatTile(label: "Doses / vial", value: "—")
-                    }
+                    StatTile(label: "Doses / vial", value: r.dosesPerVial.map { "\($0)" } ?? "—")
                 }
             }
         }
