@@ -1,10 +1,9 @@
 import SwiftUI
 import PeptideKit
 
-// The News tab — PinWise as the source of truth for peptides & dose tracking.
-// Editorial layout (Apple-News style): a large featured story, then a list of the rest.
-// Neutral, cited summaries. Reads the bundled sample feed for now; Phase 5c swaps in a
-// fetched + cached `feed.json`.
+// The News tab — PinWise as the hub for sources of truth on peptides and performance medicine.
+// Editorial layout (Apple-News style): a masthead, search + category filters, a popular lead
+// story, then the latest. Neutral, cited summaries linked to the original sources.
 
 /// Legible tint per category (uses the lighter/brighter hues so text stays readable on dark).
 private extension NewsCategory {
@@ -20,28 +19,42 @@ private extension NewsCategory {
 
 struct NewsView: View {
     @State private var loader = NewsFeedLoader()
+    @State private var searchText = ""
+    @State private var category: NewsCategory?
     private var feed: NewsFeed { loader.feed }
+
+    private var items: [NewsItem] { feed.trending }
+    private var isFiltering: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil }
+
+    /// Featured lead = most popular. "Latest" = everything else, newest first.
+    private var featured: NewsItem? { items.first }
+    private var latest: [NewsItem] {
+        items.filter { $0.id != featured?.id }.sorted { $0.publishedAt > $1.publishedAt }
+    }
+    private var results: [NewsItem] {
+        items.filter { item in
+            (category == nil || item.category == category) &&
+            (searchText.isEmpty || matches(item, searchText))
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
+                    searchBar
+                    categoryFilter
 
-                    if let featured = feed.trending.first {
-                        SectionHeader(title: "Popular")
-                        NavigationLink { NewsDetailView(item: featured) } label: {
-                            FeaturedNewsCard(item: featured)
+                    if isFiltering {
+                        resultsList
+                    } else {
+                        if let featured {
+                            SectionHeader(title: "Popular")
+                            newsLink(featured) { FeaturedNewsCard(item: featured) }
                         }
-                        .buttonStyle(.plain)
-                    }
-
-                    SectionHeader(title: "Latest")
-                    ForEach(feed.trending.dropFirst()) { item in
-                        NavigationLink { NewsDetailView(item: item) } label: {
-                            NewsRow(item: item)
-                        }
-                        .buttonStyle(.plain)
+                        SectionHeader(title: "Latest")
+                        ForEach(latest) { item in newsLink(item) { NewsRow(item: item) } }
                     }
 
                     DisclaimerBanner(
@@ -67,11 +80,90 @@ struct NewsView: View {
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7)
                 .lineLimit(2)
-            Text("Summarized clearly. Linked to the source.")
+            Text("Your hub for what the science says — trials, results, and regulatory updates on peptides and performance medicine, summarized clearly and linked to the source.")
                 .font(Typo.body)
                 .foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: Space.sm) {
+            Image(systemName: "magnifyingglass").foregroundStyle(BrandColor.textSecondary)
+            TextField("Search peptides, topics, or sources", text: $searchText)
+                .foregroundStyle(BrandColor.textPrimary)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .submitLabel(.search)
+            if !searchText.isEmpty {
+                Button { searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(BrandColor.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, Space.md)
+        .padding(.vertical, Space.md - 2)
+        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+    }
+
+    private var categoryFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Space.sm) {
+                filterChip("All", active: category == nil) { category = nil }
+                ForEach(NewsCategory.allCases, id: \.self) { c in
+                    filterChip(c.rawValue, active: category == c) { category = (category == c ? nil : c) }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    @ViewBuilder private var resultsList: some View {
+        HStack {
+            Text("\(results.count) result\(results.count == 1 ? "" : "s")")
+                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            Spacer()
+            Button("Clear filters") { searchText = ""; category = nil }
+                .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+        }
+        if results.isEmpty {
+            Card {
+                Text("No stories match. Try a different word or category.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            ForEach(results) { item in newsLink(item) { NewsRow(item: item) } }
+        }
+    }
+
+    private func filterChip(_ title: String, active: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, Space.md)
+                .padding(.vertical, Space.sm)
+                .background(active ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
+                .foregroundStyle(active ? BrandColor.onAccent : BrandColor.textSecondary)
+                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: active ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func newsLink<Label: View>(_ item: NewsItem, @ViewBuilder label: () -> Label) -> some View {
+        NavigationLink { NewsDetailView(item: item) } label: { label() }.buttonStyle(.plain)
+    }
+
+    private func matches(_ item: NewsItem, _ query: String) -> Bool {
+        let q = query.lowercased()
+        return item.headline.lowercased().contains(q)
+            || item.summary.lowercased().contains(q)
+            || item.category.rawValue.lowercased().contains(q)
+            || item.compounds.contains { $0.lowercased().contains(q) }
+            || item.sources.contains { $0.name.lowercased().contains(q) }
     }
 }
 

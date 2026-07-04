@@ -24,6 +24,9 @@ struct ToolsView: View {
                         ToolCard(title: "Ramp-up plan", subtitle: "GLP-1 dose schedule", systemImage: "chart.line.uptrend.xyaxis") {
                             TitrationPreviewView()
                         }
+                        ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand") {
+                            BodyMapView()
+                        }
                     }
                     DisclaimerBanner(text: Disclaimer.calculator)
                 }
