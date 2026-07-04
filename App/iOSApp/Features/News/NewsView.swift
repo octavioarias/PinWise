@@ -202,8 +202,10 @@ struct FeaturedNewsCard: View {
         ZStack(alignment: .bottomLeading) {
             FeedImage(urlString: item.imageURL, tint: item.category.tint)
                 .frame(height: 200)
+            // Strong scrim so the white headline stays legible over any gradient/image — this
+            // matters most in light mode, where the underlying gradient can be pale.
             LinearGradient(
-                colors: [.clear, .black.opacity(0.15), .black.opacity(0.75)],
+                colors: [.black.opacity(0.15), .black.opacity(0.5), .black.opacity(0.9)],
                 startPoint: .top, endPoint: .bottom
             )
             VStack(alignment: .leading, spacing: Space.sm) {
@@ -216,6 +218,7 @@ struct FeaturedNewsCard: View {
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.leading)
                     .lineLimit(3)
+                    .shadow(color: .black.opacity(0.55), radius: 5, y: 1)
             }
             .padding(Space.lg)
         }
