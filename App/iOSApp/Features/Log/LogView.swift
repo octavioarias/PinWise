@@ -2,9 +2,8 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The Log tab — the fastest path to record a dose. Quick-fill chips pull from active
-/// protocols; sensible defaults (preferred unit, auto-suggested site, "now" timestamp with
-/// backfill) keep it to a couple taps. A success haptic confirms the save.
+/// The Log tab — the fastest path to record a dose, in plain language. Quick-fill chips pull
+/// from active protocols; a success haptic confirms the save; logging draws from a matching vial.
 struct LogView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
@@ -42,11 +41,73 @@ struct LogView: View {
                         .minimumScaleFactor(0.7).lineLimit(1)
 
                     if !activeProtocols.isEmpty { quickFill }
-                    compoundCard
-                    doseCard
-                    siteCard
-                    whenCard
-                    metricsCard
+
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("What did you take?", hint: "The compound you're logging.") {
+                                Picker("Compound", selection: $compound) {
+                                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
+                            }
+                            HStack(spacing: Space.sm) {
+                                EvidenceBadge(tier: compound.evidenceTier)
+                                if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                                Spacer()
+                            }
+                            if compound.requiresResearchDisclaimer {
+                                Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            }
+
+                            FieldRow("How much?", hint: "The dose you took this time.") {
+                                HStack {
+                                    TextField("e.g. 250", text: $doseText).keyboardType(.decimalPad).pinwiseField()
+                                    Picker("", selection: $doseUnit) {
+                                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                                    }
+                                    .pickerStyle(.segmented).frame(width: 120)
+                                }
+                            }
+                        }
+                    }
+
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Where did you inject?", hint: "Rotating spots helps avoid irritation.") {
+                                Picker("Site", selection: $site) {
+                                    Text("Not set").tag(Optional<InjectionSite>.none)
+                                    ForEach(InjectionSite.allCases) { s in Text(s.displayName).tag(Optional(s)) }
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
+                            }
+                            if let suggested = suggestedSite, suggested != site {
+                                Button { site = suggested } label: {
+                                    Label("Suggested: \(suggested.displayName)", systemImage: "sparkles")
+                                        .font(.caption).foregroundStyle(BrandColor.accentText)
+                                }
+                            }
+                            FieldRow("When?", hint: "Now by default — change it to log an earlier dose.") {
+                                DatePicker("", selection: $timestamp, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                                    .labelsHidden()
+                            }
+                            FieldRow("Notes", hint: "Optional.") {
+                                TextField("Anything worth remembering", text: $notes, axis: .vertical).pinwiseField()
+                            }
+                        }
+                    }
+
+                    Card {
+                        DisclosureGroup(isExpanded: $showMetrics) {
+                            VStack(alignment: .leading, spacing: Space.md) {
+                                labeledSlider("Energy", value: $energy)
+                                labeledSlider("Side effects", value: $sideEffect)
+                            }
+                            .padding(.top, Space.sm)
+                        } label: {
+                            Text("How do you feel? (optional)").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                        }
+                        .tint(BrandColor.accentText)
+                    }
 
                     PrimaryButton(title: savedConfirmation ? "Logged ✓" : "Log dose",
                                   systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
@@ -74,7 +135,7 @@ struct LogView: View {
 
     private var quickFill: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
-            SectionHeader(title: "Quick-fill from protocol")
+            Text("Quick-fill from a protocol").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Space.sm) {
                     ForEach(activeProtocols, id: \.id) { p in
@@ -94,93 +155,12 @@ struct LogView: View {
         }
     }
 
-    private var compoundCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Compound")
-                Picker("Compound", selection: $compound) {
-                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
-                }
-                .pickerStyle(.menu).tint(BrandColor.accentText)
-                HStack(spacing: Space.sm) {
-                    EvidenceBadge(tier: compound.evidenceTier)
-                    if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
-                    Spacer()
-                }
-                if compound.requiresResearchDisclaimer {
-                    Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
-            }
-        }
-    }
-
-    private var doseCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Dose")
-                HStack {
-                    TextField("Amount", text: $doseText).keyboardType(.decimalPad).pinwiseField()
-                    Picker("", selection: $doseUnit) {
-                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented).frame(width: 120)
-                }
-            }
-        }
-    }
-
-    private var siteCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Injection site")
-                Picker("Site", selection: $site) {
-                    Text("Not set").tag(Optional<InjectionSite>.none)
-                    ForEach(InjectionSite.allCases) { s in Text(s.displayName).tag(Optional(s)) }
-                }
-                .pickerStyle(.menu).tint(BrandColor.accentText)
-                if let suggested = suggestedSite, suggested != site {
-                    Button { site = suggested } label: {
-                        Label("Suggest: \(suggested.displayName)", systemImage: "sparkles")
-                            .font(.caption).foregroundStyle(BrandColor.accentText)
-                    }
-                }
-            }
-        }
-    }
-
-    private var whenCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "When")
-                DatePicker("Date & time", selection: $timestamp, in: ...Date(),
-                           displayedComponents: [.date, .hourAndMinute])
-                    .tint(BrandColor.accentText)
-                TextField("Notes (optional)", text: $notes, axis: .vertical)
-            }
-        }
-    }
-
-    private var metricsCard: some View {
-        Card {
-            DisclosureGroup(isExpanded: $showMetrics) {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    labeledSlider("Energy", value: $energy)
-                    labeledSlider("Side-effect severity", value: $sideEffect)
-                }
-                .padding(.top, Space.sm)
-            } label: {
-                SectionHeader(title: "How you feel (optional)")
-            }
-            .tint(BrandColor.accentText)
-        }
-    }
-
     private func labeledSlider(_ title: String, value: Binding<Double>) -> some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             HStack {
                 Text(title).font(.caption).foregroundStyle(BrandColor.textSecondary)
                 Spacer()
-                Text("\(Int(value.wrappedValue))").font(.caption).foregroundStyle(BrandColor.textPrimary)
+                Text("\(Int(value.wrappedValue)) / 10").font(.caption).foregroundStyle(BrandColor.textPrimary)
             }
             Slider(value: value, in: 0...10, step: 1).tint(BrandColor.accent)
         }
@@ -225,7 +205,6 @@ struct LogView: View {
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )
         context.insert(entry)
-        // Cohesion: draw this dose from a matching vial that still has doses left.
         if let vial = vials.first(where: { $0.compoundName == compound.name && $0.dosesTaken < $0.totalDoses }) {
             vial.dosesTaken += 1
         }
@@ -236,6 +215,6 @@ struct LogView: View {
         timestamp = Date()
         site = suggestedSite
         savedConfirmation = true
-        savedCount += 1   // triggers the success haptic
+        savedCount += 1
     }
 }

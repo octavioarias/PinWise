@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// Create a dosing protocol: compound + dose + schedule. Presented as a sheet.
-/// It's a user-configured schedule — never a recommendation (disclaimer shown).
+/// Create a dosing protocol in plain language: what, how much, how often. Presented as a sheet.
+/// It's a schedule you configure — never a recommendation (disclaimer shown).
 struct ProtocolBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -32,11 +32,76 @@ struct ProtocolBuilderView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    nameCard
-                    compoundCard
-                    doseCard
-                    scheduleCard
-                    startCard
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Name this protocol", hint: "So you can spot it quickly, e.g. \"Weekly Tirz\".") {
+                                TextField("Name", text: $name).pinwiseField()
+                            }
+                            FieldRow("Which compound?") {
+                                Picker("Compound", selection: $compound) {
+                                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
+                            }
+                            HStack(spacing: Space.sm) {
+                                EvidenceBadge(tier: compound.evidenceTier)
+                                if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                                Spacer()
+                            }
+                            FieldRow("How much per dose?") {
+                                HStack {
+                                    TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
+                                    Picker("", selection: $doseUnit) {
+                                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                                    }
+                                    .pickerStyle(.segmented).frame(width: 120)
+                                }
+                            }
+                        }
+                    }
+
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("How often?", hint: "How often you take this dose.") {
+                                Picker("Schedule", selection: $kind) {
+                                    Text("Every day").tag(DoseSchedule.Kind.daily)
+                                    Text("Every few days").tag(DoseSchedule.Kind.everyNDays)
+                                    Text("Certain weekdays").tag(DoseSchedule.Kind.specificWeekdays)
+                                    Text("As needed").tag(DoseSchedule.Kind.asNeeded)
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
+                            }
+                            if kind == .everyNDays {
+                                Stepper("Every \(intervalDays) days", value: $intervalDays, in: 1...30)
+                                    .foregroundStyle(BrandColor.textPrimary)
+                            } else if kind == .specificWeekdays || kind == .weekly {
+                                Text("Which days?").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                                weekdayPicker
+                            }
+                        }
+                    }
+
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Start date") {
+                                DatePicker("", selection: $startDate, displayedComponents: [.date]).labelsHidden()
+                            }
+                            Toggle("Active", isOn: $isActive).tint(BrandColor.accent)
+                            Toggle("Remind me", isOn: $remindersOn)
+                                .tint(BrandColor.accent)
+                                .onChange(of: remindersOn) { _, on in
+                                    if on { Task { await NotificationManager.requestAuthorization() } }
+                                }
+                            if remindersOn {
+                                FieldRow("What time?") {
+                                    DatePicker("", selection: $reminderTime, displayedComponents: [.hourAndMinute]).labelsHidden()
+                                }
+                            }
+                            FieldRow("Notes", hint: "Optional.") {
+                                TextField("Anything worth remembering", text: $notes, axis: .vertical).pinwiseField()
+                            }
+                        }
+                    }
 
                     PrimaryButton(title: "Save protocol", systemImage: "checkmark") { save() }
                         .disabled(!canSave)
@@ -61,72 +126,6 @@ struct ProtocolBuilderView: View {
         }
     }
 
-    private var nameCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Name")
-                TextField("Protocol name", text: $name).pinwiseField()
-            }
-        }
-    }
-
-    private var compoundCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Compound")
-                Picker("Compound", selection: $compound) {
-                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
-                }
-                .pickerStyle(.menu)
-                .tint(BrandColor.accentText)
-                HStack(spacing: Space.sm) {
-                    EvidenceBadge(tier: compound.evidenceTier)
-                    if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
-                    Spacer()
-                }
-            }
-        }
-    }
-
-    private var doseCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                SectionHeader(title: "Dose")
-                HStack {
-                    TextField("Amount", text: $doseText).keyboardType(.decimalPad).pinwiseField()
-                    Picker("", selection: $doseUnit) {
-                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 120)
-                }
-            }
-        }
-    }
-
-    private var scheduleCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Schedule")
-                Picker("Schedule", selection: $kind) {
-                    Text("Daily").tag(DoseSchedule.Kind.daily)
-                    Text("Every N days").tag(DoseSchedule.Kind.everyNDays)
-                    Text("Weekly").tag(DoseSchedule.Kind.specificWeekdays)
-                    Text("As needed").tag(DoseSchedule.Kind.asNeeded)
-                }
-                .pickerStyle(.menu)
-                .tint(BrandColor.accentText)
-
-                if kind == .everyNDays {
-                    Stepper("Every \(intervalDays) days", value: $intervalDays, in: 1...30)
-                        .foregroundStyle(BrandColor.textPrimary)
-                } else if kind == .specificWeekdays || kind == .weekly {
-                    weekdayPicker
-                }
-            }
-        }
-    }
-
     private var weekdayPicker: some View {
         HStack(spacing: 6) {
             ForEach(1...7, id: \.self) { d in
@@ -143,27 +142,6 @@ struct ProtocolBuilderView: View {
                         .foregroundStyle(on ? BrandColor.onAccent : BrandColor.textSecondary)
                 }
                 .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private var startCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Details")
-                DatePicker("Start date", selection: $startDate, displayedComponents: [.date])
-                    .tint(BrandColor.accentText)
-                Toggle("Active", isOn: $isActive).tint(BrandColor.accent)
-                Toggle("Remind me", isOn: $remindersOn)
-                    .tint(BrandColor.accent)
-                    .onChange(of: remindersOn) { _, on in
-                        if on { Task { await NotificationManager.requestAuthorization() } }
-                    }
-                if remindersOn {
-                    DatePicker("Time", selection: $reminderTime, displayedComponents: [.hourAndMinute])
-                        .tint(BrandColor.accentText)
-                }
-                TextField("Notes (optional)", text: $notes, axis: .vertical)
             }
         }
     }

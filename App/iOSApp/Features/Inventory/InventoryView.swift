@@ -154,67 +154,75 @@ struct VialBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Compound")
-                            Picker("Compound", selection: $compound) {
-                                ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Which compound?") {
+                                Picker("Compound", selection: $compound) {
+                                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
                             }
-                            .pickerStyle(.menu).tint(BrandColor.accentText)
-                            TextField("Label (optional)", text: $label).pinwiseField()
+                            FieldRow("Nickname", hint: "Optional — e.g. \"Batch 3\".") {
+                                TextField("Nickname", text: $label).pinwiseField()
+                            }
                         }
                     }
                     Card {
-                        VStack(alignment: .leading, spacing: Space.md) {
-                            SectionHeader(title: "Preparation")
-                            Picker("", selection: $prep) {
-                                Text("Reconstituted").tag(Prep.reconstituted)
-                                Text("Pre-mixed").tag(Prep.premixed)
-                            }
-                            .pickerStyle(.segmented)
-
-                            if prep == .reconstituted {
-                                HStack {
-                                    TextField("Total amount", text: $massText).keyboardType(.decimalPad).pinwiseField()
-                                    unitPicker($massUnit)
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("How did it come?", hint: "A powder you mix with water, or a ready-to-use liquid.") {
+                                Picker("", selection: $prep) {
+                                    Text("Powder").tag(Prep.reconstituted)
+                                    Text("Pre-mixed").tag(Prep.premixed)
                                 }
-                                HStack {
-                                    TextField("Water added", text: $solventText).keyboardType(.decimalPad).pinwiseField()
-                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                .pickerStyle(.segmented)
+                            }
+                            if prep == .reconstituted {
+                                FieldRow("How much is in the vial?", hint: "The amount on the label.") {
+                                    HStack {
+                                        TextField("e.g. 10", text: $massText).keyboardType(.decimalPad).pinwiseField()
+                                        unitPicker($massUnit)
+                                    }
+                                }
+                                FieldRow("How much water did you add?") {
+                                    HStack {
+                                        TextField("e.g. 2", text: $solventText).keyboardType(.decimalPad).pinwiseField()
+                                        Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                    }
                                 }
                             } else {
-                                HStack {
-                                    TextField("Concentration", text: $concentrationText).keyboardType(.decimalPad).pinwiseField()
-                                    Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                FieldRow("What's the concentration?", hint: "On the pharmacy label, e.g. 2.5 mg/mL.") {
+                                    HStack {
+                                        TextField("e.g. 2.5", text: $concentrationText).keyboardType(.decimalPad).pinwiseField()
+                                        Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                    }
                                 }
-                                HStack {
-                                    TextField("Total volume", text: $totalVolumeText).keyboardType(.decimalPad).pinwiseField()
-                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                FieldRow("How much liquid in the vial?", hint: "Total volume — lets us estimate doses.") {
+                                    HStack {
+                                        TextField("e.g. 4", text: $totalVolumeText).keyboardType(.decimalPad).pinwiseField()
+                                        Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                    }
                                 }
-                                Text("From a compounding pharmacy? Enter the strength on the label (e.g. 2.5 mg/mL).")
-                                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            }
+                            FieldRow("How much per dose?") {
+                                HStack {
+                                    TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
+                                    unitPicker($doseUnit)
+                                }
                             }
                         }
                     }
                     Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Per dose")
-                            HStack {
-                                TextField("Dose", text: $doseText).keyboardType(.decimalPad).pinwiseField()
-                                unitPicker($doseUnit)
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Cost", hint: "Optional — used to show cost per dose.") {
+                                HStack {
+                                    Text("$").foregroundStyle(BrandColor.textSecondary)
+                                    TextField("e.g. 200", text: $costText).keyboardType(.decimalPad).pinwiseField()
+                                }
                             }
-                        }
-                    }
-                    Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Cost & expiry")
-                            HStack {
-                                Text("$").foregroundStyle(BrandColor.textSecondary)
-                                TextField("Cost (optional)", text: $costText).keyboardType(.decimalPad).pinwiseField()
-                            }
-                            Toggle("Has expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
+                            Toggle("Has an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
                             if hasExpiration {
-                                DatePicker("Expires", selection: $expiration, displayedComponents: [.date])
-                                    .tint(BrandColor.accentText)
+                                FieldRow("Expires") {
+                                    DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
+                                }
                             }
                         }
                     }
