@@ -61,18 +61,21 @@ private struct PinWiseTabBar: View {
         .padding(.top, Space.md)
         .padding(.bottom, Space.xs)
         .frame(maxWidth: .infinity)
-        .background {
-            BrandColor.surface
-                .overlay(alignment: .top) {
-                    LinearGradient(colors: [BrandColor.accent.opacity(0.12), .clear],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: 16)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                }
-                .overlay(alignment: .top) { Rectangle().fill(BrandColor.stroke).frame(height: 0.5) }
-                .ignoresSafeArea(edges: .bottom) // fill flush to the bottom, under the home indicator
+        // Sheen + hairline drawn within the bar's frame...
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                LinearGradient(colors: [BrandColor.accent.opacity(0.12), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: 16)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                Rectangle().fill(BrandColor.stroke).frame(height: 0.5)
+            }
         }
-        .shadow(color: .black.opacity(0.25), radius: 6, y: -1) // subtle lift; avoid dimming content above
+        // ...and the solid fill extends into the home-indicator area WITHOUT changing the bar's
+        // layout height, so safeAreaInset reserves the correct space and scroll content stops
+        // exactly at the bar's top edge (never underneath it).
+        .background(BrandColor.surface, ignoresSafeAreaEdges: .bottom)
+        .shadow(color: .black.opacity(0.25), radius: 6, y: -1)
     }
 
     @ViewBuilder
