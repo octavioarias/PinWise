@@ -21,6 +21,29 @@ struct ProtocolBuilderView: View {
     @State private var remindersOn = false
     @State private var reminderTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
 
+    /// The protocol being edited, or nil when creating a new one.
+    private let editing: SavedProtocol?
+
+    init(editing: SavedProtocol? = nil) {
+        self.editing = editing
+        guard let p = editing else { return }
+        let comp = CompoundCatalog.all.first { $0.name == p.compoundName } ?? CompoundCatalog.semaglutide
+        let unit = comp.preferredDoseUnit
+        let doseVal = p.dose.value(in: unit)
+        _name = State(initialValue: p.name)
+        _compound = State(initialValue: comp)
+        _doseText = State(initialValue: doseVal == doseVal.rounded() ? String(Int(doseVal)) : String(doseVal))
+        _doseUnit = State(initialValue: unit)
+        _kind = State(initialValue: p.scheduleKind)
+        _intervalDays = State(initialValue: p.intervalDays)
+        _weekdays = State(initialValue: Set(p.weekdays))
+        _startDate = State(initialValue: p.startDate)
+        _isActive = State(initialValue: p.isActive)
+        _notes = State(initialValue: p.notes)
+        _remindersOn = State(initialValue: p.remindersOn)
+        _reminderTime = State(initialValue: Calendar.current.date(bySettingHour: p.reminderHour, minute: p.reminderMinute, second: 0, of: Date()) ?? Date())
+    }
+
     private var doseValue: Double? {
         guard let d = Double(doseText), d > 0 else { return nil }
         return d
@@ -103,16 +126,26 @@ struct ProtocolBuilderView: View {
                         }
                     }
 
-                    PrimaryButton(title: "Save protocol", systemImage: "checkmark") { save() }
+                    PrimaryButton(title: editing == nil ? "Save protocol" : "Save changes", systemImage: "checkmark") { save() }
                         .disabled(!canSave)
                         .opacity(canSave ? 1 : 0.5)
+
+                    if editing != nil {
+                        Button(role: .destructive) { deleteProtocol() } label: {
+                            Label("Delete protocol", systemImage: "trash")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Space.md)
+                        }
+                        .foregroundStyle(BrandColor.danger)
+                    }
 
                     DisclaimerBanner(text: "A protocol is a personal schedule you configure — not medical advice or a recommendation.")
                 }
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("New protocol")
+            .navigationTitle(editing == nil ? "New protocol" : "Edit protocol")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear {
@@ -155,22 +188,29 @@ struct ProtocolBuilderView: View {
         guard let d = doseValue else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)
         let time = Calendar.current.dateComponents([.hour, .minute], from: reminderTime)
-        let entry = SavedProtocol(
-            name: trimmedName.isEmpty ? compound.name : trimmedName,
-            compoundName: compound.name,
-            doseMicrograms: Mass(d, doseUnit).micrograms,
-            scheduleKindRaw: kind.rawValue,
-            intervalDays: intervalDays,
-            weekdays: usesWeekdays ? weekdays.sorted() : [],
-            startDate: startDate,
-            isActive: isActive,
-            notes: notes,
-            remindersOn: remindersOn,
-            reminderHour: time.hour ?? 9,
-            reminderMinute: time.minute ?? 0
-        )
-        context.insert(entry)
+        let target = editing ?? SavedProtocol()
+        target.name = trimmedName.isEmpty ? compound.name : trimmedName
+        target.compoundName = compound.name
+        target.doseMicrograms = Mass(d, doseUnit).micrograms
+        target.scheduleKindRaw = kind.rawValue
+        target.intervalDays = intervalDays
+        target.weekdays = usesWeekdays ? weekdays.sorted() : []
+        target.startDate = startDate
+        target.isActive = isActive
+        target.notes = notes
+        target.remindersOn = remindersOn
+        target.reminderHour = time.hour ?? 9
+        target.reminderMinute = time.minute ?? 0
+        if editing == nil { context.insert(target) }
         try? context.save()
+        dismiss()
+    }
+
+    private func deleteProtocol() {
+        if let p = editing {
+            context.delete(p)
+            try? context.save()
+        }
         dismiss()
     }
 }

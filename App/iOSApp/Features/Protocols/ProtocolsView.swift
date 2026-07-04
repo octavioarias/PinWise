@@ -7,8 +7,12 @@ struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var showBuilder = false
+    @State private var editTarget: EditTarget?
     @State private var panel: Panel = .protocols
     private enum Panel: Hashable { case protocols, inventory }
+    /// Identifiable wrapper so a tapped protocol can drive `.sheet(item:)` without relying on
+    /// the model's own identity semantics.
+    private struct EditTarget: Identifiable { let id = UUID(); let proto: SavedProtocol }
 
     private var active: [SavedProtocol] { protocols.filter(\.isActive) }
 
@@ -37,6 +41,7 @@ struct ProtocolsView: View {
             .heroScreen()
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
+            .sheet(item: $editTarget) { ProtocolBuilderView(editing: $0.proto) }
         }
     }
 
@@ -48,12 +53,18 @@ struct ProtocolsView: View {
         } else {
             SectionHeader(title: "Active protocols")
             ForEach(active, id: \.id) { proto in
-                ProtocolRow(proto: proto)
-                    .contextMenu {
-                        Button(role: .destructive) { context.delete(proto) } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+                Button { editTarget = EditTarget(proto: proto) } label: {
+                    ProtocolRow(proto: proto)
+                }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button { editTarget = EditTarget(proto: proto) } label: {
+                        Label("Edit", systemImage: "pencil")
                     }
+                    Button(role: .destructive) { context.delete(proto) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
         }
 
@@ -106,10 +117,11 @@ struct ProtocolRow: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.xs) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                     Text(proto.name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                     Spacer()
                     Text(proto.dose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text("\(proto.compoundName) · \(proto.cadenceText)")
                     .font(.caption)
