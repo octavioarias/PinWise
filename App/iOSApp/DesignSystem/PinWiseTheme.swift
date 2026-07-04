@@ -61,7 +61,46 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
         case .dark: return .dark
         }
     }
+    var uiStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: return .unspecified
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
     static func from(_ raw: String) -> AppearanceMode { AppearanceMode(rawValue: raw) ?? .dark }
+}
+
+/// Forces the host window to a single interface style so BOTH SwiftUI-native views and the
+/// dynamic-`UIColor`-backed `BrandColor` tokens resolve to the SAME appearance. Without this,
+/// `.preferredColorScheme` (which drives SwiftUI defaults) can disagree with the trait the
+/// dynamic tokens read — leaving light-colored native text on light token backgrounds
+/// (invisible) across every screen.
+struct AppearanceApplier: UIViewRepresentable {
+    let mode: AppearanceMode
+
+    func makeUIView(context: Context) -> StyleView {
+        let v = StyleView()
+        v.isHidden = true
+        v.isUserInteractionEnabled = false
+        v.style = mode.uiStyle
+        return v
+    }
+
+    func updateUIView(_ uiView: StyleView, context: Context) {
+        uiView.style = mode.uiStyle
+        uiView.apply()
+    }
+
+    /// Applies the style both when it first attaches to a window (cold launch) and on updates.
+    final class StyleView: UIView {
+        var style: UIUserInterfaceStyle = .unspecified
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            apply()
+        }
+        func apply() { window?.overrideUserInterfaceStyle = style }
+    }
 }
 
 // Measured WCAG contrast ratios (audited 2026-07, small-text target 4.5:1):

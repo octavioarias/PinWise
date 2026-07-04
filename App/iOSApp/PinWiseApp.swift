@@ -33,5 +33,8 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)
+        // Also force the window's UIKit style so dynamic BrandColor tokens resolve to the same
+        // appearance as SwiftUI-native views (prevents invisible native text on mismatch).
+        .background(AppearanceApplier(mode: AppearanceMode.from(appearanceRaw)))
     }
 }
