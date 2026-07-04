@@ -18,6 +18,8 @@ struct ProtocolBuilderView: View {
     @State private var startDate: Date = Date()
     @State private var isActive: Bool = true
     @State private var notes: String = ""
+    @State private var remindersOn = false
+    @State private var reminderTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
 
     private var doseValue: Double? {
         guard let d = Double(doseText), d > 0 else { return nil }
@@ -152,6 +154,15 @@ struct ProtocolBuilderView: View {
                 DatePicker("Start date", selection: $startDate, displayedComponents: [.date])
                     .tint(BrandColor.accentText)
                 Toggle("Active", isOn: $isActive).tint(BrandColor.accent)
+                Toggle("Remind me", isOn: $remindersOn)
+                    .tint(BrandColor.accent)
+                    .onChange(of: remindersOn) { _, on in
+                        if on { Task { await NotificationManager.requestAuthorization() } }
+                    }
+                if remindersOn {
+                    DatePicker("Time", selection: $reminderTime, displayedComponents: [.hourAndMinute])
+                        .tint(BrandColor.accentText)
+                }
                 TextField("Notes (optional)", text: $notes, axis: .vertical)
             }
         }
@@ -165,6 +176,7 @@ struct ProtocolBuilderView: View {
     private func save() {
         guard let d = doseValue else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)
+        let time = Calendar.current.dateComponents([.hour, .minute], from: reminderTime)
         let entry = SavedProtocol(
             name: trimmedName.isEmpty ? compound.name : trimmedName,
             compoundName: compound.name,
@@ -174,7 +186,10 @@ struct ProtocolBuilderView: View {
             weekdays: usesWeekdays ? weekdays.sorted() : [],
             startDate: startDate,
             isActive: isActive,
-            notes: notes
+            notes: notes,
+            remindersOn: remindersOn,
+            reminderHour: time.hour ?? 9,
+            reminderMinute: time.minute ?? 0
         )
         context.insert(entry)
         try? context.save()

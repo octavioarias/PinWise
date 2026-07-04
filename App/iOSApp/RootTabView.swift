@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// The five app sections. Order is deliberate: Log sits in the center to make logging a
 /// dose the most reachable action.
@@ -11,6 +12,12 @@ enum AppTab: Hashable {
 /// vertical offset), so the bar stays standard-height and aligned.
 struct RootTabView: View {
     @State private var selected: AppTab = .home
+    @Query(sort: \SavedProtocol.startDate) private var protocols: [SavedProtocol]
+
+    /// Changes whenever a reminder-relevant field changes, re-triggering scheduling.
+    private var reminderSignature: String {
+        protocols.map { "\($0.id.uuidString)|\($0.remindersOn)|\($0.isActive)|\($0.reminderHour):\($0.reminderMinute)|\($0.scheduleKindRaw)|\($0.intervalDays)|\($0.weekdays)" }.joined()
+    }
 
     var body: some View {
         Group {
@@ -28,6 +35,9 @@ struct RootTabView: View {
         .tint(BrandColor.accent)
         .preferredColorScheme(.dark)
         .edgeGlow() // ambient accent glow around the screen edges
+        .task(id: reminderSignature) {
+            await NotificationManager.reschedule(protocols: protocols)
+        }
     }
 }
 

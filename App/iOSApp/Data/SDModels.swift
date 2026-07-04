@@ -65,15 +65,20 @@ final class SavedProtocol {
     var startDate: Date = Date()
     var isActive: Bool = true
     var notes: String = ""
+    var remindersOn: Bool = false
+    var reminderHour: Int = 9
+    var reminderMinute: Int = 0
 
     init(
         id: UUID = UUID(), name: String = "", compoundName: String = "", doseMicrograms: Double = 0,
         scheduleKindRaw: String = "daily", intervalDays: Int = 1, weekdays: [Int] = [],
-        startDate: Date = Date(), isActive: Bool = true, notes: String = ""
+        startDate: Date = Date(), isActive: Bool = true, notes: String = "",
+        remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0
     ) {
         self.id = id; self.name = name; self.compoundName = compoundName; self.doseMicrograms = doseMicrograms
         self.scheduleKindRaw = scheduleKindRaw; self.intervalDays = intervalDays; self.weekdays = weekdays
         self.startDate = startDate; self.isActive = isActive; self.notes = notes
+        self.remindersOn = remindersOn; self.reminderHour = reminderHour; self.reminderMinute = reminderMinute
     }
 }
 

@@ -9,6 +9,7 @@ struct LogView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
 
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
@@ -225,6 +226,10 @@ struct LogView: View {
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )
         context.insert(entry)
+        // Cohesion: draw this dose from a matching vial that still has doses left.
+        if let vial = vials.first(where: { $0.compoundName == compound.name && $0.dosesTaken < $0.totalDoses }) {
+            vial.dosesTaken += 1
+        }
         try? context.save()
 
         doseText = ""
