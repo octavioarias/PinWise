@@ -1,0 +1,286 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-04T19:49:21.628Z",
+  "items": [
+    {
+      "id": "pm-42385950",
+      "headline": "Effects of retatrutide on learning and memory in streptozotocin-induced male diabetic rats",
+      "summary": "Published in Behav Brain Res (2026 Jul 1). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Retatrutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42385950)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42385950/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-04T19:49:21.080Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 100,
+      "isMajorUpdate": true
+    },
+    {
+      "id": "pm-42394981",
+      "headline": "Efficacy and safety of incretin-based therapies in patients with type 2 diabetes mellitus…",
+      "summary": "Published in Front Pharmacol (2026). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Retatrutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42394981)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42394981/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-04T19:49:21.080Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 95,
+      "isMajorUpdate": true
+    },
+    {
+      "id": "pm-42399213",
+      "headline": "Wernicke's Encephalopathy Following Semaglutide Treatment for Obesity: A Systematic PRISM…",
+      "summary": "Published in Obesity (Silver Spring) (2026 Jul 3). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42399213)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42399213/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-04T19:49:19.918Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 90,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "pm-42399637",
+      "headline": "PCSK5 promotes angiogenesis and cardiac repair after myocardial infarction",
+      "summary": "Published in Nat Commun (2026 Jul 3). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42399637)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42399637/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-04T19:49:19.909Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 85,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT06640972",
+      "headline": "Effects of RDX-002 on Postprandial Triglycerides in Patients Discontinuing GLP-1 Agonists",
+      "summary": "PHASE2 trial for Triglycerides, Weight Gain Trajectory. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-07-02.",
+      "category": "Trial results",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT06640972)",
+          "url": "https://clinicaltrials.gov/study/NCT06640972",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-02",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 80,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07627191",
+      "headline": "GLP-1 RA Plus SOC Treatment in First-line, Metastatic Pancreatic, Colorectal, or Hepatoce…",
+      "summary": "EARLY PHASE1 trial for Pancreatic Cancer, Colorectal Cancer. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-02.",
+      "category": "Trial results",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07627191)",
+          "url": "https://clinicaltrials.gov/study/NCT07627191",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-02",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 75,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07021937",
+      "headline": "Brain Plasticity and GLP-1 Receptor Agonist Treatment for Obesity",
+      "summary": "PHASE3 trial for Obesity/Therapy. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-02.",
+      "category": "Trial results",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07021937)",
+          "url": "https://clinicaltrials.gov/study/NCT07021937",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-02",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 70,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07573163",
+      "headline": "Tirzepatide Following Adrenalectomy in Mild Autonomous Cortisol Secretion",
+      "summary": "PHASE2 trial for Mild Autonomous Cortisol Secretion (MACS), Adrenalectomy; Status. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-01.",
+      "category": "Trial results",
+      "compounds": [
+        "Tirzepatide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07573163)",
+          "url": "https://clinicaltrials.gov/study/NCT07573163",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-01",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 65,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07444073",
+      "headline": "Assessing Biological Aging in a Real-World Medical Weight Loss Program Using the LinAge2…",
+      "summary": "trial for Aging, Obesity & Overweight. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-01.",
+      "category": "Trial results",
+      "compounds": [
+        "Tirzepatide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07444073)",
+          "url": "https://clinicaltrials.gov/study/NCT07444073",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-01",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 60,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07165028",
+      "headline": "A Master Protocol of Multiple Agents in Adults With Metabolic Dysfunction-Associated Stea…",
+      "summary": "PHASE3 trial for Metabolic Dysfunction-Associated Steatotic Liver Disease. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-06-23.",
+      "category": "Trial results",
+      "compounds": [
+        "Retatrutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07165028)",
+          "url": "https://clinicaltrials.gov/study/NCT07165028",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-06-23",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 55,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT06982846",
+      "headline": "A Study to Investigate the Response of Participants With Type 2 Diabetes Mellitus on Once…",
+      "summary": "PHASE1 trial for Type 2 Diabetes Mellitus. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-06-18.",
+      "category": "Trial results",
+      "compounds": [
+        "Retatrutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT06982846)",
+          "url": "https://clinicaltrials.gov/study/NCT06982846",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-06-18",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 50,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT06383390",
+      "headline": "The Effect of Retatrutide Once Weekly on Cardiovascular Outcomes and Kidney Outcomes in A…",
+      "summary": "PHASE3 trial for Atherosclerotic Cardiovascular Disease (ASCVD), Chronic Kidney Disease (CKD). According to ClinicalTrials.gov, its status is ACTIVE_NOT_RECRUITING, last updated 2026-06-17.",
+      "category": "Trial results",
+      "compounds": [
+        "Retatrutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT06383390)",
+          "url": "https://clinicaltrials.gov/study/NCT06383390",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-06-17",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 45,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT06554717",
+      "headline": "Tesamorelin as an Adjunct to Exercise for Improving Physical Function in HIV",
+      "summary": "PHASE2 trial for HIV-1-infection, Frailty. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-05-19.",
+      "category": "Trial results",
+      "compounds": [
+        "Tesamorelin"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT06554717)",
+          "url": "https://clinicaltrials.gov/study/NCT06554717",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-05-19",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 40,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT03226821",
+      "headline": "Body Composition and Adipose Tissue in HIV",
+      "summary": "PHASE4 trial for HIV Lipodystrophy Syndrome, Growth Hormone Deficiency. According to ClinicalTrials.gov, its status is TERMINATED, last updated 2026-05-19.",
+      "category": "Trial results",
+      "compounds": [
+        "Tesamorelin"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT03226821)",
+          "url": "https://clinicaltrials.gov/study/NCT03226821",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-05-19",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 35,
+      "isMajorUpdate": false
+    }
+  ]
+}

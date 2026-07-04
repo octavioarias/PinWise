@@ -19,8 +19,8 @@ private extension NewsCategory {
 }
 
 struct NewsView: View {
-    private let feed: NewsFeed = (try? NewsFeed.decodeSample())
-        ?? NewsFeed(version: 0, generatedAt: "", items: [])
+    @State private var loader = NewsFeedLoader()
+    private var feed: NewsFeed { loader.feed }
 
     var body: some View {
         NavigationStack {
@@ -51,6 +51,7 @@ struct NewsView: View {
             }
             .heroScreen()
             .navigationTitle("News")
+            .task { await loader.load() }
         }
     }
 
