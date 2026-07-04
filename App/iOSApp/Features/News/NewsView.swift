@@ -29,6 +29,7 @@ struct NewsView: View {
                     header
 
                     if let featured = feed.trending.first {
+                        SectionHeader(title: "Popular")
                         NavigationLink { NewsDetailView(item: featured) } label: {
                             FeaturedNewsCard(item: featured)
                         }
@@ -57,12 +58,10 @@ struct NewsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text("The state of peptides,\nin plain language.")
+            Text("News")
                 .font(Typo.displayL)
                 .textCase(.uppercase)
                 .foregroundStyle(BrandColor.textPrimary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(2)
             Text("Trials, results, and regulatory news — summarized clearly and linked to the source.")
                 .font(Typo.body)
                 .foregroundStyle(BrandColor.textSecondary)

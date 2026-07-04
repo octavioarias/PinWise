@@ -10,6 +10,7 @@ struct ToolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
+                    HealthWidget()
                     LazyVGrid(columns: columns, spacing: Space.md) {
                         ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill") {
                             ReconstitutionCalculatorView()
