@@ -9,7 +9,7 @@ import Foundation
 /// (Isabella Cruz advisor doc) before launch.
 public enum Disclaimer {
     /// Bump when the acceptance copy materially changes, to re-prompt users for consent.
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     /// The short, always-visible line for calculator and dosing surfaces.
     public static let calculator = """
@@ -30,7 +30,9 @@ public enum Disclaimer {
     PinWise is a personal tracking and organization tool. It is not a medical device, \
     does not diagnose or treat any condition, and does not provide medical advice or dosing \
     recommendations. You are responsible for your own health decisions — always consult a \
-    qualified healthcare provider. By continuing you acknowledge this.
+    qualified healthcare provider. The information you enter — including logs, protocols, and \
+    any Apple Health data you connect — is stored on your device and in any backup you choose \
+    to enable. By continuing you acknowledge this.
     """
 
     /// Footer stamped onto exported reports.

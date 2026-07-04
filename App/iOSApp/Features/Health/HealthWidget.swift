@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Compact health snapshot shown at the top of the Tools tab. Surfaces the three signals most
 /// worth watching alongside a dosing protocol — body weight, resting heart rate, and HRV —
-/// or a connect prompt if Apple Health isn't linked yet. Read-only; stays on device.
+/// or a connect prompt if Apple Health isn't linked yet. Read-only.
 struct HealthWidget: View {
     @State private var health = HealthManager.shared
     @State private var requesting = false
@@ -37,7 +37,7 @@ struct HealthWidget: View {
                         metric("HRV (ms)", hrvText, "waveform.path.ecg")
                     }
                 } else {
-                    Text("Connect Apple Health to see weight, resting heart rate, and HRV next to your logs. Data from Oura, Whoop, and similar wearables shows up here too. Nothing leaves your device.")
+                    Text("Connect Apple Health to see weight, resting heart rate, and HRV next to your logs. Data from Oura, Whoop, and similar wearables shows up here too.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                     Button {
                         Task { requesting = true; await health.requestAuthorization(); requesting = false }

@@ -32,7 +32,7 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
-        NSHealthShareUsageDescription: "PinWise can display weight and body metrics you choose to share from Health, alongside your own logs. Your health data stays on your device."
+        NSHealthShareUsageDescription: "PinWise displays the weight, heart-rate, and HRV values you choose to share from Health alongside your dose logs."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
     entitlements:

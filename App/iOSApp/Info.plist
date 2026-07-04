@@ -23,7 +23,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>PinWise can display weight and body metrics you choose to share from Health, alongside your own logs. Your health data stays on your device.</string>
+	<string>PinWise displays the weight, heart-rate, and HRV values you choose to share from Health alongside your dose logs.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

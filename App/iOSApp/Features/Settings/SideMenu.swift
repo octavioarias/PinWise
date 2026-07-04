@@ -11,22 +11,27 @@ struct SideMenuDrawer: View {
         GeometryReader { geo in
             let width = geo.size.width * 0.85
             let topInset = geo.safeAreaInsets.top
+            // Nothing renders while closed — the drawer is fully absent until opened, then it
+            // slides in from the left and stops at 85% width, leaving the dimmed page beyond it.
             ZStack(alignment: .leading) {
                 if isOpen {
                     Color.black.opacity(0.55)
                         .ignoresSafeArea()
+                        .contentShape(Rectangle())
                         .onTapGesture { isOpen = false }
                         .transition(.opacity)
+
+                    panel(topInset: topInset)
+                        .frame(width: width, alignment: .topLeading)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .background(BrandColor.surface)
+                        .overlay(alignment: .trailing) {
+                            Rectangle().fill(BrandColor.stroke).frame(width: 0.5)
+                        }
+                        .ignoresSafeArea()
+                        .shadow(color: .black.opacity(0.45), radius: 24, x: 8)
+                        .transition(.move(edge: .leading))
                 }
-                panel(topInset: topInset)
-                    .frame(width: width)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .background(BrandColor.surface.ignoresSafeArea())
-                    .overlay(alignment: .trailing) {
-                        Rectangle().fill(BrandColor.stroke).frame(width: 0.5).ignoresSafeArea()
-                    }
-                    .shadow(color: .black.opacity(0.45), radius: 24, x: 8)
-                    .offset(x: isOpen ? 0 : -(width + 48))
             }
             .animation(.spring(response: 0.38, dampingFraction: 0.9), value: isOpen)
         }
@@ -36,12 +41,24 @@ struct SideMenuDrawer: View {
 
     private func panel(topInset: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("PinWise")
-                .font(.system(size: 26, weight: .black))
-                .foregroundStyle(BrandColor.textPrimary)
-                .padding(.top, topInset + Space.md)
-                .padding(.horizontal, Space.xl)
-                .padding(.bottom, Space.xl)
+            HStack {
+                Text("PinWise")
+                    .font(.system(size: 26, weight: .black))
+                    .foregroundStyle(BrandColor.textPrimary)
+                Spacer()
+                Button { isOpen = false } label: {
+                    Image(systemName: "xmark")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(BrandColor.textSecondary)
+                        .frame(width: 40, height: 40)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close menu")
+            }
+            .padding(.top, topInset + Space.md)
+            .padding(.horizontal, Space.xl)
+            .padding(.bottom, Space.xl)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -128,11 +145,6 @@ struct ProfileView: View {
                     }
                 }
             }
-            Card {
-                Text("Your logs, protocols, and health data stay on this device.")
-                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
     }
 }
@@ -140,7 +152,7 @@ struct ProfileView: View {
 struct HealthConnectionsView: View {
     var body: some View {
         MenuSheet(title: "Apple Health") {
-            Text("Connect Apple Health to see the metrics that matter alongside your doses. It's read-only and stays on your device.")
+            Text("Connect Apple Health to see the metrics that matter alongside your doses.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
             Card {

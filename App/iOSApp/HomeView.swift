@@ -143,7 +143,7 @@ struct HomeView: View {
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("Log your first dose").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text("Tap below (or the ＋ in the tab bar) to record a dose. Everything stays on your device.")
+                    Text("Tap below (or the ＋ in the tab bar) to record your first dose.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     PrimaryButton(title: "Log a dose", systemImage: "plus") { selected = .log }
                         .padding(.top, Space.sm)
