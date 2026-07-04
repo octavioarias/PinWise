@@ -27,8 +27,9 @@ extension Color {
 //   white-on-accent 7.6 · accent-on-white 7.6 · success 8.1 · warning 7.6 · danger 4.8 (chip)
 // The deep `accent` as text on dark is only 2.6:1 — so text/links on dark use `accentText`.
 enum BrandColor {
-    // 60% — dominant neutral: a deliberately blue-biased near-black (not gray).
-    static let background = Color(hex: 0x06070E)
+    // 60% — dominant neutral: a deeper blue-biased near-black (not gray). Kept very dark so the
+    // ambient blue edge glow reads clearly against it (per the reference look).
+    static let background = Color(hex: 0x04050B)
     // 30% — secondary surfaces / cards.
     static let surface = Color(hex: 0x0F1120)
     static let surfaceElevated = Color(hex: 0x171A2C)
@@ -118,17 +119,17 @@ extension View {
     /// glow around the device previews. Apply once at the app root.
     // Uses the LIGHTER accent (`accentText`) — the deep accent on near-black is ~2.6:1 and
     // reads as invisible once blurred. A dedicated bright glow tone shows on the dark edges.
-    func edgeGlow(_ color: Color = BrandColor.accentText, strength: Double = 0.85) -> some View {
+    func edgeGlow(_ color: Color = BrandColor.accentText, strength: Double = 0.95) -> some View {
         overlay {
-            RoundedRectangle(cornerRadius: 48, style: .continuous)
+            RoundedRectangle(cornerRadius: 52, style: .continuous)
                 .strokeBorder(
                     LinearGradient(
-                        colors: [color, color.opacity(0.5), color.opacity(0.85)],
+                        colors: [color, color.opacity(0.45), color.opacity(0.9)],
                         startPoint: .top, endPoint: .bottom
                     ),
-                    lineWidth: 3
+                    lineWidth: 4
                 )
-                .blur(radius: 9)
+                .blur(radius: 11)
                 .opacity(strength)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
