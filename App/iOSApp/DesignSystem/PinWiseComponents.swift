@@ -190,6 +190,41 @@ struct EvidenceBadge: View {
     }
 }
 
+/// An Apple-health-style circular adherence ring. Accessible (label + value), static (no
+/// motion) so it respects Reduce Motion by default.
+struct AdherenceRing: View {
+    let fraction: Double
+    var size: CGFloat = 88
+
+    private var clamped: Double { max(0, min(1, fraction)) }
+    private var pct: Int { Int((clamped * 100).rounded()) }
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(BrandColor.surfaceElevated, lineWidth: 9)
+            Circle()
+                .trim(from: 0, to: max(0.0001, clamped))
+                .stroke(
+                    AngularGradient(colors: [BrandColor.accentText, BrandColor.success, BrandColor.accentText], center: .center),
+                    style: StrokeStyle(lineWidth: 9, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 0) {
+                Text("\(pct)%")
+                    .font(.system(size: 20, weight: .black)).monospacedDigit()
+                    .foregroundStyle(BrandColor.textPrimary)
+                Text("ADHERENCE")
+                    .font(.system(size: 8.5, weight: .semibold)).tracking(0.5)
+                    .foregroundStyle(BrandColor.textSecondary)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Adherence")
+        .accessibilityValue("\(pct) percent over the last 14 days")
+    }
+}
+
 extension View {
     /// Styles a text/number field as a themed input (elevated surface, hairline border).
     func pinwiseField() -> some View {

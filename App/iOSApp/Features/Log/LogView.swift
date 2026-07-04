@@ -2,13 +2,13 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The Log tab — the fastest path to record a dose. The form is inline (no extra taps),
-/// with sensible defaults: the compound's preferred unit is preselected, an injection site
-/// is auto-suggested from history (least-recently-used, via PeptideKit's SiteRotationAdvisor),
-/// and the time defaults to now but is editable for backfilling past/late doses.
+/// The Log tab — the fastest path to record a dose. Quick-fill chips pull from active
+/// protocols; sensible defaults (preferred unit, auto-suggested site, "now" timestamp with
+/// backfill) keep it to a couple taps. A success haptic confirms the save.
 struct LogView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
+    @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
 
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
@@ -20,7 +20,9 @@ struct LogView: View {
     @State private var energy: Double = 5
     @State private var sideEffect: Double = 0
     @State private var savedConfirmation = false
+    @State private var savedCount = 0
 
+    private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var doseValue: Double? {
         guard let d = Double(doseText), d > 0 else { return nil }
         return d
@@ -34,12 +36,11 @@ struct LogView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Text("Log a dose")
-                        .font(Typo.displayL)
-                        .textCase(.uppercase)
+                        .font(Typo.displayL).textCase(.uppercase)
                         .foregroundStyle(BrandColor.textPrimary)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
+                        .minimumScaleFactor(0.7).lineLimit(1)
 
+                    if !activeProtocols.isEmpty { quickFill }
                     compoundCard
                     doseCard
                     siteCard
@@ -47,17 +48,13 @@ struct LogView: View {
                     metricsCard
 
                     PrimaryButton(title: savedConfirmation ? "Logged ✓" : "Log dose",
-                                  systemImage: savedConfirmation ? "checkmark" : "plus") {
-                        save()
-                    }
-                    .disabled(doseValue == nil)
-                    .opacity(doseValue == nil ? 0.5 : 1)
+                                  systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
+                        .disabled(doseValue == nil)
+                        .opacity(doseValue == nil ? 0.5 : 1)
 
                     if !recent.isEmpty {
                         SectionHeader(title: "Recent")
-                        ForEach(Array(recent.prefix(12)), id: \.id) { entry in
-                            recentRow(entry)
-                        }
+                        ForEach(Array(recent.prefix(12)), id: \.id) { entry in recentRow(entry) }
                     }
                 }
                 .padding(Space.lg)
@@ -65,6 +62,7 @@ struct LogView: View {
             .heroScreen()
             .navigationTitle("Log")
             .navigationBarTitleDisplayMode(.inline)
+            .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
                 doseUnit = compound.preferredDoseUnit
                 if site == nil { site = suggestedSite }
@@ -74,28 +72,43 @@ struct LogView: View {
         }
     }
 
-    // MARK: - Cards
+    private var quickFill: some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            SectionHeader(title: "Quick-fill from protocol")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Space.sm) {
+                    ForEach(activeProtocols, id: \.id) { p in
+                        Button { prefill(from: p) } label: {
+                            Text("\(p.name) · \(p.dose.displayString)")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
+                                .background(BrandColor.surfaceElevated, in: Capsule())
+                                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: 1))
+                                .foregroundStyle(BrandColor.textPrimary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Fills the form from this protocol")
+                    }
+                }
+            }
+        }
+    }
 
     private var compoundCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.sm) {
                 SectionHeader(title: "Compound")
                 Picker("Compound", selection: $compound) {
-                    ForEach(CompoundCatalog.all, id: \.id) { c in
-                        Text(c.name).tag(c)
-                    }
+                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
                 }
-                .pickerStyle(.menu)
-                .tint(BrandColor.accentText)
+                .pickerStyle(.menu).tint(BrandColor.accentText)
                 HStack(spacing: Space.sm) {
                     EvidenceBadge(tier: compound.evidenceTier)
                     if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
                     Spacer()
                 }
                 if compound.requiresResearchDisclaimer {
-                    Text(Disclaimer.researchCompound)
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textSecondary)
+                    Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }
@@ -106,13 +119,11 @@ struct LogView: View {
             VStack(alignment: .leading, spacing: Space.sm) {
                 SectionHeader(title: "Dose")
                 HStack {
-                    TextField("Amount", text: $doseText)
-                        .keyboardType(.decimalPad)
+                    TextField("Amount", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                     Picker("", selection: $doseUnit) {
                         ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 130)
+                    .pickerStyle(.segmented).frame(width: 120)
                 }
             }
         }
@@ -124,17 +135,13 @@ struct LogView: View {
                 SectionHeader(title: "Injection site")
                 Picker("Site", selection: $site) {
                     Text("Not set").tag(Optional<InjectionSite>.none)
-                    ForEach(InjectionSite.allCases) { s in
-                        Text(s.displayName).tag(Optional(s))
-                    }
+                    ForEach(InjectionSite.allCases) { s in Text(s.displayName).tag(Optional(s)) }
                 }
-                .pickerStyle(.menu)
-                .tint(BrandColor.accentText)
+                .pickerStyle(.menu).tint(BrandColor.accentText)
                 if let suggested = suggestedSite, suggested != site {
                     Button { site = suggested } label: {
                         Label("Suggest: \(suggested.displayName)", systemImage: "sparkles")
-                            .font(.caption)
-                            .foregroundStyle(BrandColor.accentText)
+                            .font(.caption).foregroundStyle(BrandColor.accentText)
                     }
                 }
             }
@@ -185,25 +192,26 @@ struct LogView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                     Text(entry.dose.displayString + (entry.site.map { " · \($0.displayName)" } ?? ""))
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textSecondary)
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Spacer()
                 Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
-                    .font(.caption)
-                    .foregroundStyle(BrandColor.textSecondary)
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
         }
         .contextMenu {
-            Button(role: .destructive) {
-                context.delete(entry)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
+            Button(role: .destructive) { context.delete(entry) } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
-    // MARK: - Save
+    private func prefill(from p: SavedProtocol) {
+        if let c = CompoundCatalog.all.first(where: { $0.name == p.compoundName }) {
+            compound = c
+            doseUnit = c.preferredDoseUnit
+        }
+        let v = p.dose.value(in: doseUnit)
+        doseText = v == v.rounded() ? String(Int(v)) : String(v)
+    }
 
     private func save() {
         guard let d = doseValue else { return }
@@ -219,11 +227,11 @@ struct LogView: View {
         context.insert(entry)
         try? context.save()
 
-        // Reset for the next entry (keep the compound selected).
         doseText = ""
         notes = ""
         timestamp = Date()
         site = suggestedSite
         savedConfirmation = true
+        savedCount += 1   // triggers the success haptic
     }
 }
