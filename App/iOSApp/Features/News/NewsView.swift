@@ -194,42 +194,40 @@ struct NewsView: View {
     }
 }
 
-/// The lead story: a large image banner with the headline overlaid.
+/// The lead story: a prominent, text-forward card (chips → headline → summary → sources).
+/// Uses theme tokens so it reads correctly in both light and dark mode.
 struct FeaturedNewsCard: View {
     let item: NewsItem
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            FeedImage(urlString: item.imageURL, tint: item.category.tint)
-                .frame(height: 200)
-            // Strong scrim so the white headline stays legible over any gradient/image — this
-            // matters most in light mode, where the underlying gradient can be pale.
-            LinearGradient(
-                colors: [.black.opacity(0.15), .black.opacity(0.5), .black.opacity(0.9)],
-                startPoint: .top, endPoint: .bottom
-            )
-            VStack(alignment: .leading, spacing: Space.sm) {
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
                 HStack(spacing: Space.sm) {
                     TagChip(text: item.category.rawValue, color: item.category.tint)
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
+                    Spacer()
+                    Text(String(item.publishedAt.prefix(10)))
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text(item.headline)
                     .font(Typo.title)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(BrandColor.textPrimary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(item.summary)
+                    .font(Typo.body)
+                    .foregroundStyle(BrandColor.textSecondary)
                     .lineLimit(3)
-                    .shadow(color: .black.opacity(0.55), radius: 5, y: 1)
+                HStack(spacing: Space.xs) {
+                    Image(systemName: "checkmark.seal.fill").font(.caption2)
+                    Text("\(item.sources.count) source\(item.sources.count == 1 ? "" : "s")")
+                        .font(.caption.weight(.semibold))
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                }
+                .foregroundStyle(BrandColor.success)
             }
-            .padding(Space.lg)
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 200)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(BrandColor.stroke, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
     }
 }
 
