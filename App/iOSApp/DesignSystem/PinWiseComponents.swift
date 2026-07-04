@@ -96,6 +96,30 @@ struct StatTile: View {
     }
 }
 
+/// A guided input: a plain-language question, an optional one-line hint about what to enter
+/// and why, then the control. Keeps the calculators understandable without prior knowledge.
+struct FieldRow<Content: View>: View {
+    let title: String
+    let hint: String?
+    let content: Content
+
+    init(_ title: String, hint: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.hint = hint
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text(title).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+            if let hint {
+                Text(hint).font(.caption).foregroundStyle(BrandColor.textSecondary)
+            }
+            content.padding(.top, 2)
+        }
+    }
+}
+
 struct SectionHeader: View {
     let title: String
     var body: some View {

@@ -1,7 +1,7 @@
 import SwiftUI
 import PeptideKit
 
-/// The Tools tab — a grid of calculators, each backed by verified PeptideKit logic.
+/// The Tools tab — a grid of plain-language calculators, each backed by verified PeptideKit.
 struct ToolsView: View {
     private let columns = [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)]
 
@@ -11,16 +11,16 @@ struct ToolsView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
                     LazyVGrid(columns: columns, spacing: Space.md) {
-                        ToolCard(title: "Reconstitution", subtitle: "Powder or pre-mixed → units", systemImage: "syringe.fill") {
+                        ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill") {
                             ReconstitutionCalculatorView()
                         }
-                        ToolCard(title: "Reverse dose", subtitle: "Units drawn → dose", systemImage: "arrow.uturn.backward") {
+                        ToolCard(title: "Check a dose", subtitle: "What a draw equals", systemImage: "arrow.uturn.backward") {
                             ReverseDoseView()
                         }
-                        ToolCard(title: "Blend", subtitle: "One draw → each component", systemImage: "circle.grid.2x2.fill") {
+                        ToolCard(title: "Blend", subtitle: "Doses in a mixed vial", systemImage: "circle.grid.2x2.fill") {
                             BlendCalculatorView()
                         }
-                        ToolCard(title: "Titration", subtitle: "GLP-1 escalation schedule", systemImage: "chart.line.uptrend.xyaxis") {
+                        ToolCard(title: "Ramp-up plan", subtitle: "GLP-1 dose schedule", systemImage: "chart.line.uptrend.xyaxis") {
                             TitrationPreviewView()
                         }
                     }
@@ -38,7 +38,7 @@ struct ToolsView: View {
             Text("Tools")
                 .font(Typo.displayL).textCase(.uppercase)
                 .foregroundStyle(BrandColor.textPrimary)
-            Text("Calculators for accurate, confident dosing.")
+            Text("Simple calculators — pick one and answer a couple of questions.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -73,7 +73,14 @@ private struct ToolCard<Destination: View>: View {
     }
 }
 
-// MARK: - Reverse dose (units drawn → dose)
+private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
+    Picker("", selection: binding) {
+        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+    }
+    .pickerStyle(.segmented).frame(width: 120)
+}
+
+// MARK: - Check a dose (units drawn → dose)
 
 struct ReverseDoseView: View {
     @State private var massText = "5"
@@ -91,37 +98,39 @@ struct ReverseDoseView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
+                Text("Already drew a dose? See how much that actually is.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+
                 Card {
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Vial")
-                        HStack {
-                            TextField("Amount", text: $massText).keyboardType(.decimalPad).pinwiseField()
-                            unitPicker($massUnit)
+                    VStack(alignment: .leading, spacing: Space.lg) {
+                        FieldRow("How much peptide was in the vial?", hint: "The amount on the vial label.") {
+                            HStack {
+                                TextField("e.g. 5", text: $massText).keyboardType(.decimalPad).pinwiseField()
+                                unitPicker($massUnit)
+                            }
                         }
-                        HStack {
-                            TextField("Water", text: $solventText).keyboardType(.decimalPad).pinwiseField()
-                            Text("mL").foregroundStyle(BrandColor.textSecondary)
+                        FieldRow("How much water was added?", hint: "The water it was mixed with.") {
+                            HStack {
+                                TextField("e.g. 2", text: $solventText).keyboardType(.decimalPad).pinwiseField()
+                                Text("mL").foregroundStyle(BrandColor.textSecondary)
+                            }
+                        }
+                        FieldRow("How many units did you draw?", hint: "The mark you filled to on the syringe.") {
+                            HStack {
+                                TextField("e.g. 10", text: $unitsText).keyboardType(.decimalPad).pinwiseField()
+                                Text("units").foregroundStyle(BrandColor.textSecondary)
+                            }
                         }
                     }
                 }
-                Card {
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Drawn")
-                        HStack {
-                            TextField("Units", text: $unitsText).keyboardType(.decimalPad).pinwiseField()
-                            Text("units").foregroundStyle(BrandColor.textSecondary)
-                        }
-                        Picker("Syringe", selection: $syringe) {
-                            ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.menu).tint(BrandColor.accentText)
-                    }
-                }
+
+                syringeAdvanced($syringe)
+
                 if let d = dose {
                     Card {
-                        VStack(alignment: .leading, spacing: Space.md) {
-                            SectionHeader(title: "That's about")
-                            StatTile(label: "Dose", value: d.displayString, emphasized: true)
+                        VStack(alignment: .leading, spacing: Space.sm) {
+                            Text("YOU DREW ABOUT").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
+                            Text(d.displayString).font(Typo.numberXL).foregroundStyle(BrandColor.accentText)
                         }
                     }
                 }
@@ -130,15 +139,8 @@ struct ReverseDoseView: View {
             .padding(Space.lg)
         }
         .heroScreen()
-        .navigationTitle("Reverse dose")
+        .navigationTitle("Check a dose")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
-        Picker("", selection: binding) {
-            ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-        }
-        .pickerStyle(.segmented).frame(width: 120)
     }
 }
 
@@ -158,13 +160,17 @@ struct BlendCalculatorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
+                Text("A vial with more than one peptide? See how much of each you get per shot.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Blend")
-                        Picker("Blend", selection: $blend) {
-                            ForEach(BlendPresets.all, id: \.id) { Text($0.name).tag($0) }
+                        FieldRow("Which blend?", hint: "Pick a common blend, or the closest match.") {
+                            Picker("Blend", selection: $blend) {
+                                ForEach(BlendPresets.all, id: \.id) { Text($0.name).tag($0) }
+                            }
+                            .pickerStyle(.menu).tint(BrandColor.accentText)
                         }
-                        .pickerStyle(.menu).tint(BrandColor.accentText)
                         ForEach(blend.components) { c in
                             HStack {
                                 Text(c.name).font(.caption).foregroundStyle(BrandColor.textSecondary)
@@ -175,26 +181,27 @@ struct BlendCalculatorView: View {
                     }
                 }
                 Card {
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Mix & draw")
-                        HStack {
-                            TextField("Water", text: $solventText).keyboardType(.decimalPad).pinwiseField()
-                            Text("mL").foregroundStyle(BrandColor.textSecondary)
+                    VStack(alignment: .leading, spacing: Space.lg) {
+                        FieldRow("How much water did you add?", hint: "The water you mixed the vial with.") {
+                            HStack {
+                                TextField("e.g. 2", text: $solventText).keyboardType(.decimalPad).pinwiseField()
+                                Text("mL").foregroundStyle(BrandColor.textSecondary)
+                            }
                         }
-                        HStack {
-                            TextField("Draw", text: $unitsText).keyboardType(.decimalPad).pinwiseField()
-                            Text("units").foregroundStyle(BrandColor.textSecondary)
+                        FieldRow("How many units do you draw?", hint: "The mark you fill to on the syringe.") {
+                            HStack {
+                                TextField("e.g. 20", text: $unitsText).keyboardType(.decimalPad).pinwiseField()
+                                Text("units").foregroundStyle(BrandColor.textSecondary)
+                            }
                         }
-                        Picker("Syringe", selection: $syringe) {
-                            ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.menu).tint(BrandColor.accentText)
                     }
                 }
+                syringeAdvanced($syringe)
+
                 if let r = result {
                     Card {
                         VStack(alignment: .leading, spacing: Space.md) {
-                            SectionHeader(title: "Each dose delivers")
+                            Text("EACH SHOT GIVES YOU").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
                             ForEach(r.components) { comp in
                                 HStack {
                                     Text(comp.name).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
@@ -215,7 +222,7 @@ struct BlendCalculatorView: View {
     }
 }
 
-// MARK: - Titration schedule preview
+// MARK: - Ramp-up plan (titration schedule)
 
 struct TitrationPreviewView: View {
     @State private var template: TitrationTemplate = TitrationTemplates.wegovy
@@ -228,20 +235,26 @@ struct TitrationPreviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
+                Text("See how a GLP-1 dose typically steps up over the first weeks.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+
                 Card {
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Template")
-                        Picker("Template", selection: $template) {
-                            ForEach(TitrationTemplates.all, id: \.id) { Text($0.name).tag($0) }
+                    VStack(alignment: .leading, spacing: Space.lg) {
+                        FieldRow("Which plan?", hint: "Based on each product's label.") {
+                            Picker("Plan", selection: $template) {
+                                ForEach(TitrationTemplates.all, id: \.id) { Text($0.name).tag($0) }
+                            }
+                            .pickerStyle(.menu).tint(BrandColor.accentText)
                         }
-                        .pickerStyle(.menu).tint(BrandColor.accentText)
-                        DatePicker("Start date", selection: $startDate, displayedComponents: [.date])
-                            .tint(BrandColor.accentText)
+                        FieldRow("Starting when?") {
+                            DatePicker("", selection: $startDate, displayedComponents: [.date])
+                                .labelsHidden().tint(BrandColor.accentText)
+                        }
                     }
                 }
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Schedule")
+                        SectionHeader(title: "Your schedule")
                         ForEach(phases) { phase in
                             HStack(alignment: .firstTextBaseline) {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -251,7 +264,7 @@ struct TitrationPreviewView: View {
                                 }
                                 Spacer()
                                 if template.initiationOnlyStepIndices.contains(phase.id) {
-                                    TagChip(text: "Initiation", color: BrandColor.warning)
+                                    TagChip(text: "Starter", color: BrandColor.warning)
                                 }
                             }
                         }
@@ -262,7 +275,24 @@ struct TitrationPreviewView: View {
             .padding(Space.lg)
         }
         .heroScreen()
-        .navigationTitle("Titration")
+        .navigationTitle("Ramp-up plan")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// Shared "Advanced — syringe type" disclosure (hidden by default; most people use U-100).
+private func syringeAdvanced(_ binding: Binding<SyringeScale>) -> some View {
+    Card {
+        DisclosureGroup {
+            Picker("Syringe type", selection: binding) {
+                ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            Text("Most insulin syringes are U-100. Only change this if yours says otherwise.")
+                .font(.caption).foregroundStyle(BrandColor.textSecondary).padding(.top, Space.xs)
+        } label: {
+            Text("Advanced — syringe type").font(.caption).foregroundStyle(BrandColor.textSecondary)
+        }
+        .tint(BrandColor.accentText)
     }
 }

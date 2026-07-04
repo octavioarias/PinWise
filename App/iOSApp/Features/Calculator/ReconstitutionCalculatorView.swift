@@ -93,13 +93,54 @@ struct ReconstitutionCalculatorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
+                Text("Find out how much to draw into your syringe.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+
                 Picker("", selection: $model.mode) {
-                    ForEach(DoseCalculatorViewModel.Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    Text("Powder + water").tag(DoseCalculatorViewModel.Mode.reconstitute)
+                    Text("Pre-mixed").tag(DoseCalculatorViewModel.Mode.premixed)
                 }
                 .pickerStyle(.segmented)
 
-                if model.mode == .reconstitute { vialCard } else { concentrationCard }
-                doseCard
+                Card {
+                    VStack(alignment: .leading, spacing: Space.lg) {
+                        if model.mode == .reconstitute {
+                            FieldRow("How much peptide is in the vial?", hint: "The amount printed on the vial label.") {
+                                HStack {
+                                    TextField("e.g. 5", text: $model.vialMassText).keyboardType(.decimalPad).pinwiseField()
+                                    unitPicker($model.vialMassUnit)
+                                }
+                            }
+                            FieldRow("How much water did you add?", hint: "The bacteriostatic or sterile water you mixed in.") {
+                                HStack {
+                                    TextField("e.g. 2", text: $model.solventText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                        } else {
+                            FieldRow("What's the concentration?", hint: "On the pharmacy label, e.g. 2.5 mg/mL.") {
+                                HStack {
+                                    TextField("e.g. 2.5", text: $model.concentrationText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                            FieldRow("Vial size (optional)", hint: "Total liquid in the vial — lets us estimate how many doses it holds.") {
+                                HStack {
+                                    TextField("e.g. 4", text: $model.totalVolumeText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                        }
+                        FieldRow("What dose do you want?", hint: "The dose you're aiming for this injection.") {
+                            HStack {
+                                TextField("e.g. 250", text: $model.doseText).keyboardType(.decimalPad).pinwiseField()
+                                unitPicker($model.doseUnit)
+                            }
+                        }
+                    }
+                }
+
+                advancedCard
                 if let r = model.result { resultCard(r) }
                 if let error = model.errorMessage { errorCard(error) }
                 DisclaimerBanner(text: Disclaimer.calculator)
@@ -107,7 +148,7 @@ struct ReconstitutionCalculatorView: View {
             .padding(Space.lg)
         }
         .heroScreen()
-        .navigationTitle("Dose calculator")
+        .navigationTitle("How much to draw")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.recalculate() }
         .onChange(of: model.mode) { _, _ in model.recalculate() }
@@ -121,73 +162,42 @@ struct ReconstitutionCalculatorView: View {
         .onChange(of: model.syringe) { _, _ in model.recalculate() }
     }
 
-    private var vialCard: some View {
+    private var advancedCard: some View {
         Card {
-            VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Vial (powder)")
-                HStack {
-                    TextField("Amount", text: $model.vialMassText).keyboardType(.decimalPad).pinwiseField()
-                    Picker("", selection: $model.vialMassUnit) {
-                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented).frame(width: 120)
-                }
-                HStack {
-                    TextField("Bacteriostatic water", text: $model.solventText).keyboardType(.decimalPad).pinwiseField()
-                    Text("mL").font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                }
-            }
-        }
-    }
-
-    private var concentrationCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Pre-mixed (from pharmacy)")
-                HStack {
-                    TextField("Concentration", text: $model.concentrationText).keyboardType(.decimalPad).pinwiseField()
-                    Text("mg/mL").font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                }
-                HStack {
-                    TextField("Total volume (optional)", text: $model.totalVolumeText).keyboardType(.decimalPad).pinwiseField()
-                    Text("mL").font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                }
-                Text("Enter the strength printed on the label (e.g. 2.5 mg/mL). Total volume gives doses per vial.")
-                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
-            }
-        }
-    }
-
-    private var doseCard: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Desired dose")
-                HStack {
-                    TextField("Dose", text: $model.doseText).keyboardType(.decimalPad).pinwiseField()
-                    Picker("", selection: $model.doseUnit) {
-                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented).frame(width: 120)
-                }
-                Picker("Syringe", selection: $model.syringe) {
+            DisclosureGroup {
+                Picker("Syringe type", selection: $model.syringe) {
                     ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
-                .pickerStyle(.menu).tint(BrandColor.accentText)
+                .pickerStyle(.segmented)
+                Text("Most insulin syringes are U-100. Only change this if yours says otherwise.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary).padding(.top, Space.xs)
+            } label: {
+                Text("Advanced — syringe type").font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
+            .tint(BrandColor.accentText)
         }
     }
+
+    private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
+        Picker("", selection: binding) {
+            ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        }
+        .pickerStyle(.segmented).frame(width: 120)
+    }
+
+    private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
 
     private func resultCard(_ r: DoseDisplay) -> some View {
         Card {
-            VStack(alignment: .leading, spacing: Space.lg) {
-                SectionHeader(title: "Draw to")
-                HStack(spacing: Space.lg) {
-                    StatTile(label: "Syringe units", value: String(format: "%.1f", r.units), emphasized: true)
-                    StatTile(label: "Volume", value: String(format: "%.3f mL", r.volumeMilliliters))
-                }
-                HStack(spacing: Space.lg) {
-                    StatTile(label: "Concentration", value: String(format: "%.0f mcg/mL", r.concentrationMcgPerMl))
-                    StatTile(label: "Doses / vial", value: r.dosesPerVial.map { "\($0)" } ?? "—")
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Text("DRAW TO").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
+                Text("\(fmt(r.units)) units")
+                    .font(Typo.numberXL).foregroundStyle(BrandColor.accentText)
+                Text("= \(String(format: "%.2f", r.volumeMilliliters)) mL on the syringe")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                if let doses = r.dosesPerVial {
+                    Text("About \(doses) doses in this vial.")
+                        .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }
