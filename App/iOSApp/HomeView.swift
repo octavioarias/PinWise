@@ -6,9 +6,9 @@ import PeptideKit
 /// adherence ring and next-dose, computed with the verified PeptideKit logic.
 struct HomeView: View {
     @Binding var selected: AppTab
+    @Binding var showMenu: Bool
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
-    @State private var showSettings = false
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var lastDose: LoggedDose? { recent.first }
@@ -56,29 +56,25 @@ struct HomeView: View {
             }
             .heroScreen()
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showSettings) { SettingsView() }
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(alignment: .top) {
-                Text("Track your protocol.\nKnow the science.")
-                    .font(Typo.displayL).textCase(.uppercase)
+            Button { showMenu = true } label: {
+                Image(systemName: "line.3.horizontal")
+                    .font(.title2.weight(.semibold))
                     .foregroundStyle(BrandColor.textPrimary)
-                    .minimumScaleFactor(0.7).lineLimit(2)
-                Spacer(minLength: Space.md)
-                Button { showSettings = true } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(BrandColor.textPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(BrandColor.surfaceElevated, in: Circle())
-                        .overlay(Circle().strokeBorder(BrandColor.stroke, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Menu — profile, settings, and health connections")
+                    .frame(width: 44, height: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Menu — profile, settings, and health connections")
+
+            Text("Track your protocol.\nKnow the science.")
+                .font(Typo.displayL).textCase(.uppercase)
+                .foregroundStyle(BrandColor.textPrimary)
+                .minimumScaleFactor(0.7).lineLimit(2)
             Text("The source of truth for peptides and dose tracking — transparent about where the evidence stands.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
         }

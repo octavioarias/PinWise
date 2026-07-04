@@ -12,6 +12,7 @@ enum AppTab: Hashable {
 /// vertical offset), so the bar stays standard-height and aligned.
 struct RootTabView: View {
     @State private var selected: AppTab = .home
+    @State private var showMenu = false
     @Query(sort: \SavedProtocol.startDate) private var protocols: [SavedProtocol]
 
     /// Changes whenever a reminder-relevant field changes, re-triggering scheduling.
@@ -22,7 +23,7 @@ struct RootTabView: View {
     var body: some View {
         Group {
             switch selected {
-            case .home: HomeView(selected: $selected)
+            case .home: HomeView(selected: $selected, showMenu: $showMenu)
             case .tools: ToolsView()
             case .log: LogView()
             case .protocols: ProtocolsView()
@@ -31,6 +32,10 @@ struct RootTabView: View {
         }
         .overlay(alignment: .bottom) {
             PinWiseTabBar(selected: $selected)
+        }
+        // Side menu drawer sits above the tab bar so it covers the full screen when open.
+        .overlay {
+            SideMenuDrawer(isOpen: $showMenu)
         }
         .tint(BrandColor.accent)
         .preferredColorScheme(.dark)

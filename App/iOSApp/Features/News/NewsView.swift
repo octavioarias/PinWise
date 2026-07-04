@@ -59,8 +59,7 @@ struct NewsView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             Text("News")
-                .font(Typo.displayL)
-                .textCase(.uppercase)
+                .font(Typo.displayXL)
                 .foregroundStyle(BrandColor.textPrimary)
             Text("Trials, results, and regulatory news — summarized clearly and linked to the source.")
                 .font(Typo.body)
