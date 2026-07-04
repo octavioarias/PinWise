@@ -1,42 +1,47 @@
 # PinWise
 
-A privacy-first iOS app for tracking peptide / GLP-1 / multi-injectable dosing protocols.
-This repo holds both the **advisory knowledge base** (research, strategy, specs) and the
-**app itself** (early-stage).
+A privacy-first iOS app for tracking peptide / GLP-1 / multi-injectable dosing protocols —
+and the source of truth for the science around them. This repo holds the **advisory knowledge
+base** (research, strategy, specs) and the **app** (a CI-validated v1).
+
+Repo: `github.com/octavioarias/PinWise` · CI: GitHub Actions (compiles + tests every push).
 
 ## Layout
 ```
 PeptideTrackingApp/
-├── Knowledge/
-│   └── KnowledgeBase_v2/                                   # optimized, fact-checked KB — START HERE
-│                                                           # (supersedes the original zip'd KB, now removed)
-│       ├── 00_KB_Optimization_Report_and_Changelog.md      #   ← the audit: what changed & why
-│       ├── 00_Team_Overview_and_Mandate.md
-│       ├── 01..08 advisor docs   ├── 09 clinical catalog   ├── 10 competitive matrix
-│       └── 99_Synthesis_Master_App_Spec_and_Roadmap.md
-└── App/                                                    # the app (Swift)
-    ├── Package.swift              # PeptideKit library + pk-verify harness + test target
-    ├── Sources/PeptideKit/        # verified domain core (models, calculators, catalog, safety)
-    ├── Sources/pk-verify/         # runnable verification harness
-    ├── Tests/PeptideKitTests/     # swift-testing suite (runs in Xcode)
-    └── iOSApp/                    # SwiftUI sources (app shell + reconstitution calculator)
+├── Knowledge/KnowledgeBase_v2/     # fact-checked KB — START HERE (00 report, 12 build status)
+├── App/
+│   ├── Package.swift               # PeptideKit library + pk-verify + tests
+│   ├── Sources/PeptideKit/         # verified domain core (models, calculators, catalog, safety, news contract)
+│   ├── Sources/pk-verify/          # runnable verification harness (66 checks)
+│   ├── Tests/PeptideKitTests/      # swift-testing suite (runs in Xcode/CI)
+│   ├── iOSApp/                     # SwiftUI app (Onboarding, Home, Log, Protocols+Inventory, News, Tools)
+│   └── project.yml                 # XcodeGen spec
+├── scripts/build-feed.mjs          # News feed generator (ClinicalTrials.gov + PubMed)
+├── feed/feed.json                  # generated News feed
+└── .github/workflows/              # ci.yml (build+test) · news-feed.yml (daily feed)
 ```
 
-## Where to start
-- **Strategy / product:** read `Knowledge/KnowledgeBase_v2/00_KB_Optimization_Report_and_Changelog.md`, then `99_...Roadmap.md`.
-- **Code:** `cd App && swift run pk-verify` — runs the domain-logic verification (58 checks). Then see `App/iOSApp/README.md` to wire the SwiftUI layer into Xcode.
+## Run it
+```sh
+brew install xcodegen        # once
+cd App && xcodegen generate && open PinWise.xcodeproj   # then ⌘R
+swift run pk-verify          # domain-core check (no Xcode needed)
+```
 
-## What's built and verified
-The domain core (`PeptideKit`) is pure, platform-agnostic Swift with **58 passing checks**:
-- **Reconstitution calculator** (vial mg + water mL + dose → syringe units, concentration, doses/vial) and its inverse (units → dose).
-- **Blend calculator** (one injection volume → every component's dose, for Wolverine/GLOW-style blends).
-- **Inventory** run-out/cost-per-dose projection, **adherence** %, **titration** planner, **site-rotation** advisor.
-- **Compounded-dose safety guard** — blocks unit/volume dosing of compounded products until a concentration is on record (prevents the FDA-documented 5–20× overdose pattern).
-- **Seeded compound catalog** with evidence tiers, half-lives, regulatory/WADA status, and label-exact GLP-1 titration templates.
+## What's built (v1)
+A complete, CI-validated free-tier MVP — see **`Knowledge/KnowledgeBase_v2/12_v1_Build_Status_and_Next_Iteration.md`** for the full status + next-iteration backlog.
+- **Onboarding** + gated 18+ disclaimer acceptance.
+- **Home** — live adherence ring, next dose, recent activity.
+- **Log** — fast logging (quick-fill from protocols, site suggestion, backfill, haptics); decrements inventory.
+- **Protocols & Inventory** — protocol builder with reminders; vials with run-out/cost/expiry; compound library.
+- **News** — neutral, cited editorial feed (live pipeline + bundled fallback).
+- **Tools** — verified reconstitution calculator.
+- Deep-blue design system (60-30-10, WCAG-audited), reminders, SwiftData (CloudKit-safe), local-first.
 
 ## Ground rules baked into the design
 PinWise is a **passive record-keeper**: it never recommends a dose or titration (FDA CDS
-guidance; Apple Guideline 1.4.2). Calculators are personal unit/volume converters,
-titration ladders are user-configured dated templates, insights are neutral display.
-Local-first, no PHI in iCloud. **Not medical or legal advice** — the clinical catalog and
+guidance; Apple Guideline 1.4.2). Calculators are personal converters, titration ladders are
+user-configured templates, insights are neutral display. Local-first; privacy language lives
+only in agreements/disclaimers. **Not medical or legal advice** — the clinical catalog and
 regulatory posture require licensed-clinician and licensed-attorney review before launch.
