@@ -5,11 +5,22 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("weightInPounds") private var weightInPounds = true
+    @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Space.lg) {
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.md) {
+                            SectionHeader(title: "Appearance")
+                            Picker("Appearance", selection: $appearanceRaw) {
+                                ForEach(AppearanceMode.allCases) { Text($0.label).tag($0.rawValue) }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+                    }
+
                     Card {
                         VStack(alignment: .leading, spacing: Space.md) {
                             SectionHeader(title: "Units")

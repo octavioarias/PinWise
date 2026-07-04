@@ -27,7 +27,6 @@ struct OnboardingView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
         }
-        .preferredColorScheme(.dark)
         .tint(BrandColor.accent)
         .sensoryFeedback(.success, trigger: acceptTrigger)
     }

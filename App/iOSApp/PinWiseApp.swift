@@ -21,6 +21,7 @@ struct PinWiseApp: App {
 /// Gates the app behind one-time onboarding + disclaimer acceptance.
 struct RootView: View {
     @AppStorage("acceptedDisclaimerVersion") private var acceptedVersion = 0
+    @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
 
     var body: some View {
         ZStack {
@@ -31,5 +32,6 @@ struct RootView: View {
                     .zIndex(1)
             }
         }
+        .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)
     }
 }

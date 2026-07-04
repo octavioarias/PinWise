@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // PinWise design system. Color strategy (founder-directed):
 //  • Deep blue = brand + trust + primary CTA (the Enhanced-style deep royal blue).
@@ -20,39 +21,82 @@ extension Color {
             opacity: alpha
         )
     }
+
+    /// A color that resolves to `light` or `dark` (hex) based on the active interface style,
+    /// so a single token adapts across light and dark mode.
+    init(light: UInt, dark: UInt) {
+        self.init(uiColor: UIColor { traits in
+            UIColor(hexValue: traits.userInterfaceStyle == .dark ? dark : light)
+        })
+    }
+}
+
+private extension UIColor {
+    convenience init(hexValue: UInt) {
+        self.init(
+            red: CGFloat((hexValue >> 16) & 0xFF) / 255,
+            green: CGFloat((hexValue >> 8) & 0xFF) / 255,
+            blue: CGFloat(hexValue & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+}
+
+/// User-selectable appearance, stored via `@AppStorage("appearance")`.
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+    /// nil = follow the system setting.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+    static func from(_ raw: String) -> AppearanceMode { AppearanceMode(rawValue: raw) ?? .dark }
 }
 
 // Measured WCAG contrast ratios (audited 2026-07, small-text target 4.5:1):
 //   white/background 20.1 · white/surface 18.7 · textSecondary/dark 7.9 · accentText/dark 7.6
 //   white-on-accent 7.6 · accent-on-white 7.6 · success 8.1 · warning 7.6 · danger 4.8 (chip)
 // The deep `accent` as text on dark is only 2.6:1 — so text/links on dark use `accentText`.
+// Each token adapts per interface style: dark keeps the Enhanced-style deep blue-black; light
+// is a clean blue-biased near-white. Light values are chosen to hold small-text contrast ≥4.5:1
+// (deep accent, darker semantic hues); dark values are the previously audited set.
 enum BrandColor {
-    // 60% — dominant neutral: a deeper blue-biased near-black (not gray). Kept very dark so the
-    // ambient blue edge glow reads clearly against it (per the reference look).
-    static let background = Color(hex: 0x04050B)
+    // 60% — dominant neutral. Dark: deep blue-black so the edge glow pops. Light: blue-white.
+    static let background = Color(light: 0xF4F6FC, dark: 0x04050B)
     // 30% — secondary surfaces / cards.
-    static let surface = Color(hex: 0x0F1120)
-    static let surfaceElevated = Color(hex: 0x171A2C)
-    static let stroke = Color(hex: 0x272B45)          // blue-tinted hairline
+    static let surface = Color(light: 0xFFFFFF, dark: 0x0F1120)
+    static let surfaceElevated = Color(light: 0xEEF1F9, dark: 0x171A2C)
+    static let stroke = Color(light: 0xDCE0EC, dark: 0x272B45)     // hairline
 
-    // Deep blue used in hero gradients — evokes the Enhanced imagery.
-    static let deepBlue = Color(hex: 0x0C1A66)
+    // Deep blue used in hero gradients. Light mode uses a soft periwinkle so the mesh stays subtle.
+    static let deepBlue = Color(light: 0x8FA0FF, dark: 0x0C1A66)
 
-    // 10% — functional accent: deep royal-electric blue (trust). Saturated → for FILLS.
+    // 10% — functional accent: deep royal-electric blue (trust). Same in both modes → for FILLS.
     static let accent = Color(hex: 0x2536E6)
     static let onAccent = Color(hex: 0xFFFFFF)
-    // Lighter blue for accent TEXT/ICONS on dark grounds (WCAG-safe, ~7:1).
-    static let accentText = Color(hex: 0x8A97FF)
+    // Accent TEXT/ICONS: the deep accent reads well on light; on dark it needs the lighter blue.
+    static let accentText = Color(light: 0x2536E6, dark: 0x8A97FF)
 
-    // Semantic (separate from the accent).
-    static let success = Color(hex: 0x18E39A)   // green — progress / health / completed
-    static let warning = Color(hex: 0xFFB020)   // amber — attention, used sparingly
-    static let danger  = Color(hex: 0xFF4D4D)   // red — urgency / destructive / safety block
-    static let mint = success                    // alias kept for existing call sites
+    // Semantic (separate from the accent). Light variants darkened for contrast on white.
+    static let success = Color(light: 0x0E9E63, dark: 0x18E39A)   // green — progress / health
+    static let warning = Color(light: 0xB26A00, dark: 0xFFB020)   // amber — attention
+    static let danger  = Color(light: 0xD92D2D, dark: 0xFF4D4D)   // red — urgency / destructive
+    static let mint = success                                     // alias kept for call sites
 
     // Text
-    static let textPrimary = Color(hex: 0xFFFFFF)
-    static let textSecondary = Color(hex: 0x9AA3B8) // low-saturation blue-gray
+    static let textPrimary = Color(light: 0x0B0D16, dark: 0xFFFFFF)
+    static let textSecondary = Color(light: 0x5A6478, dark: 0x9AA3B8)
 }
 
 /// Type ramp — system font (SF), heavy weights, uppercase display, monospaced figures.
@@ -119,21 +163,8 @@ extension View {
     /// glow around the device previews. Apply once at the app root.
     // Uses the LIGHTER accent (`accentText`) — the deep accent on near-black is ~2.6:1 and
     // reads as invisible once blurred. A dedicated bright glow tone shows on the dark edges.
-    func edgeGlow(_ color: Color = BrandColor.accentText, strength: Double = 0.95) -> some View {
-        overlay {
-            RoundedRectangle(cornerRadius: 52, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [color, color.opacity(0.45), color.opacity(0.9)],
-                        startPoint: .top, endPoint: .bottom
-                    ),
-                    lineWidth: 4
-                )
-                .blur(radius: 11)
-                .opacity(strength)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
+    func edgeGlow() -> some View {
+        overlay { EdgeGlowOverlay() }
     }
 
     /// Canvas with an ambient deep-blue mesh at the top, faded into the background.
@@ -151,5 +182,26 @@ extension View {
                     .ignoresSafeArea(edges: .top)
             }
             .background(BrandColor.background.ignoresSafeArea())
+    }
+}
+
+/// The ambient accent glow hugging the screen edges. Scheme-aware: bold on the dark canvas,
+/// softened on light so the blue halo reads as a highlight rather than a heavy border.
+private struct EdgeGlowOverlay: View {
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 52, style: .continuous)
+            .strokeBorder(
+                LinearGradient(
+                    colors: [BrandColor.accentText, BrandColor.accentText.opacity(0.45), BrandColor.accentText.opacity(0.9)],
+                    startPoint: .top, endPoint: .bottom
+                ),
+                lineWidth: 4
+            )
+            .blur(radius: 11)
+            .opacity(scheme == .dark ? 0.95 : 0.5)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
     }
 }
