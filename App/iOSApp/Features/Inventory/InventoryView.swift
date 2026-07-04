@@ -95,6 +95,9 @@ struct VialRow: View {
 
     private var metaLine: some View {
         HStack(spacing: Space.md) {
+            if let mgml = vial.concentrationMgPerMl {
+                Label(String(format: "%.2f mg/mL", mgml), systemImage: "drop")
+            }
             if let days = projection.daysOfSupply, let out = projection.projectedRunOutDate {
                 Label("~\(Int(days.rounded()))d · out \(out.formatted(.dateTime.month().day()))",
                       systemImage: "calendar")
@@ -133,8 +136,18 @@ struct VialBuilderView: View {
     @State private var costText = ""
     @State private var hasExpiration = false
     @State private var expiration = Date()
+    @State private var prep: Prep = .reconstituted
+    @State private var concentrationText = ""
+    @State private var totalVolumeText = ""
+    private enum Prep: Hashable { case reconstituted, premixed }
 
-    private var canSave: Bool { (Double(massText) ?? 0) > 0 && (Double(doseText) ?? 0) > 0 }
+    private var contentsValid: Bool {
+        switch prep {
+        case .reconstituted: return (Double(massText) ?? 0) > 0
+        case .premixed: return (Double(concentrationText) ?? 0) > 0 && (Double(totalVolumeText) ?? 0) > 0
+        }
+    }
+    private var canSave: Bool { contentsValid && (Double(doseText) ?? 0) > 0 }
 
     var body: some View {
         NavigationStack {
@@ -151,15 +164,34 @@ struct VialBuilderView: View {
                         }
                     }
                     Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Vial contents")
-                            HStack {
-                                TextField("Total amount", text: $massText).keyboardType(.decimalPad).pinwiseField()
-                                unitPicker($massUnit)
+                        VStack(alignment: .leading, spacing: Space.md) {
+                            SectionHeader(title: "Preparation")
+                            Picker("", selection: $prep) {
+                                Text("Reconstituted").tag(Prep.reconstituted)
+                                Text("Pre-mixed").tag(Prep.premixed)
                             }
-                            HStack {
-                                TextField("Water added (optional)", text: $solventText).keyboardType(.decimalPad).pinwiseField()
-                                Text("mL").foregroundStyle(BrandColor.textSecondary)
+                            .pickerStyle(.segmented)
+
+                            if prep == .reconstituted {
+                                HStack {
+                                    TextField("Total amount", text: $massText).keyboardType(.decimalPad).pinwiseField()
+                                    unitPicker($massUnit)
+                                }
+                                HStack {
+                                    TextField("Water added", text: $solventText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                            } else {
+                                HStack {
+                                    TextField("Concentration", text: $concentrationText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                                HStack {
+                                    TextField("Total volume", text: $totalVolumeText).keyboardType(.decimalPad).pinwiseField()
+                                    Text("mL").foregroundStyle(BrandColor.textSecondary)
+                                }
+                                Text("From a compounding pharmacy? Enter the strength on the label (e.g. 2.5 mg/mL).")
+                                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
@@ -218,15 +250,29 @@ struct VialBuilderView: View {
     }
 
     private func save() {
-        guard let m = Double(massText), m > 0, let d = Double(doseText), d > 0 else { return }
+        guard canSave, let d = Double(doseText), d > 0 else { return }
+
+        let massMicrograms: Double
+        let solventMilliliters: Double
+        switch prep {
+        case .reconstituted:
+            massMicrograms = Mass(Double(massText) ?? 0, massUnit).micrograms
+            solventMilliliters = Double(solventText) ?? 0
+        case .premixed:
+            let volume = Double(totalVolumeText) ?? 0
+            massMicrograms = Concentration(mgPerMl: Double(concentrationText) ?? 0).microgramsPerMilliliter * volume
+            solventMilliliters = volume
+        }
+
         let vial = StoredVial(
             compoundName: compound.name,
             label: label,
-            massMicrograms: Mass(m, massUnit).micrograms,
-            solventVolumeMilliliters: Double(solventText) ?? 0,
+            massMicrograms: massMicrograms,
+            solventVolumeMilliliters: solventMilliliters,
             perDoseMicrograms: Mass(d, doseUnit).micrograms,
             cost: Double(costText) ?? 0,
-            expirationDate: hasExpiration ? expiration : nil
+            expirationDate: hasExpiration ? expiration : nil,
+            isPremixed: prep == .premixed
         )
         context.insert(vial)
         try? context.save()

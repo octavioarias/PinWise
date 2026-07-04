@@ -129,16 +129,18 @@ final class StoredVial {
     var expirationDate: Date?
     var dateAcquired: Date = Date()
     var notes: String = ""
+    var isPremixed: Bool = false               // true = came ready-to-use from a pharmacy
 
     init(
         id: UUID = UUID(), compoundName: String = "", label: String = "", massMicrograms: Double = 0,
         solventVolumeMilliliters: Double = 0, perDoseMicrograms: Double = 0, dosesTaken: Int = 0,
-        cost: Double = 0, expirationDate: Date? = nil, dateAcquired: Date = Date(), notes: String = ""
+        cost: Double = 0, expirationDate: Date? = nil, dateAcquired: Date = Date(), notes: String = "",
+        isPremixed: Bool = false
     ) {
         self.id = id; self.compoundName = compoundName; self.label = label; self.massMicrograms = massMicrograms
         self.solventVolumeMilliliters = solventVolumeMilliliters; self.perDoseMicrograms = perDoseMicrograms
         self.dosesTaken = dosesTaken; self.cost = cost; self.expirationDate = expirationDate
-        self.dateAcquired = dateAcquired; self.notes = notes
+        self.dateAcquired = dateAcquired; self.notes = notes; self.isPremixed = isPremixed
     }
 }
 
@@ -146,6 +148,9 @@ extension StoredVial {
     var mass: Mass { Mass(micrograms: massMicrograms) }
     var perDose: Mass { Mass(micrograms: perDoseMicrograms) }
     var isReconstituted: Bool { solventVolumeMilliliters > 0 }
+    var concentrationMgPerMl: Double? {
+        solventVolumeMilliliters > 0 ? (massMicrograms / solventVolumeMilliliters) / 1_000 : nil
+    }
     var totalDoses: Int { perDoseMicrograms > 0 ? Int((massMicrograms / perDoseMicrograms).rounded(.down)) : 0 }
 
     var fractionRemaining: Double {
