@@ -108,3 +108,68 @@ extension SavedProtocol {
         }
     }
 }
+
+/// A physical vial in inventory. CloudKit-safe. `0` sentinels mean "unknown/not set" for
+/// value types that can't be optional cleanly across CloudKit.
+@Model
+final class StoredVial {
+    var id: UUID = UUID()
+    var compoundName: String = ""
+    var label: String = ""
+    var massMicrograms: Double = 0            // total peptide when full
+    var solventVolumeMilliliters: Double = 0  // 0 = not reconstituted
+    var perDoseMicrograms: Double = 0         // the dose drawn from this vial
+    var dosesTaken: Int = 0
+    var cost: Double = 0                       // 0 = unknown
+    var expirationDate: Date?
+    var dateAcquired: Date = Date()
+    var notes: String = ""
+
+    init(
+        id: UUID = UUID(), compoundName: String = "", label: String = "", massMicrograms: Double = 0,
+        solventVolumeMilliliters: Double = 0, perDoseMicrograms: Double = 0, dosesTaken: Int = 0,
+        cost: Double = 0, expirationDate: Date? = nil, dateAcquired: Date = Date(), notes: String = ""
+    ) {
+        self.id = id; self.compoundName = compoundName; self.label = label; self.massMicrograms = massMicrograms
+        self.solventVolumeMilliliters = solventVolumeMilliliters; self.perDoseMicrograms = perDoseMicrograms
+        self.dosesTaken = dosesTaken; self.cost = cost; self.expirationDate = expirationDate
+        self.dateAcquired = dateAcquired; self.notes = notes
+    }
+}
+
+extension StoredVial {
+    var mass: Mass { Mass(micrograms: massMicrograms) }
+    var perDose: Mass { Mass(micrograms: perDoseMicrograms) }
+    var isReconstituted: Bool { solventVolumeMilliliters > 0 }
+    var totalDoses: Int { perDoseMicrograms > 0 ? Int((massMicrograms / perDoseMicrograms).rounded(.down)) : 0 }
+
+    var fractionRemaining: Double {
+        guard massMicrograms > 0, perDoseMicrograms > 0 else { return 0 }
+        let remaining = max(0, massMicrograms - Double(dosesTaken) * perDoseMicrograms)
+        return remaining / massMicrograms
+    }
+
+    /// Run-out/cost projection via the verified `InventoryEstimator`. `schedule` comes from a
+    /// matching active protocol when available, else as-needed (no run-out date).
+    func projection(schedule: DoseSchedule, referenceDate: Date = Date()) -> InventoryEstimator.Projection {
+        let vial = Vial(
+            compoundID: UUID(),
+            mass: mass,
+            solventVolumeMilliliters: isReconstituted ? solventVolumeMilliliters : nil,
+            cost: cost > 0 ? Decimal(cost) : nil
+        )
+        return InventoryEstimator.project(
+            vial: vial, dose: perDose, dosesTaken: dosesTaken,
+            schedule: schedule, referenceDate: referenceDate
+        )
+    }
+
+    var expiryState: (label: String, isWarning: Bool, isError: Bool)? {
+        guard let exp = expirationDate else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()),
+                                                   to: Calendar.current.startOfDay(for: exp)).day ?? 0
+        if days < 0 { return ("Expired", false, true) }
+        if days <= 14 { return ("Expires in \(days)d", true, false) }
+        return (exp.formatted(.dateTime.month().day().year()), false, false)
+    }
+}

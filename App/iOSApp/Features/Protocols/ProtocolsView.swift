@@ -7,6 +7,8 @@ struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var showBuilder = false
+    @State private var panel: Panel = .protocols
+    private enum Panel: Hashable { case protocols, inventory }
 
     private var active: [SavedProtocol] { protocols.filter(\.isActive) }
 
@@ -16,36 +18,19 @@ struct ProtocolsView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
 
-                    PrimaryButton(title: "New protocol", systemImage: "plus") { showBuilder = true }
+                    Picker("", selection: $panel) {
+                        Text("Protocols").tag(Panel.protocols)
+                        Text("Inventory").tag(Panel.inventory)
+                    }
+                    .pickerStyle(.segmented)
 
-                    if active.isEmpty {
-                        emptyState
+                    if panel == .protocols {
+                        protocolsPanel
                     } else {
-                        SectionHeader(title: "Active protocols")
-                        ForEach(active, id: \.id) { proto in
-                            ProtocolRow(proto: proto)
-                                .contextMenu {
-                                    Button(role: .destructive) { context.delete(proto) } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                        }
+                        InventoryList()
                     }
 
-                    NavigationLink { CompoundsView() } label: {
-                        HStack {
-                            Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
-                            Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
-                        }
-                        .padding(Space.lg)
-                        .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-
-                    DisclaimerBanner(text: "Protocols are personal schedules you configure — not medical advice.")
+                    DisclaimerBanner(text: "Protocols and inventory are personal records you configure — not medical advice.")
                 }
                 .padding(Space.lg)
             }
@@ -53,6 +38,37 @@ struct ProtocolsView: View {
             .navigationTitle("Protocols")
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
         }
+    }
+
+    @ViewBuilder private var protocolsPanel: some View {
+        PrimaryButton(title: "New protocol", systemImage: "plus") { showBuilder = true }
+
+        if active.isEmpty {
+            emptyState
+        } else {
+            SectionHeader(title: "Active protocols")
+            ForEach(active, id: \.id) { proto in
+                ProtocolRow(proto: proto)
+                    .contextMenu {
+                        Button(role: .destructive) { context.delete(proto) } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+            }
+        }
+
+        NavigationLink { CompoundsView() } label: {
+            HStack {
+                Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
+                Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+            }
+            .padding(Space.lg)
+            .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     private var header: some View {
