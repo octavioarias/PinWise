@@ -72,7 +72,7 @@ private struct PinWiseTabBar: View {
                 .overlay(alignment: .top) { Rectangle().fill(BrandColor.stroke).frame(height: 0.5) }
                 .ignoresSafeArea(edges: .bottom) // fill flush to the bottom, under the home indicator
         }
-        .shadow(color: .black.opacity(0.5), radius: 14, y: -3) // lift it off the content
+        .shadow(color: .black.opacity(0.25), radius: 6, y: -1) // subtle lift; avoid dimming content above
     }
 
     @ViewBuilder

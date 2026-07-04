@@ -35,7 +35,7 @@ struct ProtocolsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("Protocols")
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
         }
     }

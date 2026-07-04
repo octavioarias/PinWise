@@ -118,8 +118,7 @@ struct ReconstitutionCalculatorView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("Tools")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear { model.recalculate() }
             .onChange(of: model.mode) { _, _ in model.recalculate() }
             .onChange(of: model.vialMassText) { _, _ in model.recalculate() }

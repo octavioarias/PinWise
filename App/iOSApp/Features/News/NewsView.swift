@@ -50,7 +50,7 @@ struct NewsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("News")
+            .toolbar(.hidden, for: .navigationBar)
             .task { await loader.load() }
         }
     }

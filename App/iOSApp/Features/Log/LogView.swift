@@ -61,8 +61,7 @@ struct LogView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("Log")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
                 doseUnit = compound.preferredDoseUnit

@@ -54,8 +54,7 @@ struct HomeView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
-            .navigationTitle("PinWise")
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
