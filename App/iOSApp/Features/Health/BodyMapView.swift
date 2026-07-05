@@ -84,8 +84,8 @@ struct BodyMapView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let headSize = CGSize(width: w * 0.135, height: h * 0.125)
-            let headCenter = CGPoint(x: w * 0.5, y: h * 0.072)
+            let headSize = CGSize(width: w * 0.115, height: h * 0.116)
+            let headCenter = CGPoint(x: w * 0.5, y: h * 0.070)
             let body = MaleBodyShape()
             ZStack {
                 // Black backdrop so the blue glow reads (per the reference).
@@ -193,24 +193,26 @@ struct BodyMapView: View {
     /// Normalized (0…1) marker positions over the figure, mirror-style.
     private func position(for site: InjectionSite) -> CGPoint {
         switch site {
-        case .armLeft:           return CGPoint(x: 0.335, y: 0.33)
-        case .armRight:          return CGPoint(x: 0.665, y: 0.33)
-        case .abdomenUpperLeft:  return CGPoint(x: 0.455, y: 0.33)
-        case .abdomenUpperRight: return CGPoint(x: 0.545, y: 0.33)
-        case .abdomenLowerLeft:  return CGPoint(x: 0.455, y: 0.44)
-        case .abdomenLowerRight: return CGPoint(x: 0.545, y: 0.44)
-        case .gluteLeft:         return CGPoint(x: 0.455, y: 0.52)
-        case .gluteRight:        return CGPoint(x: 0.545, y: 0.52)
-        case .thighLeft:         return CGPoint(x: 0.46, y: 0.66)
-        case .thighRight:        return CGPoint(x: 0.54, y: 0.66)
+        case .armLeft:           return CGPoint(x: 0.345, y: 0.320)
+        case .armRight:          return CGPoint(x: 0.655, y: 0.320)
+        case .abdomenUpperLeft:  return CGPoint(x: 0.452, y: 0.315)
+        case .abdomenUpperRight: return CGPoint(x: 0.548, y: 0.315)
+        case .abdomenLowerLeft:  return CGPoint(x: 0.452, y: 0.420)
+        case .abdomenLowerRight: return CGPoint(x: 0.548, y: 0.420)
+        case .gluteLeft:         return CGPoint(x: 0.435, y: 0.490)
+        case .gluteRight:        return CGPoint(x: 0.565, y: 0.490)
+        case .thighLeft:         return CGPoint(x: 0.440, y: 0.605)
+        case .thighRight:        return CGPoint(x: 0.560, y: 0.605)
         }
     }
 }
 
 /// A front-facing male body — torso+legs as one subpath and each arm as its own subpath, so the
-/// natural gap between arm and torso shows through. Anatomical contours: deltoids, tapered waist,
-/// hip flare, thigh/calf bulges, feet. Landmark points are rounded into smooth curves. Head is
-/// drawn separately. All subpaths are wound the same way so overlaps (shoulders) fill solid.
+/// natural gap between arm and torso shows through. Dense landmark points trace the true silhouette
+/// (sloping traps, rounded deltoids, chest, V-tapered waist, hip flare, thigh/calf bulges, slim
+/// ankles, splayed feet) and are joined with a closed Catmull-Rom spline (emitted as cubic Béziers)
+/// so the curve passes *through* every point. Head is drawn separately as an ellipse. All subpaths
+/// are wound the same way so overlaps (shoulder ↔ deltoid) fill solid instead of cancelling.
 struct MaleBodyShape: Shape {
     func path(in rect: CGRect) -> Path {
         func pt(_ p: (CGFloat, CGFloat)) -> CGPoint {
@@ -218,24 +220,65 @@ struct MaleBodyShape: Shape {
         }
         func mirror(_ p: (CGFloat, CGFloat)) -> (CGFloat, CGFloat) { (1 - p.0, p.1) }
 
-        // Right half of torso+legs: top-center of neck → clockwise down the right side → back up
-        // the inner right leg to the crotch center. Left half is the mirror (reversed, sans the
-        // shared center endpoints), giving one closed loop.
+        // Right half of torso+legs: top-center of the neck → clockwise down the right side
+        // (trap → deltoid root → chest → waist → hip → outer thigh → knee → calf → ankle → foot)
+        // → up the inner right leg to the crotch center. The left half is the mirror (reversed,
+        // minus the two shared on-axis endpoints), giving one symmetric closed loop.
         let torsoRight: [(CGFloat, CGFloat)] = [
-            (0.500, 0.128), (0.545, 0.132), (0.560, 0.172), (0.610, 0.192),
-            (0.605, 0.246), (0.590, 0.320), (0.575, 0.420), (0.600, 0.485),
-            (0.612, 0.520), (0.590, 0.610), (0.575, 0.720), (0.560, 0.762),
-            (0.585, 0.820), (0.560, 0.910), (0.552, 0.958), (0.590, 0.990),
-            (0.512, 0.992), (0.516, 0.958), (0.520, 0.860), (0.523, 0.762),
-            (0.512, 0.650), (0.503, 0.545), (0.500, 0.520),
+            (0.500, 0.118),  // neck top center [axis]
+            (0.538, 0.128),  // neck (right)
+            (0.556, 0.164),  // neck base / trapezius
+            (0.598, 0.181),  // trapezius slope
+            (0.632, 0.198),  // acromion / shoulder top (arm overlaps here)
+            (0.620, 0.250),  // side under deltoid (armpit)
+            (0.614, 0.300),  // side of chest
+            (0.606, 0.352),  // lower ribs
+            (0.600, 0.392),  // waist (narrowest)
+            (0.610, 0.442),  // iliac crest / hip rising
+            (0.628, 0.482),  // hip widest (greater trochanter)
+            (0.632, 0.525),  // upper outer thigh (bulge)
+            (0.622, 0.590),  // mid outer thigh
+            (0.600, 0.658),  // lower thigh (above knee)
+            (0.574, 0.716),  // knee (outer)
+            (0.570, 0.748),  // below knee
+            (0.596, 0.795),  // calf outer bulge
+            (0.572, 0.855),  // lower calf taper
+            (0.560, 0.898),  // ankle (outer)
+            (0.560, 0.930),  // outer heel / foot
+            (0.598, 0.960),  // toe tip (forward + slightly out)
+            (0.520, 0.958),  // inner toe / medial foot
+            (0.524, 0.900),  // inner ankle
+            (0.526, 0.855),  // inner lower calf
+            (0.528, 0.798),  // inner calf
+            (0.522, 0.748),  // inner below knee
+            (0.520, 0.716),  // inner knee
+            (0.516, 0.650),  // inner lower thigh
+            (0.510, 0.580),  // inner mid thigh (legs nearly together)
+            (0.506, 0.525),  // inner upper thigh
+            (0.500, 0.508),  // crotch center [axis]
         ]
         let torso = torsoRight + torsoRight.reversed().dropFirst().dropLast().map(mirror)
 
-        // Right arm as its own loop (hangs slightly out; inner edge clears the torso → gap).
+        // Right arm as its own loop: overlaps the shoulder cap (so it reads connected) then hangs
+        // slightly out with its inner edge clearing the torso side → a visible gap below the armpit.
+        // Outer edge (deltoid → triceps → elbow → forearm → hand) down, inner edge back up to armpit.
         let armRight: [(CGFloat, CGFloat)] = [
-            (0.615, 0.185), (0.700, 0.250), (0.695, 0.345), (0.678, 0.470),
-            (0.672, 0.545), (0.676, 0.578), (0.632, 0.572), (0.636, 0.500),
-            (0.646, 0.360), (0.628, 0.255), (0.618, 0.200),
+            (0.626, 0.194),  // shoulder cap (overlaps torso acromion)
+            (0.678, 0.240),  // deltoid (outer max)
+            (0.672, 0.300),  // upper arm / triceps (outer)
+            (0.658, 0.392),  // elbow (outer)
+            (0.664, 0.440),  // forearm outer bulge
+            (0.646, 0.520),  // forearm taper
+            (0.636, 0.560),  // wrist (outer)
+            (0.642, 0.600),  // hand / knuckles (outer)
+            (0.618, 0.636),  // fingertips
+            (0.598, 0.612),  // hand (inner)
+            (0.606, 0.560),  // wrist (inner)
+            (0.622, 0.500),  // forearm (inner)
+            (0.636, 0.395),  // inner elbow
+            (0.624, 0.300),  // inner upper arm
+            (0.612, 0.246),  // armpit
+            (0.606, 0.210),  // inner shoulder
         ]
         let armLeft = armRight.map(mirror)
 
@@ -246,15 +289,24 @@ struct MaleBodyShape: Shape {
         return path
     }
 
-    /// Add a smooth closed loop (quad curves through midpoints), normalized to a consistent
-    /// winding so overlapping subpaths union instead of punching holes.
+    /// Add a smooth closed loop through the given landmark points using a uniform Catmull-Rom
+    /// spline expressed as cubic Béziers, so the curve interpolates (passes through) every point.
+    /// Winding is normalized to a consistent direction so overlapping subpaths union (fill solid)
+    /// instead of punching holes.
     private func addLoop(_ path: inout Path, _ raw: [CGPoint]) {
         let pts = normalizedWinding(raw)
-        guard pts.count > 2 else { return }
-        func mid(_ a: CGPoint, _ b: CGPoint) -> CGPoint { CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
-        path.move(to: mid(pts[pts.count - 1], pts[0]))
-        for i in pts.indices {
-            path.addQuadCurve(to: mid(pts[i], pts[(i + 1) % pts.count]), control: pts[i])
+        let n = pts.count
+        guard n > 2 else { return }
+        path.move(to: pts[0])
+        for i in 0..<n {
+            let p0 = pts[(i - 1 + n) % n]
+            let p1 = pts[i]
+            let p2 = pts[(i + 1) % n]
+            let p3 = pts[(i + 2) % n]
+            // Catmull-Rom → cubic Bézier control points (uniform, tension 1/6).
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6.0, y: p1.y + (p2.y - p0.y) / 6.0)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6.0, y: p2.y - (p3.y - p1.y) / 6.0)
+            path.addCurve(to: p2, control1: c1, control2: c2)
         }
         path.closeSubpath()
     }
