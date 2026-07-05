@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The dashboard. A personalized greeting, one prominent hero (adherence + next dose), a bento
-/// grid of secondary stats, quick actions, and recent activity — an editorial rhythm rather than
-/// a uniform stack of cards. Reflects real logged data via verified PeptideKit logic.
+/// The dashboard — a personalized overview of *your* setup: how on-track you are, the stack
+/// you're running, and your connected health metrics. Actions (logging, calculators) live in
+/// their own tabs; Home is about what the app understands about you.
 struct HomeView: View {
     @Binding var selected: AppTab
     @Binding var showMenu: Bool
@@ -19,7 +19,6 @@ struct HomeView: View {
     }
     private var sitesInRotation: Int { Set(recent.prefix(30).compactMap { $0.site }).count }
 
-    /// Aggregate adherence over the last 14 days across active protocols.
     private var adherenceFraction: Double {
         let cal = Calendar.current
         let end = Date()
@@ -44,14 +43,17 @@ struct HomeView: View {
                     header
                     if !activeProtocols.isEmpty {
                         heroActive
+                        stackCard
+                        HealthWidget()
                         bentoGrid
                     } else if !recent.isEmpty {
                         heroActivity
+                        HealthWidget()
                         bentoGrid
                     } else {
                         emptyState
+                        HealthWidget()
                     }
-                    quickActions
                     if !recent.isEmpty { recentSection }
                     DisclaimerBanner(text: Disclaimer.calculator)
                 }
@@ -135,6 +137,37 @@ struct HomeView: View {
         }
     }
 
+    // MARK: Your stack (personalization)
+
+    private var stackCard: some View {
+        Button { selected = .protocols } label: {
+            Card {
+                VStack(alignment: .leading, spacing: Space.sm) {
+                    HStack {
+                        SectionHeader(title: "Your stack")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                    }
+                    ForEach(activeProtocols.prefix(4), id: \.id) { p in
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(p.name).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
+                                Text("\(p.contentsSummary) · \(p.cadenceText)")
+                                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                            }
+                            Spacer()
+                            Text(p.dose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                        }
+                    }
+                    if activeProtocols.count > 4 {
+                        Text("+\(activeProtocols.count - 4) more").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                    }
+                }
+            }
+        }
+        .buttonStyle(PressableStyle())
+    }
+
     // MARK: Bento
 
     private var bentoGrid: some View {
@@ -161,14 +194,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Quick actions / recent
-
-    private var quickActions: some View {
-        HStack(spacing: Space.md) {
-            QuickAction(title: "Log a dose", systemImage: "plus.circle.fill") { selected = .log }
-            QuickAction(title: "How much to draw", systemImage: "syringe.fill") { selected = .tools }
-        }
-    }
+    // MARK: Recent / empty
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: Space.md) {
@@ -195,10 +221,10 @@ struct HomeView: View {
             SectionHeader(title: "Get started")
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("Log your first dose").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text("Tap below (or the ＋ in the tab bar) to record your first dose.")
+                    Text("Set up your stack").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text("Add a protocol and log your first dose — then Home fills in with your adherence, stack, and health at a glance.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                    PrimaryButton(title: "Log a dose", systemImage: "plus") { selected = .log }
+                    PrimaryButton(title: "Create a protocol", systemImage: "plus") { selected = .protocols }
                         .padding(.top, Space.sm)
                 }
             }
@@ -212,7 +238,7 @@ struct HomeView: View {
 }
 
 /// The hero surface — a deep-blue gradient wash + rim light so the focal card reads as elevated
-/// and distinct from the flat bento tiles below it. Adapts with the scheme via theme tokens.
+/// and distinct from the flat bento tiles below it.
 private struct HeroSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -230,31 +256,5 @@ private struct HeroSurface: ViewModifier {
                     )
             )
             .shadow(color: .black.opacity(0.25), radius: 18, y: 12)
-    }
-}
-
-/// A tappable quick-action tile.
-private struct QuickAction: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Image(systemName: systemImage).font(.title2).foregroundStyle(BrandColor.accentText)
-                Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary).multilineTextAlignment(.leading)
-            }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-            .padding(Space.lg)
-            .background(
-                LinearGradient(colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.65)],
-                               startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-            )
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-        }
-        .buttonStyle(PressableStyle())
-        .accessibilityLabel(title)
     }
 }

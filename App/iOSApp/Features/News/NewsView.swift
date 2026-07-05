@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PeptideKit
 
 // The News tab — PinWise as the hub for sources of truth on peptides and performance medicine.
@@ -21,12 +22,30 @@ struct NewsView: View {
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
     @State private var category: NewsCategory?
+    @State private var myStack = false
     @State private var searchActive = false
     @FocusState private var searchFocused: Bool
+    @Query private var protocols: [SavedProtocol]
+    @Query private var vials: [StoredVial]
+    @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
     private var feed: NewsFeed { loader.feed }
 
+    /// Every compound the user is currently on — from active protocols, inventory, and recent logs.
+    private var userCompounds: Set<String> {
+        var s = Set<String>()
+        for p in protocols where p.isActive { for n in p.compoundNames { s.insert(n.lowercased()) } }
+        for v in vials { for n in v.apiNames { s.insert(n.lowercased()) } }
+        for l in logs.prefix(80) { s.insert(l.compoundName.lowercased()) }
+        return s
+    }
+    private func matchesStack(_ item: NewsItem) -> Bool {
+        !userCompounds.isEmpty && item.compounds.contains { userCompounds.contains($0.lowercased()) }
+    }
+
     private var items: [NewsItem] { feed.trending }
-    private var isFiltering: Bool { !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil }
+    private var isFiltering: Bool {
+        !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil || myStack
+    }
 
     /// Featured lead = most popular. "Latest" = everything else, newest first.
     private var featured: NewsItem? { items.first }
@@ -36,7 +55,8 @@ struct NewsView: View {
     private var results: [NewsItem] {
         items.filter { item in
             (category == nil || item.category == category) &&
-            (searchText.isEmpty || matches(item, searchText))
+            (searchText.isEmpty || matches(item, searchText)) &&
+            (!myStack || matchesStack(item))
         }
     }
 
@@ -45,6 +65,8 @@ struct NewsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     masthead
+
+                    stackToggle
 
                     if searchActive {
                         VStack(spacing: Space.lg) {
@@ -100,6 +122,18 @@ struct NewsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var stackToggle: some View {
+        HStack(spacing: Space.sm) {
+            filterChip("My Stack", active: myStack) { withAnimation(.snappy) { myStack.toggle() } }
+            if myStack {
+                Text(userCompounds.isEmpty ? "Add a protocol or log a dose to use this"
+                                           : "Filtered to what you're taking")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            }
+            Spacer()
+        }
+    }
+
     @ViewBuilder private var content: some View {
         if isFiltering {
             resultsList
@@ -153,12 +187,14 @@ struct NewsView: View {
             Text("\(results.count) result\(results.count == 1 ? "" : "s")")
                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
             Spacer()
-            Button("Clear filters") { searchText = ""; category = nil }
+            Button("Clear filters") { searchText = ""; category = nil; myStack = false }
                 .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
         }
         if results.isEmpty {
             Card {
-                Text("No stories match. Try a different word or category.")
+                Text(myStack && userCompounds.isEmpty
+                     ? "Add a protocol or log a dose — then My Stack shows news about what you're taking."
+                     : "No stories match. Try a different word or category.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

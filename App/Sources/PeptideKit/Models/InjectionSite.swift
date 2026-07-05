@@ -7,6 +7,8 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
     case abdomenUpperRight
     case abdomenLowerLeft
     case abdomenLowerRight
+    case flankLeft
+    case flankRight
     case thighLeft
     case thighRight
     case gluteLeft
@@ -20,6 +22,7 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
     public var region: Region {
         switch self {
         case .abdomenUpperLeft, .abdomenUpperRight, .abdomenLowerLeft, .abdomenLowerRight: return .abdomen
+        case .flankLeft, .flankRight: return .flank
         case .thighLeft, .thighRight: return .thigh
         case .gluteLeft, .gluteRight: return .glute
         case .armLeft, .armRight: return .arm
@@ -32,6 +35,8 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
         case .abdomenUpperRight: return "Abdomen — upper right"
         case .abdomenLowerLeft: return "Abdomen — lower left"
         case .abdomenLowerRight: return "Abdomen — lower right"
+        case .flankLeft: return "Flank — left (love handle)"
+        case .flankRight: return "Flank — right (love handle)"
         case .thighLeft: return "Thigh — left"
         case .thighRight: return "Thigh — right"
         case .gluteLeft: return "Glute — left"
@@ -42,6 +47,6 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
     }
 
     public enum Region: String, Codable, CaseIterable, Sendable {
-        case abdomen, thigh, glute, arm
+        case abdomen, flank, thigh, glute, arm
     }
 }

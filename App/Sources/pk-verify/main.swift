@@ -254,10 +254,10 @@ expectDosingThrow(.nonPositiveConcentration, "rejects zero concentration") {
 section("News feed")
 do {
     let feed = try NewsFeed.decodeSample()
-    check(feed.items.count == 4, "sample feed decodes 4 items")
+    check(feed.items.count == 10, "sample feed decodes 10 items")
     check(feed.trending.first?.popularity == feed.items.map(\.popularity).max(), "trending sorted by popularity")
     check(!feed.items(mentioning: "Retatrutide").isEmpty, "can filter items by compound")
-    check(feed.majorUpdates.count == 2, "2 items flagged as major updates")
+    check(feed.majorUpdates.count == 3, "3 items flagged as major updates")
     // Editorial contract — the transparency guarantees, enforced in code:
     check(feed.items.allSatisfy { !$0.sources.isEmpty }, "EVERY item carries ≥1 source citation")
     check(feed.items.allSatisfy { !$0.disclaimer.isEmpty }, "EVERY item carries a disclaimer")

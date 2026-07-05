@@ -107,6 +107,8 @@ struct BodyMapView: View {
         case .abdomenUpperRight: return (.upperAbs, .right)
         case .abdomenLowerLeft:  return (.lowerAbs, .left)
         case .abdomenLowerRight: return (.lowerAbs, .right)
+        case .flankLeft:         return (.obliques, .left)
+        case .flankRight:        return (.obliques, .right)
         case .gluteLeft:         return (.gluteal, .left)
         case .gluteRight:        return (.gluteal, .right)
         case .thighLeft:         return (.quadriceps, .left)

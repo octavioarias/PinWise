@@ -152,6 +152,92 @@ public extension NewsFeed {
           "popularity": 60,
           "isMajorUpdate": false,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "reta-phase2-obesity-2023",
+          "headline": "Retatrutide Phase 2: up to ~24% body-weight loss over 48 weeks",
+          "summary": "In a Phase 2 obesity trial (NEJM 2023), retatrutide produced dose-dependent weight loss up to about 24% at 48 weeks (12 mg weekly), with improvements in blood sugar and blood pressure. Retatrutide is investigational and not FDA-approved; nausea and other GI effects were the most common side effects.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "NEJM 2023 (Phase 2)", "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2301972", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT04881760", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"}
+          ],
+          "publishedAt": "2026-06-20T00:00:00Z",
+          "popularity": 92,
+          "isMajorUpdate": true,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "reta-liver-fat-2024",
+          "headline": "Retatrutide reduced liver fat in a Phase 2 metabolic-liver sub-study",
+          "summary": "A Phase 2 sub-study reported large reductions in liver fat in people with metabolic dysfunction-associated steatotic liver disease (MASLD). Findings are early and investigational; retatrutide is not approved for any use.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "The Lancet 2024", "url": "https://www.thelancet.com/", "kind": "journal"}
+          ],
+          "publishedAt": "2026-06-05T00:00:00Z",
+          "popularity": 78,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "sema-select-cv-2024",
+          "headline": "Semaglutide (Wegovy) label reflects cardiovascular risk reduction",
+          "summary": "After the SELECT trial showed roughly a 20% reduction in major cardiovascular events in adults with obesity and established cardiovascular disease, the Wegovy label was updated to include cardiovascular risk reduction. Applies to the FDA-approved product, not compounded versions.",
+          "category": "Regulatory",
+          "compounds": ["Semaglutide"],
+          "sources": [
+            {"name": "U.S. FDA", "url": "https://www.fda.gov/", "kind": "regulatory"},
+            {"name": "NEJM (SELECT)", "url": "https://www.nejm.org/", "kind": "journal"}
+          ],
+          "publishedAt": "2026-05-10T00:00:00Z",
+          "popularity": 80,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "tirz-osa-approval",
+          "headline": "Tirzepatide (Zepbound) approved for obstructive sleep apnea in obesity",
+          "summary": "The FDA approved tirzepatide for moderate-to-severe obstructive sleep apnea in adults with obesity, based on trials showing a reduced apnea-hypopnea index alongside weight loss. A labeled indication for the approved product.",
+          "category": "Regulatory",
+          "compounds": ["Tirzepatide"],
+          "sources": [
+            {"name": "U.S. FDA", "url": "https://www.fda.gov/", "kind": "regulatory"}
+          ],
+          "publishedAt": "2026-04-15T00:00:00Z",
+          "popularity": 74,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "glp1-lean-mass-2026",
+          "headline": "The trade-off: GLP-1 weight loss includes lean muscle mass",
+          "summary": "Reviews note that a meaningful share of weight lost on GLP-1 medicines is lean mass, not just fat. Adequate protein and resistance training are commonly discussed to help preserve muscle. General context, not a dosing recommendation.",
+          "category": "Guidance",
+          "compounds": ["Semaglutide", "Tirzepatide", "Retatrutide"],
+          "sources": [
+            {"name": "Lancet Diabetes & Endocrinology", "url": "https://www.thelancet.com/journals/landia/home", "kind": "journal"}
+          ],
+          "publishedAt": "2026-03-25T00:00:00Z",
+          "popularity": 66,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "cagrisema-phase3",
+          "headline": "CagriSema (cagrilintide + semaglutide) reports Phase 3 weight-loss data",
+          "summary": "The amylin analog cagrilintide combined with semaglutide (CagriSema) reported Phase 3 weight-loss results. Both are dosed weekly; cagrilintide is investigational and CagriSema is not FDA-approved.",
+          "category": "Trial results",
+          "compounds": ["Cagrilintide", "Semaglutide"],
+          "sources": [
+            {"name": "ClinicalTrials.gov", "url": "https://clinicaltrials.gov/", "kind": "trial"}
+          ],
+          "publishedAt": "2026-05-28T00:00:00Z",
+          "popularity": 70,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         }
       ]
     }
