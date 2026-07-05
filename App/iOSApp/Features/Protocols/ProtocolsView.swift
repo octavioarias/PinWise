@@ -23,8 +23,8 @@ struct ProtocolsView: View {
                     header
 
                     Picker("", selection: $panel) {
-                        Text("Protocols").tag(Panel.protocols)
-                        Text("Inventory").tag(Panel.inventory)
+                        Text("My Protocols").tag(Panel.protocols)
+                        Text("My Inventory").tag(Panel.inventory)
                     }
                     .pickerStyle(.segmented)
 
@@ -84,12 +84,12 @@ struct ProtocolsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text("Your protocols.")
+            Text("What you're running.")
                 .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text("Compound, dose, and schedule — the plan you track against.")
+            Text("Your protocols and what's on hand — the plan you track against.")
                 .font(Typo.body)
                 .foregroundStyle(BrandColor.textSecondary)
         }

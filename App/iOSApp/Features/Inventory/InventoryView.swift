@@ -150,20 +150,14 @@ struct VialBuilderView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
-                    Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            Text("How did you get it?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                            Toggle("Came pre-mixed from a pharmacy", isOn: $isPremixed).tint(BrandColor.accent)
-                            Text(isPremixed ? "Already liquid and ready to use." : "A powder you mix with water yourself.")
-                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                        }
+                    Picker("", selection: $isPremixed) {
+                        Text("Pre-mixed").tag(true)
+                        Text("Powder").tag(false)
                     }
-
-                    Card {
-                        FieldRow("Nickname", hint: "Optional — e.g. \"GLOW\" or \"Wolverine 3mg/3mg/mL\".") {
-                            TextField("GLOW", text: $label).pinwiseField()
-                        }
-                    }
+                    .pickerStyle(.segmented)
+                    Text(isPremixed ? "Ready-to-use liquid from a pharmacy." : "A powder you mix with water yourself.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
@@ -213,8 +207,8 @@ struct VialBuilderView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow(isPremixed ? "How much liquid is in the vial?" : "How much water did you add?",
-                                     hint: isPremixed ? "The volume in the vial — leave blank if you're not sure yet." : "The water you mixed it with — leave blank if not mixed yet.") {
+                            FieldRow("Liquid volume",
+                                     hint: isPremixed ? "Total mL in the vial (from the label)." : "Total mL once mixed — more liquid means more dilute.") {
                                 HStack {
                                     TextField("e.g. 2", text: $solventText).keyboardType(.decimalPad).pinwiseField()
                                     Text("mL").foregroundStyle(BrandColor.textSecondary)
@@ -231,23 +225,29 @@ struct VialBuilderView: View {
                     }
 
                     Card {
-                        VStack(alignment: .leading, spacing: Space.lg) {
-                            Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
-                            if hasExpiration {
-                                FieldRow("Expires") {
-                                    DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
+                        DisclosureGroup {
+                            VStack(alignment: .leading, spacing: Space.lg) {
+                                FieldRow("Nickname", hint: "e.g. \"GLOW\" or \"Wolverine 3mg/3mg/mL\".") {
+                                    TextField("GLOW", text: $label).pinwiseField()
+                                }
+                                Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
+                                if hasExpiration {
+                                    FieldRow("Expires") {
+                                        DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
+                                    }
+                                }
+                                FieldRow("Cost", hint: "Optional — shows cost per dose.") {
+                                    HStack {
+                                        Text("$").foregroundStyle(BrandColor.textSecondary)
+                                        TextField("e.g. 200", text: $costText).keyboardType(.decimalPad).pinwiseField()
+                                    }
                                 }
                             }
+                            .padding(.top, Space.sm)
+                        } label: {
+                            Text("Optional — nickname, expiry, cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                         }
-                    }
-
-                    Card {
-                        FieldRow("Cost (optional)", hint: "Add it to see cost per dose — totally fine to skip.") {
-                            HStack {
-                                Text("$").foregroundStyle(BrandColor.textSecondary)
-                                TextField("e.g. 200", text: $costText).keyboardType(.decimalPad).pinwiseField()
-                            }
-                        }
+                        .tint(BrandColor.accentText)
                     }
 
                     PrimaryButton(title: "Add vial", systemImage: "checkmark") { save() }
@@ -263,11 +263,22 @@ struct VialBuilderView: View {
         }
     }
 
+    /// Bold unit chooser — the selected unit is accent-filled so the mg default is obvious.
     private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
-        Picker("", selection: binding) {
-            ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+        HStack(spacing: 4) {
+            ForEach(MassUnit.allCases, id: \.self) { u in
+                Button { binding.wrappedValue = u } label: {
+                    Text(u.rawValue)
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
+                        .frame(minWidth: 46)
+                        .background(binding.wrappedValue == u ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
+                        .foregroundStyle(binding.wrappedValue == u ? BrandColor.onAccent : BrandColor.textSecondary)
+                        .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: binding.wrappedValue == u ? 0 : 1))
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .pickerStyle(.segmented).frame(width: 120)
     }
 
     private func applyPreset(_ blend: Blend) {
