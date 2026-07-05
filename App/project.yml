@@ -13,6 +13,9 @@ options:
 packages:
   PeptideKit:
     path: .
+  MuscleMap:
+    url: https://github.com/melihcolpan/MuscleMap.git
+    from: "1.6.4"
 
 targets:
   PinWise:
@@ -44,6 +47,8 @@ targets:
     dependencies:
       - package: PeptideKit
         product: PeptideKit
+      - package: MuscleMap
+        product: MuscleMap
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.saphobio.pinwise
