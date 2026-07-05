@@ -2,16 +2,17 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The dashboard. Reflects real logged activity and — once protocols exist — a live
-/// adherence ring and next-dose, computed with the verified PeptideKit logic.
+/// The dashboard. A personalized greeting, one prominent hero (adherence + next dose), a bento
+/// grid of secondary stats, quick actions, and recent activity — an editorial rhythm rather than
+/// a uniform stack of cards. Reflects real logged data via verified PeptideKit logic.
 struct HomeView: View {
     @Binding var selected: AppTab
     @Binding var showMenu: Bool
+    @AppStorage("profileName") private var profileName = ""
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
-    private var lastDose: LoggedDose? { recent.first }
     private var thisWeekCount: Int {
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return recent.filter { $0.timestamp >= weekAgo }.count
@@ -41,14 +42,16 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     header
-                    quickActions
                     if !activeProtocols.isEmpty {
-                        glanceWithRing
+                        heroActive
+                        bentoGrid
                     } else if !recent.isEmpty {
-                        activityGlance
+                        heroActivity
+                        bentoGrid
                     } else {
                         emptyState
                     }
+                    quickActions
                     if !recent.isEmpty { recentSection }
                     DisclaimerBanner(text: Disclaimer.calculator)
                 }
@@ -58,6 +61,8 @@ struct HomeView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
     }
+
+    // MARK: Header
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
@@ -71,56 +76,100 @@ struct HomeView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Menu — profile, settings, and health connections")
 
+            Text(greeting.uppercased())
+                .font(Typo.caption).tracking(1.2)
+                .foregroundStyle(BrandColor.accentText)
             Text("Track your protocol.\nKnow the science.")
                 .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7).lineLimit(2)
-            Text("The source of truth for peptides and dose tracking — transparent about where the evidence stands.")
-                .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let base = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
+        let name = profileName.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? base : "\(base), \(name)"
+    }
+
+    // MARK: Hero
+
+    private var heroActive: some View {
+        HStack(spacing: Space.lg) {
+            AdherenceRing(fraction: adherenceFraction, size: 96)
+            VStack(alignment: .leading, spacing: Space.lg) {
+                heroStat("Next dose", nextDoseText)
+                heroStat("This week", "\(thisWeekCount) logged")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(Space.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(HeroSurface())
+    }
+
+    private var heroActivity: some View {
+        HStack(alignment: .center, spacing: Space.lg) {
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("\(thisWeekCount)").font(Typo.numberXL).foregroundStyle(BrandColor.textPrimary)
+                Text("Doses logged this week").font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "syringe.fill").font(.system(size: 40)).foregroundStyle(BrandColor.accentText)
+        }
+        .padding(Space.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .modifier(HeroSurface())
+    }
+
+    private func heroStat(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased()).font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
+            Text(value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
+        }
+    }
+
+    // MARK: Bento
+
+    private var bentoGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)],
+                  spacing: Space.md) {
+            bentoTile("Sites in rotation", "\(sitesInRotation)", "circle.grid.3x3.fill")
+            if activeProtocols.isEmpty {
+                bentoTile("Doses logged", "\(recent.count)", "syringe.fill")
+            } else {
+                bentoTile("Active protocols", "\(activeProtocols.count)", "list.bullet.rectangle.fill")
+            }
+        }
+    }
+
+    private func bentoTile(_ label: String, _ value: String, _ icon: String) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Image(systemName: icon).font(.title3).foregroundStyle(BrandColor.accentText)
+                Spacer(minLength: Space.sm)
+                Text(value).font(Typo.numberLG).foregroundStyle(BrandColor.textPrimary)
+                Text(label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+        }
+    }
+
+    // MARK: Quick actions / recent
+
     private var quickActions: some View {
         HStack(spacing: Space.md) {
             QuickAction(title: "Log a dose", systemImage: "plus.circle.fill") { selected = .log }
-            QuickAction(title: "Reconstitution", systemImage: "syringe.fill") { selected = .tools }
-        }
-    }
-
-    private var glanceWithRing: some View {
-        VStack(alignment: .leading, spacing: Space.md) {
-            SectionHeader(title: "At a glance")
-            Card {
-                HStack(spacing: Space.lg) {
-                    AdherenceRing(fraction: adherenceFraction)
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        labeledStat("Next dose", nextDoseText)
-                        labeledStat("Logged this week", "\(thisWeekCount)")
-                    }
-                    Spacer()
-                }
-            }
-        }
-    }
-
-    private var activityGlance: some View {
-        VStack(alignment: .leading, spacing: Space.md) {
-            SectionHeader(title: "At a glance")
-            Card {
-                HStack {
-                    StatTile(label: "Logged this week", value: "\(thisWeekCount)", emphasized: true)
-                    Divider().frame(height: 40).overlay(BrandColor.stroke)
-                    StatTile(label: "Sites in rotation", value: "\(sitesInRotation)")
-                }
-            }
+            QuickAction(title: "How much to draw", systemImage: "syringe.fill") { selected = .tools }
         }
     }
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: Space.md) {
             SectionHeader(title: "Recent")
-            ForEach(Array(recent.prefix(5)), id: \.id) { entry in
+            ForEach(Array(recent.prefix(4)), id: \.id) { entry in
                 Card {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -156,12 +205,27 @@ struct HomeView: View {
         guard let d = nextDoseDate else { return "—" }
         return d.formatted(.dateTime.weekday(.abbreviated).month().day())
     }
+}
 
-    private func labeledStat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased()).font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
-            Text(value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
-        }
+/// The hero surface — a deep-blue gradient wash + rim light so the focal card reads as elevated
+/// and distinct from the flat bento tiles below it. Adapts with the scheme via theme tokens.
+private struct HeroSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                LinearGradient(colors: [BrandColor.deepBlue.opacity(0.5), BrandColor.surface],
+                               startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [Color.white.opacity(0.16), BrandColor.stroke.opacity(0.6), BrandColor.stroke],
+                                       startPoint: .top, endPoint: .bottom),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.25), radius: 18, y: 12)
     }
 }
 
