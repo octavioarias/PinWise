@@ -5,7 +5,7 @@
 # SwiftUI sources under iOSApp/. Keeps the manual-setup steps in iOSApp/README.md optional.
 name: PinWise
 options:
-  bundleIdPrefix: com.saphobio.pinwise
+  bundleIdPrefix: com.pinwise
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -55,7 +55,7 @@ targets:
         product: MuscleMap
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.saphobio.pinwise
+        PRODUCT_BUNDLE_IDENTIFIER: com.pinwise.app
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
