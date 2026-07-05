@@ -100,8 +100,8 @@ struct LogView: View {
                 if activeProtocols.isEmpty { mode = .compound }
                 else { mode = .protocolBased; if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id } }
                 doseUnit = compound.preferredDoseUnit
-                if site == nil { site = suggestedSite }
-                showBack = site?.isBack ?? false
+                // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
+                // rotation suggestion. The "Suggested" hint below applies the pick on tap.
             }
             .onChange(of: compound) { _, newValue in doseUnit = newValue.preferredDoseUnit }
             .onChange(of: doseText) { _, _ in savedConfirmation = false }
@@ -347,8 +347,8 @@ struct LogView: View {
     private func finishSave() {
         notes = ""
         timestamp = Date()
-        site = suggestedSite
-        showBack = site?.isBack ?? false
+        site = nil          // clear so the next log starts unselected (no silently-wrong location)
+        showBack = false
         savedConfirmation = true
         savedCount += 1
     }
