@@ -72,7 +72,7 @@ struct HomeView: View {
             .accessibilityLabel("Menu — profile, settings, and health connections")
 
             Text("Track your protocol.\nKnow the science.")
-                .font(Typo.displayL).textCase(.uppercase)
+                .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7).lineLimit(2)
             Text("The source of truth for peptides and dose tracking — transparent about where the evidence stands.")

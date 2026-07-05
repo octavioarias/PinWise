@@ -72,7 +72,7 @@ struct NewsView: View {
         VStack(alignment: .leading, spacing: Space.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("News")
-                    .font(Typo.displayXL)
+                    .font(Typo.screenTitle)
                     .foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button {

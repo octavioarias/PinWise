@@ -40,7 +40,7 @@ struct ToolsView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             Text("Tools")
-                .font(Typo.displayL).textCase(.uppercase)
+                .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
             Text("Simple calculators — pick one and answer a couple of questions.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)

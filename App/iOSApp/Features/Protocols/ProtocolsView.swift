@@ -85,8 +85,7 @@ struct ProtocolsView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             Text("Your protocols.")
-                .font(Typo.displayL)
-                .textCase(.uppercase)
+                .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)

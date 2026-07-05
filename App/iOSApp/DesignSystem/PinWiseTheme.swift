@@ -142,6 +142,8 @@ enum BrandColor {
 enum Typo {
     static let displayXL = Font.system(size: 44, weight: .black)
     static let displayL = Font.system(size: 34, weight: .black)
+    /// Screen/tab titles — large but not heavy: sentence case, medium weight, kept clean and cool.
+    static let screenTitle = Font.system(size: 34, weight: .medium)
     static let title = Font.system(size: 28, weight: .bold)
     static let headline = Font.system(size: 20, weight: .semibold)
     static let body = Font.system(size: 16, weight: .regular)
