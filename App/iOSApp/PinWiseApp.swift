@@ -22,6 +22,8 @@ struct PinWiseApp: App {
 struct RootView: View {
     @AppStorage("acceptedDisclaimerVersion") private var acceptedVersion = 0
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
+    @AppStorage("weightInPounds") private var weightInPounds = true
+    @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
 
     var body: some View {
         ZStack {
@@ -30,6 +32,13 @@ struct RootView: View {
                 OnboardingView(acceptedVersion: $acceptedVersion)
                     .transition(.opacity)
                     .zIndex(1)
+            }
+        }
+        // One-time: seed the weight unit from the device region (user can override in Settings).
+        .task {
+            if !didInitWeightUnit {
+                weightInPounds = Locale.current.measurementSystem != .metric
+                didInitWeightUnit = true
             }
         }
         .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)

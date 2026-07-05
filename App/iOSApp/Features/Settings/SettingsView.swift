@@ -5,6 +5,10 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("weightInPounds") private var weightInPounds = true
+
+    /// Region hint — metric locales default to kg; US/UK-style locales to pounds for body weight.
+    private var suggestsPounds: Bool { Locale.current.measurementSystem != .metric }
+    private var suggestedUnitLabel: String { suggestsPounds ? "pounds (lb)" : "kilograms (kg)" }
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
 
     var body: some View {
@@ -24,7 +28,13 @@ struct SettingsView: View {
                     Card {
                         VStack(alignment: .leading, spacing: Space.md) {
                             SectionHeader(title: "Units")
-                            Toggle("Show weight in pounds", isOn: $weightInPounds).tint(BrandColor.accent)
+                            FieldRow("Weight", hint: "Suggested for your region: \(suggestedUnitLabel).") {
+                                Picker("Weight unit", selection: $weightInPounds) {
+                                    Text("Pounds (lb)").tag(true)
+                                    Text("Kilograms (kg)").tag(false)
+                                }
+                                .pickerStyle(.segmented)
+                            }
                         }
                     }
 
