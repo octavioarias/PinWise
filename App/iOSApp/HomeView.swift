@@ -44,15 +44,15 @@ struct HomeView: View {
                     if !activeProtocols.isEmpty {
                         heroActive
                         stackCard
-                        HealthWidget()
+                        HomeHealthCard()
                         bentoGrid
                     } else if !recent.isEmpty {
                         heroActivity
-                        HealthWidget()
+                        HomeHealthCard()
                         bentoGrid
                     } else {
                         emptyState
-                        HealthWidget()
+                        HomeHealthCard()
                     }
                     if !recent.isEmpty { recentSection }
                     DisclaimerBanner(text: Disclaimer.calculator)
@@ -256,5 +256,68 @@ private struct HeroSurface: ViewModifier {
                     )
             )
             .shadow(color: .black.opacity(0.25), radius: 18, y: 12)
+    }
+}
+
+/// A unified health snapshot for Home — merges connector metrics (Apple Health: weight, resting
+/// HR, HRV) with the user's logged biomarkers (A1c, glucose, BP, LDL, weight). Shows *only* when
+/// there's real data: users without a connector and without logged labs see nothing here, so Home
+/// stays clean and never nags. Tap to open Labs & metrics. Connecting Health lives in the menu.
+struct HomeHealthCard: View {
+    @AppStorage("weightInPounds") private var pounds = true
+    @State private var health = HealthManager.shared
+    @Query(sort: \BiomarkerEntry.timestamp, order: .reverse) private var biomarkers: [BiomarkerEntry]
+
+    private struct Metric: Identifiable { let id = UUID(); let label: String; let value: String }
+
+    private func latest(_ type: BiomarkerType) -> BiomarkerEntry? { biomarkers.first { $0.typeRaw == type.rawValue } }
+
+    private var metrics: [Metric] {
+        var out: [Metric] = []
+        if health.authorized {
+            if let kg = health.latestWeightKg {
+                out.append(.init(label: "Weight", value: String(format: pounds ? "%.0f" : "%.1f", pounds ? kg * 2.20462 : kg) + (pounds ? " lb" : " kg")))
+            }
+            if let hr = health.restingHeartRate { out.append(.init(label: "Resting HR", value: "\(Int(hr.rounded())) bpm")) }
+            if let hrv = health.hrvMilliseconds { out.append(.init(label: "HRV", value: "\(Int(hrv.rounded())) ms")) }
+        }
+        let haveWeight = out.contains { $0.label == "Weight" }
+        for type in [BiomarkerType.weight, .a1c, .glucose, .systolic, .ldl] {
+            if type == .weight && haveWeight { continue }
+            if let e = latest(type) {
+                let v = e.value == e.value.rounded() ? String(Int(e.value)) : String(format: "%.1f", e.value)
+                out.append(.init(label: type.rawValue, value: v + " " + type.unit(pounds: pounds)))
+            }
+        }
+        return Array(out.prefix(6))
+    }
+
+    var body: some View {
+        if metrics.isEmpty {
+            EmptyView()
+        } else {
+            NavigationLink { BiomarkersView() } label: {
+                Card {
+                    VStack(alignment: .leading, spacing: Space.md) {
+                        HStack {
+                            SectionHeader(title: "Your health")
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                        }
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
+                            ForEach(metrics) { m in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(m.label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+                                    Text(m.value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+            }
+            .buttonStyle(PressableStyle())
+            .task { if health.authorized { await health.refresh() } }
+        }
     }
 }
