@@ -118,11 +118,12 @@ struct ProtocolRow: View {
             VStack(alignment: .leading, spacing: Space.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                     Text(proto.name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
                     Spacer()
                     Text(proto.dose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
                     Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                 }
-                Text("\(proto.compoundName) · \(proto.cadenceText)")
+                Text("\(proto.contentsSummary) · \(proto.cadenceText)")
                     .font(.caption)
                     .foregroundStyle(BrandColor.textSecondary)
                 if let next = proto.nextDose() {

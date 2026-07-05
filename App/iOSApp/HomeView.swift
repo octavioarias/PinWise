@@ -25,7 +25,7 @@ struct HomeView: View {
         let start = cal.date(byAdding: .day, value: -13, to: cal.startOfDay(for: end)) ?? end
         var expected = 0, taken = 0
         for p in activeProtocols {
-            let logDates = recent.filter { $0.compoundName == p.compoundName }.map(\.timestamp)
+            let logDates = recent.filter { p.compoundNames.contains($0.compoundName) }.map(\.timestamp)
             let r = AdherenceCalculator.evaluate(schedule: p.schedule,
                                                  start: max(start, cal.startOfDay(for: p.startDate)),
                                                  end: end, logDates: logDates, calendar: cal)

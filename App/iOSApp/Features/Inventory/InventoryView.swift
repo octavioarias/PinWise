@@ -12,7 +12,7 @@ struct InventoryList: View {
 
     /// Project a vial against a matching active protocol (matched on any of its APIs), else as-needed.
     private func schedule(for vial: StoredVial) -> DoseSchedule {
-        protocols.first { $0.isActive && vial.apiNames.contains($0.compoundName) }?.schedule
+        protocols.first { p in p.isActive && p.compoundNames.contains(where: { vial.apiNames.contains($0) }) }?.schedule
             ?? DoseSchedule(kind: .asNeeded)
     }
 

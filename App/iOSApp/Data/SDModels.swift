@@ -52,13 +52,20 @@ extension LoggedDose {
     }
 }
 
-/// A saved dosing protocol (compound + dose + schedule). CloudKit-safe like `LoggedDose`.
+/// One compound + dose within a protocol. 1 item = single-compound; 2+ = a stack.
+struct ProtocolItem: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var compoundName: String = ""
+    var doseMicrograms: Double = 0
+}
+
+/// A saved dosing protocol — one shared schedule covering one or more compounds (a stack).
+/// CloudKit-safe like `LoggedDose`.
 @Model
 final class SavedProtocol {
     var id: UUID = UUID()
     var name: String = ""
-    var compoundName: String = ""
-    var doseMicrograms: Double = 0
+    var items: [ProtocolItem] = []           // 1 = single compound; 2+ = a stack
     var scheduleKindRaw: String = "daily"   // DoseSchedule.Kind rawValue
     var intervalDays: Int = 1
     var weekdays: [Int] = []                 // 1 = Sunday … 7 = Saturday
@@ -70,12 +77,12 @@ final class SavedProtocol {
     var reminderMinute: Int = 0
 
     init(
-        id: UUID = UUID(), name: String = "", compoundName: String = "", doseMicrograms: Double = 0,
+        id: UUID = UUID(), name: String = "", items: [ProtocolItem] = [],
         scheduleKindRaw: String = "daily", intervalDays: Int = 1, weekdays: [Int] = [],
         startDate: Date = Date(), isActive: Bool = true, notes: String = "",
         remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0
     ) {
-        self.id = id; self.name = name; self.compoundName = compoundName; self.doseMicrograms = doseMicrograms
+        self.id = id; self.name = name; self.items = items
         self.scheduleKindRaw = scheduleKindRaw; self.intervalDays = intervalDays; self.weekdays = weekdays
         self.startDate = startDate; self.isActive = isActive; self.notes = notes
         self.remindersOn = remindersOn; self.reminderHour = reminderHour; self.reminderMinute = reminderMinute
@@ -83,7 +90,17 @@ final class SavedProtocol {
 }
 
 extension SavedProtocol {
-    var dose: Mass { Mass(micrograms: doseMicrograms) }
+    var isStack: Bool { items.count > 1 }
+    var primaryItem: ProtocolItem? { items.first }
+    /// Primary compound name — kept for call sites that show a single compound.
+    var compoundName: String { primaryItem?.compoundName ?? "" }
+    /// Every compound in the protocol — used to match logs and inventory.
+    var compoundNames: [String] { items.map(\.compoundName) }
+    /// Primary dose.
+    var dose: Mass { Mass(micrograms: primaryItem?.doseMicrograms ?? 0) }
+    /// Human summary of contents, e.g. "Semaglutide · BPC-157".
+    var contentsSummary: String { items.isEmpty ? "No compounds" : compoundNames.joined(separator: " · ") }
+
     var scheduleKind: DoseSchedule.Kind { DoseSchedule.Kind(rawValue: scheduleKindRaw) ?? .daily }
     var schedule: DoseSchedule { DoseSchedule(kind: scheduleKind, intervalDays: intervalDays, weekdays: weekdays) }
 

@@ -2,16 +2,22 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// Create a dosing protocol in plain language: what, how much, how often. Presented as a sheet.
+/// Create or edit a dosing protocol in plain language: what compound(s), how much, how often.
+/// One protocol shares a schedule and can hold several compounds (a stack). Presented as a sheet.
 /// It's a schedule you configure — never a recommendation (disclaimer shown).
 struct ProtocolBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
+    private struct ItemEntry: Identifiable {
+        let id = UUID()
+        var compound: Compound
+        var doseText: String
+        var doseUnit: MassUnit
+    }
+
     @State private var name: String = ""
-    @State private var compound: Compound = CompoundCatalog.semaglutide
-    @State private var doseText: String = ""
-    @State private var doseUnit: MassUnit = .milligram
+    @State private var items: [ItemEntry] = [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
     @State private var kind: DoseSchedule.Kind = .specificWeekdays
     @State private var intervalDays: Int = 2
     @State private var weekdays: Set<Int> = [1]
@@ -21,19 +27,21 @@ struct ProtocolBuilderView: View {
     @State private var remindersOn = false
     @State private var reminderTime: Date = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
 
-    /// The protocol being edited, or nil when creating a new one.
     private let editing: SavedProtocol?
 
     init(editing: SavedProtocol? = nil) {
         self.editing = editing
         guard let p = editing else { return }
-        let comp = CompoundCatalog.all.first { $0.name == p.compoundName } ?? CompoundCatalog.semaglutide
-        let unit = comp.preferredDoseUnit
-        let doseVal = p.dose.value(in: unit)
         _name = State(initialValue: p.name)
-        _compound = State(initialValue: comp)
-        _doseText = State(initialValue: doseVal == doseVal.rounded() ? String(Int(doseVal)) : String(doseVal))
-        _doseUnit = State(initialValue: unit)
+        let entries = p.items.map { item -> ItemEntry in
+            let comp = CompoundCatalog.all.first { $0.name == item.compoundName } ?? CompoundCatalog.semaglutide
+            let unit = comp.preferredDoseUnit
+            let val = Mass(micrograms: item.doseMicrograms).value(in: unit)
+            return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit)
+        }
+        _items = State(initialValue: entries.isEmpty
+            ? [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
+            : entries)
         _kind = State(initialValue: p.scheduleKind)
         _intervalDays = State(initialValue: p.intervalDays)
         _weekdays = State(initialValue: Set(p.weekdays))
@@ -44,48 +52,71 @@ struct ProtocolBuilderView: View {
         _reminderTime = State(initialValue: Calendar.current.date(bySettingHour: p.reminderHour, minute: p.reminderMinute, second: 0, of: Date()) ?? Date())
     }
 
-    private var doseValue: Double? {
-        guard let d = Double(doseText), d > 0 else { return nil }
-        return d
-    }
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
-    private var canSave: Bool { doseValue != nil }
+    private var canSave: Bool { items.contains { (Double($0.doseText) ?? 0) > 0 } }
+    private var needsResearchNote: Bool { items.contains { $0.compound.requiresResearchDisclaimer } }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
+                        FieldRow("Name this protocol", hint: "So you can spot it quickly, e.g. \"Weekly Tirz\" or \"Recovery stack\".") {
+                            TextField("Name", text: $name).pinwiseField()
+                        }
+                    }
+
+                    Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow("Name this protocol", hint: "So you can spot it quickly, e.g. \"Weekly Tirz\".") {
-                                TextField("Name", text: $name).pinwiseField()
-                            }
-                            FieldRow("Which compound?") {
-                                Picker("Compound", selection: $compound) {
-                                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
-                                }
-                                .pickerStyle(.menu).tint(BrandColor.accentText)
-                            }
-                            HStack(spacing: Space.sm) {
-                                EvidenceBadge(tier: compound.evidenceTier)
-                                if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
-                                Spacer()
-                            }
-                            FieldRow("How much per dose?") {
-                                HStack {
-                                    TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
-                                    Picker("", selection: $doseUnit) {
-                                        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                            Text("What's in this protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("One compound is a single protocol. Add more to build a stack — they'll share the schedule below.")
+                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+
+                            ForEach($items) { $item in
+                                VStack(alignment: .leading, spacing: Space.sm) {
+                                    HStack {
+                                        Picker("", selection: $item.compound) {
+                                            ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                        }
+                                        .pickerStyle(.menu).tint(BrandColor.accentText)
+                                        Spacer()
+                                        if items.count > 1 {
+                                            Button { items.removeAll { $0.id == item.id } } label: {
+                                                Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
                                     }
-                                    .pickerStyle(.segmented).frame(width: 120)
+                                    HStack {
+                                        TextField("Dose per shot", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
+                                        Picker("", selection: $item.doseUnit) {
+                                            ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                                        }
+                                        .pickerStyle(.segmented).frame(width: 120)
+                                    }
+                                    HStack(spacing: Space.sm) {
+                                        EvidenceBadge(tier: item.compound.evidenceTier)
+                                        if item.compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                                        Spacer()
+                                    }
                                 }
+                                .padding(.bottom, Space.xs)
+                            }
+
+                            Button { items.append(ItemEntry(compound: CompoundCatalog.bpc157, doseText: "", doseUnit: .microgram)) } label: {
+                                Label("Add compound", systemImage: "plus").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                            }
+                            .buttonStyle(.plain)
+
+                            if needsResearchNote {
+                                Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow("How often?", hint: "How often you take this dose.") {
+                            FieldRow("How often?", hint: "How often you take this — shared across every compound above.") {
                                 Picker("Schedule", selection: $kind) {
                                     Text("Every day").tag(DoseSchedule.Kind.daily)
                                     Text("Every few days").tag(DoseSchedule.Kind.everyNDays)
@@ -148,14 +179,6 @@ struct ProtocolBuilderView: View {
             .navigationTitle(editing == nil ? "New protocol" : "Edit protocol")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .onAppear {
-                doseUnit = compound.preferredDoseUnit
-                if trimmedName.isEmpty { name = compound.name }
-            }
-            .onChange(of: compound) { _, c in
-                doseUnit = c.preferredDoseUnit
-                if trimmedName.isEmpty { name = c.name }
-            }
         }
     }
 
@@ -185,13 +208,16 @@ struct ProtocolBuilderView: View {
     }
 
     private func save() {
-        guard let d = doseValue else { return }
+        let built = items.compactMap { e -> ProtocolItem? in
+            guard let d = Double(e.doseText), d > 0 else { return nil }
+            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms)
+        }
+        guard !built.isEmpty else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)
         let time = Calendar.current.dateComponents([.hour, .minute], from: reminderTime)
         let target = editing ?? SavedProtocol()
-        target.name = trimmedName.isEmpty ? compound.name : trimmedName
-        target.compoundName = compound.name
-        target.doseMicrograms = Mass(d, doseUnit).micrograms
+        target.name = trimmedName.isEmpty ? (items.first?.compound.name ?? "Protocol") : trimmedName
+        target.items = built
         target.scheduleKindRaw = kind.rawValue
         target.intervalDays = intervalDays
         target.weekdays = usesWeekdays ? weekdays.sorted() : []
