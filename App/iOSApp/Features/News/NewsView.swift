@@ -181,7 +181,7 @@ struct NewsView: View {
     }
 
     private func newsLink<Label: View>(_ item: NewsItem, @ViewBuilder label: () -> Label) -> some View {
-        NavigationLink { NewsDetailView(item: item) } label: { label() }.buttonStyle(.plain)
+        NavigationLink { NewsDetailView(item: item) } label: { label() }.buttonStyle(PressableStyle())
     }
 
     private func matches(_ item: NewsItem, _ query: String) -> Bool {

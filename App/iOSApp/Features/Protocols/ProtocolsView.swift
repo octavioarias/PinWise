@@ -56,7 +56,7 @@ struct ProtocolsView: View {
                 Button { editTarget = EditTarget(proto: proto) } label: {
                     ProtocolRow(proto: proto)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
                 .contextMenu {
                     Button { editTarget = EditTarget(proto: proto) } label: {
                         Label("Edit", systemImage: "pencil")

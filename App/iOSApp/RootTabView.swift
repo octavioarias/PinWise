@@ -38,6 +38,7 @@ struct RootTabView: View {
             SideMenuDrawer(isOpen: $showMenu)
         }
         .tint(BrandColor.accent)
+        .grain()    // subtle film-grain texture across the app
         .edgeGlow() // ambient accent glow around the screen edges (scheme-aware)
         .task(id: reminderSignature) {
             await NotificationManager.reschedule(protocols: protocols)

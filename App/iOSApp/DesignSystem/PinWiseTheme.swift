@@ -148,9 +148,11 @@ enum Typo {
     static let headline = Font.system(size: 20, weight: .semibold)
     static let body = Font.system(size: 16, weight: .regular)
     static let caption = Font.system(size: 13, weight: .medium)
-    static let numberXL = Font.system(size: 40, weight: .black).monospacedDigit()
-    static let numberLG = Font.system(size: 30, weight: .black).monospacedDigit()
-    static let numberMD = Font.system(size: 22, weight: .bold).monospacedDigit()
+    // Rounded design for vital numbers — the Apple Health/Fitness signature; reads as a
+    // considered product choice rather than default system type.
+    static let numberXL = Font.system(size: 40, weight: .black, design: .rounded).monospacedDigit()
+    static let numberLG = Font.system(size: 30, weight: .black, design: .rounded).monospacedDigit()
+    static let numberMD = Font.system(size: 22, weight: .bold, design: .rounded).monospacedDigit()
 }
 
 enum Space {
@@ -215,6 +217,19 @@ extension View {
         overlay { EdgeGlowOverlay() }
     }
 
+    /// Subtle film-grain texture across the screen — a premium, tactile cue that breaks up
+    /// flat fills. Non-interactive; applied once at the app root.
+    func grain(_ opacity: Double = 0.035) -> some View {
+        overlay {
+            Grain.image
+                .resizable(resizingMode: .tile)
+                .opacity(opacity)
+                .blendMode(.softLight)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
+    }
+
     /// Canvas with an ambient deep-blue mesh at the top, faded into the background.
     func heroScreen() -> some View {
         tabBarClearance()
@@ -251,5 +266,41 @@ private struct EdgeGlowOverlay: View {
             .opacity(scheme == .dark ? 0.95 : 0.5)
             .ignoresSafeArea()
             .allowsHitTesting(false)
+    }
+}
+
+/// A cached, deterministic monochrome noise tile for the film-grain overlay. Built once with an
+/// xorshift PRNG (no Date/random dependency, so it's stable across launches).
+enum Grain {
+    static let image: Image = {
+        let size = 128
+        let bytesPerRow = size * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * size)
+        var seed: UInt64 = 88172645463325252
+        for i in 0..<(size * size) {
+            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
+            let v = UInt8(truncatingIfNeeded: seed)
+            let o = i * 4
+            pixels[o] = v; pixels[o + 1] = v; pixels[o + 2] = v; pixels[o + 3] = 255
+        }
+        let space = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: &pixels, width: size, height: size, bitsPerComponent: 8,
+                                  bytesPerRow: bytesPerRow, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let cg = ctx.makeImage() else {
+            return Image(systemName: "circle.fill")
+        }
+        return Image(decorative: cg, scale: 1, orientation: .up)
+    }()
+}
+
+/// Plain button style that adds a springy press-scale — tactile feedback used across tappable
+/// cards, so the app feels responsive rather than static.
+struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }

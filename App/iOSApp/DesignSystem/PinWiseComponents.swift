@@ -15,16 +15,24 @@ struct Card<Content: View>: View {
             .padding(Space.lg)
             .background(
                 LinearGradient(
-                    colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.65)],
+                    colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.55)],
                     startPoint: .top, endPoint: .bottom
                 ),
                 in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
             )
+            // Rim light: a faint highlight on the top edge fading into the hairline — reads as a
+            // raised, glassy surface rather than a flat rectangle.
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(BrandColor.stroke, lineWidth: 1)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.14), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
+                            startPoint: .top, endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
             )
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+            .shadow(color: .black.opacity(0.22), radius: 16, y: 10)
     }
 }
 
@@ -220,6 +228,7 @@ struct AdherenceRing: View {
     let fraction: Double
     var size: CGFloat = 88
 
+    @State private var animated = false
     private var clamped: Double { max(0, min(1, fraction)) }
     private var pct: Int { Int((clamped * 100).rounded()) }
 
@@ -227,15 +236,16 @@ struct AdherenceRing: View {
         ZStack {
             Circle().stroke(BrandColor.surfaceElevated, lineWidth: 9)
             Circle()
-                .trim(from: 0, to: max(0.0001, clamped))
+                .trim(from: 0, to: max(0.0001, animated ? clamped : 0))
                 .stroke(
                     AngularGradient(colors: [BrandColor.accentText, BrandColor.success, BrandColor.accentText], center: .center),
                     style: StrokeStyle(lineWidth: 9, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
+                .animation(.spring(response: 0.9, dampingFraction: 0.85), value: animated)
             VStack(spacing: 0) {
                 Text("\(pct)%")
-                    .font(.system(size: 20, weight: .black)).monospacedDigit()
+                    .font(.system(size: 20, weight: .black, design: .rounded)).monospacedDigit()
                     .foregroundStyle(BrandColor.textPrimary)
                 Text("ADHERENCE")
                     .font(.system(size: 8.5, weight: .semibold)).tracking(0.5)
@@ -243,6 +253,7 @@ struct AdherenceRing: View {
             }
         }
         .frame(width: size, height: size)
+        .onAppear { animated = true }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Adherence")
         .accessibilityValue("\(pct) percent over the last 14 days")
