@@ -146,7 +146,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.5, // ~30 min
         wadaProhibited: true,
         notes: "Short-acting GHRH analog; ~100–300 mcg 1–3×/day in community use. Distinct from the DAC version."
@@ -159,7 +159,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 2,
         wadaProhibited: true,
         notes: "Ghrelin-receptor/GH secretagogue. Per FDA it is 503A Category 1 — a different status than the 12 peptides removed from Category 2 in April 2026."
@@ -172,7 +172,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.2, // ~11–12 min
         wadaProhibited: true,
         notes: "GHRH(1-29) analog; the branded product Geref was discontinued. Human PK data exist; not currently an approved product."
@@ -185,7 +185,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.25,
         wadaProhibited: true,
         notes: "GH-releasing peptide (ghrelin mimetic). Used diagnostically as pralmorelin abroad; not FDA-approved for therapy."
@@ -198,7 +198,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.25,
         wadaProhibited: true,
         notes: "GH-releasing peptide; strongly increases appetite via ghrelin signaling. Not FDA-approved."
@@ -211,7 +211,7 @@ public enum CompoundCatalog {
         category: .growthHormoneSecretagogue,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.5,
         wadaProhibited: true,
         notes: "Potent GH-releasing peptide; GH response can desensitize with continued use. Not FDA-approved."
@@ -239,7 +239,7 @@ public enum CompoundCatalog {
         category: .healingRecovery,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 0.4, // sub-30-min plasma half-life
         wadaProhibited: true,
         notes: "No completed Phase II trial; human data from <30 subjects across uncontrolled studies. Removed from FDA 503A Category 2 (April 2026, procedural)."
@@ -290,7 +290,7 @@ public enum CompoundCatalog {
         category: .healingRecovery,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Tripeptide fragment of α-MSH studied preclinically for anti-inflammatory effects. No approved human product."
     )
@@ -302,7 +302,7 @@ public enum CompoundCatalog {
         category: .healingRecovery,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Antimicrobial host-defense peptide studied preclinically. No approved human product; injectable use is unstudied."
     )
@@ -340,7 +340,7 @@ public enum CompoundCatalog {
         category: .cosmeticLongevity,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Non-selective melanocortin agonist used for tanning/libido; NOT approved. Linked to nausea, darkening/changing moles — dermatologic monitoring is advised in the literature."
     )
@@ -364,7 +364,7 @@ public enum CompoundCatalog {
         category: .cosmeticLongevity,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "GH fragment (176-191) marketed for fat loss; human obesity trials did NOT show meaningful weight loss vs placebo. Not approved."
     )
@@ -414,7 +414,7 @@ public enum CompoundCatalog {
         category: .metabolic,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Nonapeptide studied for sleep/stress with inconsistent results. No approved human product."
     )
@@ -426,7 +426,7 @@ public enum CompoundCatalog {
         category: .metabolic,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Anxiolytic peptide developed in Russia (human use there); not FDA-approved. Often used intranasally."
     )
@@ -438,7 +438,7 @@ public enum CompoundCatalog {
         category: .metabolic,
         regulatoryStatus: .researchOnly,
         evidenceTier: .humanTrialsUnapproved,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: nil,
         notes: "Nootropic/neuroprotective peptide developed in Russia (human use there); not FDA-approved. Often used intranasally."
     )
@@ -450,7 +450,7 @@ public enum CompoundCatalog {
         category: .metabolic,
         regulatoryStatus: .researchOnly,
         evidenceTier: .preclinicalOrFailed,
-        preferredDoseUnit: .microgram,
+        preferredDoseUnit: .milligram,
         halfLifeHours: 20, // LR3 variant resists binding proteins, extending action
         wadaProhibited: true,
         notes: "Modified IGF-1 with an extended half-life. WADA-prohibited (S2). No approved human product; growth-factor signaling carries theoretical cancer-risk concerns."

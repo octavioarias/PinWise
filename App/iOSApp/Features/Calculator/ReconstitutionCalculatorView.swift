@@ -30,7 +30,7 @@ final class DoseCalculatorViewModel {
     var totalVolumeText = ""
 
     var doseText = "250"
-    var doseUnit: MassUnit = .microgram
+    var doseUnit: MassUnit = .milligram
     var syringe: SyringeScale = .u100
 
     private(set) var result: DoseDisplay?

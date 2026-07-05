@@ -46,7 +46,7 @@ public struct Compound: Identifiable, Codable, Hashable, Sendable {
         category: CompoundCategory,
         regulatoryStatus: RegulatoryStatus,
         evidenceTier: EvidenceTier,
-        preferredDoseUnit: MassUnit = .microgram,
+        preferredDoseUnit: MassUnit = .milligram,
         halfLifeHours: Double? = nil,
         wadaProhibited: Bool = false,
         notes: String = ""

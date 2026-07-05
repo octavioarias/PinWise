@@ -137,7 +137,7 @@ struct VialBuilderView: View {
     @State private var solventText = ""
     @State private var isPremixed = false
     @State private var doseText = ""
-    @State private var doseUnit: MassUnit = .microgram
+    @State private var doseUnit: MassUnit = .milligram
     @State private var costText = ""
     @State private var hasExpiration = false
     @State private var expiration = Date()

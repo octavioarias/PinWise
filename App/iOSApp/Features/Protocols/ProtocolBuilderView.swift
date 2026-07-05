@@ -103,7 +103,7 @@ struct ProtocolBuilderView: View {
                                 .padding(.bottom, Space.xs)
                             }
 
-                            Button { items.append(ItemEntry(compound: CompoundCatalog.bpc157, doseText: "", doseUnit: .microgram)) } label: {
+                            Button { items.append(ItemEntry(compound: CompoundCatalog.bpc157, doseText: "", doseUnit: .milligram)) } label: {
                                 Label("Add compound", systemImage: "plus").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
                             }
                             .buttonStyle(.plain)
