@@ -156,7 +156,7 @@ struct HomeView: View {
                                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             }
                             Spacer()
-                            Text(p.dose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                            Text(p.effectiveDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
                         }
                     }
                     if activeProtocols.count > 4 {

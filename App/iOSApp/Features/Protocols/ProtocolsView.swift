@@ -119,13 +119,17 @@ struct ProtocolRow: View {
                 HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                     Text(proto.name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                     if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
+                    if proto.isTitrating { TagChip(text: "Ramp-up", color: BrandColor.warning) }
                     Spacer()
-                    Text(proto.dose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                    Text(proto.effectiveDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
                     Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text("\(proto.contentsSummary) · \(proto.cadenceText)")
                     .font(.caption)
                     .foregroundStyle(BrandColor.textSecondary)
+                if let label = proto.titrationLabel {
+                    Text(label).font(.caption2).foregroundStyle(BrandColor.warning)
+                }
                 if let next = proto.nextDose() {
                     Text("Next: \(next, format: .dateTime.weekday(.abbreviated).month().day())")
                         .font(.caption)

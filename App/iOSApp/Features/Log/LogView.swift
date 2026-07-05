@@ -226,7 +226,7 @@ struct LogView: View {
             compound = c
             doseUnit = c.preferredDoseUnit
         }
-        let v = p.dose.value(in: doseUnit)
+        let v = p.effectiveDose.value(in: doseUnit)
         doseText = v == v.rounded() ? String(Int(v)) : String(v)
     }
 
