@@ -10,8 +10,12 @@ enum HeatWindow: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var days: Int { self == .twoWeeks ? 14 : (self == .fourWeeks ? 28 : 56) }
     var label: String { self == .twoWeeks ? "last 2 weeks" : (self == .fourWeeks ? "last 4 weeks" : "last 8 weeks") }
-    /// Uses at one site that count as "a lot" (fully red) — about 2 per week over the window.
-    var cap: Double { Double(days) / 7.0 * 2.0 }
+    /// The "fully red" load, grounded in injection-technique guidance rather than relative ranking:
+    /// keep injections ≥1 cm apart and rest a spot ~2–3 weeks (FITTER / lipohypertrophy consensus).
+    /// Once a single region is used ~daily, holding that spacing + rest becomes impractical, so we
+    /// treat ≈6 uses/week of one region as fully red. Rate-based (scales with the window) so a
+    /// longer look-back never just crowds everything toward red.
+    var cap: Double { Double(days) / 7.0 * 6.0 }
 }
 
 /// Injection-site heat map over a professionally-drawn anatomical body (MuscleMap, MIT). Color is
@@ -80,7 +84,7 @@ struct BodyMapView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("How heavily you've used each site recently. A few uses stay green; heavy repeat use turns red — rotate toward the cooler areas so tissue can recover.")
+                Text("How heavily you've used each site recently. A few uses stay green; leaning on one area turns it red — rotate toward the cooler areas so tissue can recover.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
                 Card {
@@ -143,7 +147,10 @@ struct BodyMapView: View {
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
 
-                DisclaimerBanner(text: "Rotation guidance is general education, not medical advice.")
+                Text("Why the colors: injection-technique guidance is to keep shots about a finger-width (≥1 cm) apart and let a spot rest ~2–3 weeks before reusing it. A region warms toward red as you rely on it more heavily than that allows.")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+
+                DisclaimerBanner(text: "Rotation guidance is general education based on injection-technique research — not medical advice.")
             }
             .padding(Space.lg)
         }
