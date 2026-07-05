@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// A body heat map of injection-site frequency: warmer spots are used more often. Doubles as a
-/// rotation aid — the app suggests the least-recently-used site. Sites are shown mirror-style
-/// (your own left/right). Built from logged doses; drawn with native shapes (no image assets).
+/// A body heat map of injection-site frequency, drawn over a gray front-facing male figure:
+/// warmer, larger blooms mark sites you use more often. Doubles as a rotation aid (the app
+/// suggests the least-recently-used site). Native shapes — no image assets. Mirror-style.
 struct BodyMapView: View {
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var doses: [LoggedDose]
 
@@ -22,12 +22,12 @@ struct BodyMapView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("Where you've been injecting. Warmer spots are used more often — rotating toward the cooler ones gives tissue time to recover.")
+                Text("Where you've been injecting. Warmer, larger blooms are used more often — rotating toward the cooler areas gives tissue time to recover.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
                 Card {
                     VStack(spacing: Space.md) {
-                        bodyDiagram
+                        figure
                         legend
                         Text("Shown mirror-style — left and right are your own body's sides.")
                             .font(.caption2).foregroundStyle(BrandColor.textSecondary)
@@ -51,14 +51,14 @@ struct BodyMapView: View {
                     VStack(alignment: .leading, spacing: Space.sm) {
                         SectionHeader(title: "By site")
                         ForEach(InjectionSite.allCases) { site in
+                            let c = counts[site] ?? 0
                             HStack(spacing: Space.sm) {
-                                Circle().fill(heatColor(for: counts[site] ?? 0))
+                                Circle().fill(c > 0 ? heatColor(intensity(c)) : BrandColor.surfaceElevated)
                                     .frame(width: 11, height: 11)
                                     .overlay(Circle().strokeBorder(BrandColor.stroke, lineWidth: 0.5))
                                 Text(site.displayName).font(.caption).foregroundStyle(BrandColor.textPrimary)
                                 Spacer()
-                                Text("\(counts[site] ?? 0)")
-                                    .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                                Text("\(c)").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
@@ -78,92 +78,132 @@ struct BodyMapView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: Diagram
+    // MARK: Figure + heat
 
-    private var bodyDiagram: some View {
+    private var figure: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
             ZStack {
-                silhouette(w: w, h: h)
+                // Gray male body: torso/arms/legs shape + head, shaded for a little dimension.
+                MaleBodyShape()
+                    .fill(bodyGradient)
+                MaleBodyShape()
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                Ellipse()
+                    .fill(bodyGradient)
+                    .frame(width: w * 0.15, height: h * 0.11)
+                    .position(x: w * 0.5, y: h * 0.075)
+
+                // Heat blooms, clipped to the body so warmth sits on the figure.
+                ZStack {
+                    ForEach(InjectionSite.allCases) { site in
+                        let c = counts[site] ?? 0
+                        if c > 0 {
+                            let t = intensity(c)
+                            let radius = 24 + 34 * t
+                            let p = position(for: site)
+                            Circle()
+                                .fill(RadialGradient(
+                                    colors: [heatColor(t).opacity(0.9), heatColor(t).opacity(0)],
+                                    center: .center, startRadius: 0, endRadius: radius))
+                                .frame(width: radius * 2, height: radius * 2)
+                                .position(x: p.x * w, y: p.y * h)
+                                .blur(radius: 9)
+                        }
+                    }
+                }
+                .frame(width: w, height: h)
+                .clipShape(MaleBodyShape())
+
+                // Faint locators so every site is findable even at zero uses.
                 ForEach(InjectionSite.allCases) { site in
                     let p = position(for: site)
-                    marker(for: site).position(x: p.x * w, y: p.y * h)
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                        .frame(width: 9, height: 9)
+                        .position(x: p.x * w, y: p.y * h)
                 }
             }
         }
-        .frame(height: 360)
+        .frame(height: 420)
         .frame(maxWidth: .infinity)
     }
 
-    private func silhouette(w: CGFloat, h: CGFloat) -> some View {
-        let fill = BrandColor.surfaceElevated.opacity(0.55)
-        return ZStack {
-            Circle().fill(fill).frame(width: w * 0.17, height: w * 0.17).position(x: w * 0.5, y: h * 0.09)
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(fill).frame(width: w * 0.44, height: h * 0.44).position(x: w * 0.5, y: h * 0.40)
-            Capsule().fill(fill).frame(width: w * 0.11, height: h * 0.34).position(x: w * 0.21, y: h * 0.36)
-            Capsule().fill(fill).frame(width: w * 0.11, height: h * 0.34).position(x: w * 0.79, y: h * 0.36)
-            Capsule().fill(fill).frame(width: w * 0.17, height: h * 0.40).position(x: w * 0.40, y: h * 0.80)
-            Capsule().fill(fill).frame(width: w * 0.17, height: h * 0.40).position(x: w * 0.60, y: h * 0.80)
-        }
-    }
-
-    private func marker(for site: InjectionSite) -> some View {
-        let c = counts[site] ?? 0
-        return ZStack {
-            Circle()
-                .fill(heatColor(for: c))
-                .frame(width: 34, height: 34)
-                .overlay(Circle().strokeBorder(BrandColor.background.opacity(0.5), lineWidth: 1.5))
-            if c > 0 {
-                Text("\(c)").font(.caption2.weight(.bold)).foregroundStyle(BrandColor.background)
-            }
-        }
-        .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
-        .accessibilityLabel("\(site.displayName): \(c) doses")
-    }
-
-    /// Normalized (0…1) marker positions over the silhouette, mirror-style.
-    private func position(for site: InjectionSite) -> CGPoint {
-        switch site {
-        case .armLeft:           return CGPoint(x: 0.21, y: 0.30)
-        case .armRight:          return CGPoint(x: 0.79, y: 0.30)
-        case .abdomenUpperLeft:  return CGPoint(x: 0.42, y: 0.33)
-        case .abdomenUpperRight: return CGPoint(x: 0.58, y: 0.33)
-        case .abdomenLowerLeft:  return CGPoint(x: 0.42, y: 0.46)
-        case .abdomenLowerRight: return CGPoint(x: 0.58, y: 0.46)
-        case .gluteLeft:         return CGPoint(x: 0.39, y: 0.60)
-        case .gluteRight:        return CGPoint(x: 0.61, y: 0.60)
-        case .thighLeft:         return CGPoint(x: 0.40, y: 0.80)
-        case .thighRight:        return CGPoint(x: 0.60, y: 0.80)
-        }
-    }
-
-    /// Relative heat: none → surface; then low/medium/high vs the most-used site.
-    private func heatColor(for count: Int) -> Color {
-        guard count > 0, maxCount > 0 else { return BrandColor.surfaceElevated }
-        let frac = Double(count) / Double(maxCount)
-        if frac <= 0.34 { return BrandColor.success }
-        if frac <= 0.67 { return BrandColor.warning }
-        return BrandColor.danger
+    private var bodyGradient: LinearGradient {
+        LinearGradient(colors: [Color(white: 0.46), Color(white: 0.30)], startPoint: .top, endPoint: .bottom)
     }
 
     private var legend: some View {
-        HStack(spacing: Space.md) {
-            legendDot(BrandColor.surfaceElevated, "None")
-            legendDot(BrandColor.success, "Low")
-            legendDot(BrandColor.warning, "Medium")
-            legendDot(BrandColor.danger, "High")
-            Spacer()
+        HStack(spacing: Space.sm) {
+            Text("Less").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            Capsule()
+                .fill(LinearGradient(colors: [heatColor(0.12), heatColor(0.5), heatColor(0.92)],
+                                     startPoint: .leading, endPoint: .trailing))
+                .frame(height: 6)
+            Text("More").font(.caption2).foregroundStyle(BrandColor.textSecondary)
         }
     }
 
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 10, height: 10)
-                .overlay(Circle().strokeBorder(BrandColor.stroke, lineWidth: 0.5))
-            Text(label).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+    // MARK: Heat helpers
+
+    private func intensity(_ count: Int) -> Double {
+        guard maxCount > 0 else { return 0 }
+        return max(0, min(1, Double(count) / Double(maxCount)))
+    }
+
+    /// Smooth green → amber → red thermal ramp.
+    private func heatColor(_ t: Double) -> Color {
+        let x = max(0, min(1, t))
+        func lerp(_ a: Double, _ b: Double, _ u: Double) -> Double { a + (b - a) * u }
+        if x < 0.5 {
+            let u = x / 0.5
+            return Color(red: lerp(0.10, 1.00, u), green: lerp(0.78, 0.69, u), blue: lerp(0.55, 0.13, u))
+        } else {
+            let u = (x - 0.5) / 0.5
+            return Color(red: lerp(1.00, 0.87, u), green: lerp(0.69, 0.20, u), blue: lerp(0.13, 0.20, u))
         }
+    }
+
+    /// Normalized (0…1) marker positions over the figure, mirror-style.
+    private func position(for site: InjectionSite) -> CGPoint {
+        switch site {
+        case .armLeft:           return CGPoint(x: 0.31, y: 0.30)
+        case .armRight:          return CGPoint(x: 0.69, y: 0.30)
+        case .abdomenUpperLeft:  return CGPoint(x: 0.44, y: 0.33)
+        case .abdomenUpperRight: return CGPoint(x: 0.56, y: 0.33)
+        case .abdomenLowerLeft:  return CGPoint(x: 0.44, y: 0.44)
+        case .abdomenLowerRight: return CGPoint(x: 0.56, y: 0.44)
+        case .gluteLeft:         return CGPoint(x: 0.44, y: 0.53)
+        case .gluteRight:        return CGPoint(x: 0.56, y: 0.53)
+        case .thighLeft:         return CGPoint(x: 0.45, y: 0.67)
+        case .thighRight:        return CGPoint(x: 0.55, y: 0.67)
+        }
+    }
+}
+
+/// A simple front-facing male body outline (torso + arms + legs) in normalized proportions.
+/// Symmetric: the right half is authored and mirrored. Head is drawn separately.
+struct MaleBodyShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
+        }
+        // Right-side outline from neck base, out along the shoulder/arm, down the torso and leg
+        // to the crotch center. Mirrored for the left side.
+        let right: [(CGFloat, CGFloat)] = [
+            (0.50, 0.150), (0.565, 0.150), (0.605, 0.180), (0.700, 0.240),
+            (0.690, 0.400), (0.662, 0.520), (0.668, 0.565), (0.620, 0.552),
+            (0.600, 0.400), (0.585, 0.258), (0.575, 0.420), (0.628, 0.500),
+            (0.600, 0.620), (0.575, 0.740), (0.575, 0.860), (0.552, 0.955),
+            (0.566, 0.985), (0.516, 0.978), (0.520, 0.860), (0.526, 0.740),
+            (0.505, 0.600), (0.500, 0.585),
+        ]
+        var p = Path()
+        p.move(to: pt(right[0].0, right[0].1))
+        for q in right.dropFirst() { p.addLine(to: pt(q.0, q.1)) }
+        for q in right.reversed() { p.addLine(to: pt(1 - q.0, q.1)) }
+        p.closeSubpath()
+        return p
     }
 }
