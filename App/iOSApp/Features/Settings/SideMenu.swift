@@ -64,7 +64,7 @@ struct SideMenuDrawer: View {
                 VStack(alignment: .leading, spacing: 0) {
                     row("person", "My Profile", .profile)
                     row("slider.horizontal.3", "Settings", .settings)
-                    row("heart.text.square", "Apple Health", .health)
+                    row("heart.text.square", "Connections", .health)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     row("info.circle", "About & Legal", .about)
                 }
@@ -166,15 +166,18 @@ struct HealthConnectionsView: View {
     @State private var health = HealthManager.shared
 
     var body: some View {
-        MenuSheet(title: "Apple Health") {
-            Text("Connect Apple Health to see the metrics that matter alongside your doses.")
+        MenuSheet(title: "Connections") {
+            Text("PinWise syncs through Apple Health. Connect once and the metrics that matter — weight, resting heart rate, HRV, sleep, and activity — flow in, including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write to Apple Health. No separate logins.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
             Card {
-                VStack(alignment: .leading, spacing: Space.sm) {
-                    SectionHeader(title: "Works with your wearables")
-                    Text("Oura, Whoop, and most rings and watches write to Apple Health. Connect Health above and their weight, heart-rate, and HRV data flows in automatically — no separate login.")
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                VStack(alignment: .leading, spacing: Space.md) {
+                    SectionHeader(title: "Sources")
+                    sourceRow("Apple Health", "heart.fill", health.authorized ? "Connected — the hub for everything below." : "The hub — connect above to sync.", on: health.authorized)
+                    sourceRow("Apple Fitness", "figure.run", "Workouts, move & exercise minutes — via Apple Health.")
+                    sourceRow("Oura Ring", "circle.circle", "Sleep, HRV, readiness — turn on Apple Health sharing in the Oura app.")
+                    sourceRow("Whoop", "bolt.heart.fill", "Recovery, strain, sleep — turn on Apple Health sharing in the Whoop app.")
+                    sourceRow("Garmin", "figure.outdoor.cycle", "Activity & sleep — enable Apple Health in Garmin Connect.")
                 }
             }
             if health.authorized {
@@ -184,6 +187,18 @@ struct HealthConnectionsView: View {
                 }
                 .foregroundStyle(BrandColor.danger)
             }
+        }
+    }
+
+    private func sourceRow(_ name: String, _ icon: String, _ note: String, on: Bool = false) -> some View {
+        HStack(alignment: .top, spacing: Space.md) {
+            Image(systemName: icon).font(.title3).frame(width: 26).foregroundStyle(BrandColor.accentText)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Text(note).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            }
+            Spacer(minLength: 0)
+            if on { Image(systemName: "checkmark.circle.fill").foregroundStyle(BrandColor.success) }
         }
     }
 }

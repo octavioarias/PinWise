@@ -27,17 +27,17 @@ struct HealthWidget: View {
                     Text("Health data isn't available on this device.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 } else if health.authorized {
-                    Text("Signals worth watching alongside your doses.")
+                    Text("Signals worth watching alongside your doses — including anything Oura, Whoop, or Apple Fitness write to Health.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    HStack(spacing: Space.md) {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Space.md) {
                         metric("Weight (\(weightInPounds ? "lb" : "kg"))", weightText, "scalemass")
-                        Divider().frame(height: 40).overlay(BrandColor.stroke)
-                        metric("Resting HR (bpm)", hrText, "heart")
-                        Divider().frame(height: 40).overlay(BrandColor.stroke)
+                        metric("Resting HR", hrText, "heart")
                         metric("HRV (ms)", hrvText, "waveform.path.ecg")
+                        if health.sleepHoursLastNight != nil { metric("Sleep (h)", sleepText, "bed.double") }
+                        if health.stepsToday != nil { metric("Steps", stepsText, "shoeprints.fill") }
                     }
                 } else {
-                    Text("Connect Apple Health to see weight, resting heart rate, and HRV next to your logs. Data from Oura, Whoop, and similar wearables shows up here too.")
+                    Text("Connect Apple Health to see weight, resting heart rate, HRV, sleep, and activity next to your logs. Data from Oura, Whoop, Apple Fitness, and similar shows up here too.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                     Button {
                         Task { requesting = true; await health.requestAuthorization(); requesting = false }
@@ -67,4 +67,6 @@ struct HealthWidget: View {
     }
     private var hrText: String { health.restingHeartRate.map { String(Int($0.rounded())) } ?? "—" }
     private var hrvText: String { health.hrvMilliseconds.map { String(Int($0.rounded())) } ?? "—" }
+    private var sleepText: String { health.sleepHoursLastNight.map { String(format: "%.1f", $0) } ?? "—" }
+    private var stepsText: String { health.stepsToday.map { Int($0).formatted() } ?? "—" }
 }

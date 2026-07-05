@@ -18,6 +18,8 @@ final class HealthManager {
     private(set) var latestWeightKg: Double?
     private(set) var restingHeartRate: Double?      // bpm
     private(set) var hrvMilliseconds: Double?       // SDNN
+    private(set) var sleepHoursLastNight: Double?
+    private(set) var stepsToday: Double?
 
     private init() {
         authorized = UserDefaults.standard.bool(forKey: Self.connectedKey)
@@ -27,10 +29,14 @@ final class HealthManager {
 
     private var readTypes: Set<HKObjectType> {
         var set = Set<HKObjectType>()
-        for id in [HKQuantityTypeIdentifier.bodyMass, .restingHeartRate, .heartRateVariabilitySDNN, .heartRate, .stepCount] {
+        // Body, heart, and the activity/fitness/wearable metrics that Oura, Whoop, Apple Fitness,
+        // Garmin, etc. write into Apple Health.
+        for id in [HKQuantityTypeIdentifier.bodyMass, .restingHeartRate, .heartRateVariabilitySDNN,
+                   .heartRate, .stepCount, .activeEnergyBurned, .appleExerciseTime, .vo2Max, .respiratoryRate] {
             if let t = HKObjectType.quantityType(forIdentifier: id) { set.insert(t) }
         }
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { set.insert(sleep) }
+        set.insert(HKObjectType.workoutType())
         return set
     }
 
@@ -62,6 +68,42 @@ final class HealthManager {
         latestWeightKg = await latest(.bodyMass, unit: .gramUnit(with: .kilo))
         restingHeartRate = await latest(.restingHeartRate, unit: HKUnit.count().unitDivided(by: .minute()))
         hrvMilliseconds = await latest(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli))
+        stepsToday = await sumToday(.stepCount, unit: .count())
+        sleepHoursLastNight = await sleepHours()
+    }
+
+    /// Cumulative sum for today (steps, active energy…).
+    private func sumToday(_ identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double? {
+        guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else { return nil }
+        let start = Calendar.current.startOfDay(for: Date())
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
+        return await withCheckedContinuation { continuation in
+            let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+                continuation.resume(returning: stats?.sumQuantity()?.doubleValue(for: unit))
+            }
+            store.execute(query)
+        }
+    }
+
+    /// Hours asleep in the last ~18 hours (sums "asleep" sleep-analysis samples).
+    private func sleepHours() async -> Double? {
+        guard let type = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+        let start = Calendar.current.date(byAdding: .hour, value: -18, to: Date()) ?? Date()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+                let cats = (samples as? [HKCategorySample]) ?? []
+                let asleep: Set<Int> = [
+                    HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                    HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+                ]
+                let seconds = cats.filter { asleep.contains($0.value) }.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+                continuation.resume(returning: seconds > 0 ? seconds / 3600 : nil)
+            }
+            store.execute(query)
+        }
     }
 
     /// Most recent sample value for a quantity type, or nil.

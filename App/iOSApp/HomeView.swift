@@ -280,6 +280,8 @@ struct HomeHealthCard: View {
             }
             if let hr = health.restingHeartRate { out.append(.init(label: "Resting HR", value: "\(Int(hr.rounded())) bpm")) }
             if let hrv = health.hrvMilliseconds { out.append(.init(label: "HRV", value: "\(Int(hrv.rounded())) ms")) }
+            if let sleep = health.sleepHoursLastNight { out.append(.init(label: "Sleep", value: String(format: "%.1f h", sleep))) }
+            if let steps = health.stepsToday { out.append(.init(label: "Steps", value: Int(steps).formatted())) }
         }
         let haveWeight = out.contains { $0.label == "Weight" }
         for type in [BiomarkerType.weight, .a1c, .glucose, .systolic, .ldl] {
