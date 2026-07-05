@@ -97,7 +97,7 @@ public extension NewsFeed {
       "items": [
         {
           "id": "reta-triumph1-2026-05",
-          "headline": "Retatrutide reports positive Phase 3 topline in obesity",
+          "headline": "Retatrutide clears Phase 3 in obesity",
           "summary": "Eli Lilly reported positive Phase 3 (TRIUMPH-1) topline results for retatrutide in obesity in May 2026. Retatrutide is investigational and not FDA-approved. Phase 2 dosing (1/4/8/12 mg weekly) was published in NEJM (2023).",
           "category": "Trial results",
           "compounds": ["Retatrutide"],
@@ -113,7 +113,7 @@ public extension NewsFeed {
         },
         {
           "id": "fda-503b-bulks-2026-04",
-          "headline": "FDA proposes keeping semaglutide & tirzepatide off the 503B bulks list",
+          "headline": "FDA moves to curb compounded GLP-1s",
           "summary": "On April 30, 2026 the FDA proposed keeping semaglutide, tirzepatide, and liraglutide off the 503B bulk drug substances list — a pending proposal, not a final ban. Shortage-based compounding enforcement discretion ended in 2025.",
           "category": "Regulatory",
           "compounds": ["Semaglutide", "Tirzepatide"],
@@ -127,7 +127,7 @@ public extension NewsFeed {
         },
         {
           "id": "compounded-glp1-units-safety",
-          "headline": "FDA: compounded GLP-1 dosing errors from non-standardized concentrations",
+          "headline": "FDA warns of compounded GLP-1 dosing errors",
           "summary": "The FDA has warned that non-standardized compounded GLP-1 concentrations have led to dosing errors, with some patients self-administering 5–20x the intended dose when dosing by 'units.' Always confirm the mg/mL concentration on the label.",
           "category": "Safety",
           "compounds": ["Semaglutide", "Tirzepatide"],
@@ -141,7 +141,7 @@ public extension NewsFeed {
         },
         {
           "id": "bpc157-review-2026",
-          "headline": "Review: BPC-157 human evidence remains limited",
+          "headline": "BPC-157's human evidence stays thin",
           "summary": "A 2026 narrative review (Pharmaceutics) summarized BPC-157's biopharmaceutical challenges and translational barriers. Human evidence remains limited — no completed Phase II trial and fewer than 30 subjects across uncontrolled studies. BPC-157 is not FDA-approved.",
           "category": "General",
           "compounds": ["BPC-157"],
@@ -155,7 +155,7 @@ public extension NewsFeed {
         },
         {
           "id": "reta-phase2-obesity-2023",
-          "headline": "Retatrutide Phase 2: up to ~24% body-weight loss over 48 weeks",
+          "headline": "Retatrutide drove ~24% weight loss in Phase 2",
           "summary": "In a Phase 2 obesity trial (NEJM 2023), retatrutide produced dose-dependent weight loss up to about 24% at 48 weeks (12 mg weekly), with improvements in blood sugar and blood pressure. Retatrutide is investigational and not FDA-approved; nausea and other GI effects were the most common side effects.",
           "category": "Trial results",
           "compounds": ["Retatrutide"],
@@ -170,7 +170,7 @@ public extension NewsFeed {
         },
         {
           "id": "reta-liver-fat-2024",
-          "headline": "Retatrutide reduced liver fat in a Phase 2 metabolic-liver sub-study",
+          "headline": "Retatrutide sharply cut liver fat, early data show",
           "summary": "A Phase 2 sub-study reported large reductions in liver fat in people with metabolic dysfunction-associated steatotic liver disease (MASLD). Findings are early and investigational; retatrutide is not approved for any use.",
           "category": "Trial results",
           "compounds": ["Retatrutide"],
@@ -184,7 +184,7 @@ public extension NewsFeed {
         },
         {
           "id": "sema-select-cv-2024",
-          "headline": "Semaglutide (Wegovy) label reflects cardiovascular risk reduction",
+          "headline": "Wegovy label adds heart-risk benefit",
           "summary": "After the SELECT trial showed roughly a 20% reduction in major cardiovascular events in adults with obesity and established cardiovascular disease, the Wegovy label was updated to include cardiovascular risk reduction. Applies to the FDA-approved product, not compounded versions.",
           "category": "Regulatory",
           "compounds": ["Semaglutide"],
@@ -199,7 +199,7 @@ public extension NewsFeed {
         },
         {
           "id": "tirz-osa-approval",
-          "headline": "Tirzepatide (Zepbound) approved for obstructive sleep apnea in obesity",
+          "headline": "Zepbound approved for sleep apnea",
           "summary": "The FDA approved tirzepatide for moderate-to-severe obstructive sleep apnea in adults with obesity, based on trials showing a reduced apnea-hypopnea index alongside weight loss. A labeled indication for the approved product.",
           "category": "Regulatory",
           "compounds": ["Tirzepatide"],
@@ -213,7 +213,7 @@ public extension NewsFeed {
         },
         {
           "id": "glp1-lean-mass-2026",
-          "headline": "The trade-off: GLP-1 weight loss includes lean muscle mass",
+          "headline": "GLP-1 weight loss comes with muscle loss",
           "summary": "Reviews note that a meaningful share of weight lost on GLP-1 medicines is lean mass, not just fat. Adequate protein and resistance training are commonly discussed to help preserve muscle. General context, not a dosing recommendation.",
           "category": "Guidance",
           "compounds": ["Semaglutide", "Tirzepatide", "Retatrutide"],
@@ -227,7 +227,7 @@ public extension NewsFeed {
         },
         {
           "id": "cagrisema-phase3",
-          "headline": "CagriSema (cagrilintide + semaglutide) reports Phase 3 weight-loss data",
+          "headline": "CagriSema posts strong Phase 3 results",
           "summary": "The amylin analog cagrilintide combined with semaglutide (CagriSema) reported Phase 3 weight-loss results. Both are dosed weekly; cagrilintide is investigational and CagriSema is not FDA-approved.",
           "category": "Trial results",
           "compounds": ["Cagrilintide", "Semaglutide"],

@@ -291,6 +291,7 @@ struct NewsRow: View {
                         .foregroundStyle(BrandColor.textPrimary)
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
+                        .minimumScaleFactor(0.85)
                     Text("\(item.sources.count) source\(item.sources.count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(BrandColor.success)

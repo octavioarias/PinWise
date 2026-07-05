@@ -295,17 +295,19 @@ struct HomeHealthCard: View {
     }
 
     var body: some View {
-        if metrics.isEmpty {
-            EmptyView()
-        } else {
-            NavigationLink { BiomarkersView() } label: {
-                Card {
-                    VStack(alignment: .leading, spacing: Space.md) {
-                        HStack {
-                            SectionHeader(title: "Your health")
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
-                        }
+        NavigationLink { BiomarkersView() } label: {
+            Card {
+                VStack(alignment: .leading, spacing: Space.md) {
+                    HStack {
+                        SectionHeader(title: "Your health")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                    }
+                    if metrics.isEmpty {
+                        Text("Connect a wearable (menu → Connections) or log a lab, and your weight, HRV, sleep, and more show up here.")
+                            .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
                             ForEach(metrics) { m in
                                 VStack(alignment: .leading, spacing: 2) {
@@ -318,8 +320,8 @@ struct HomeHealthCard: View {
                     }
                 }
             }
-            .buttonStyle(PressableStyle())
-            .task { if health.authorized { await health.refresh() } }
         }
+        .buttonStyle(PressableStyle())
+        .task { if health.authorized { await health.refresh() } }
     }
 }
