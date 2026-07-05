@@ -18,12 +18,13 @@ struct PinWiseApp: App {
     }
 }
 
-/// Gates the app behind one-time onboarding + disclaimer acceptance.
+/// Gates the app behind sign-in, then one-time onboarding + disclaimer acceptance.
 struct RootView: View {
     @AppStorage("acceptedDisclaimerVersion") private var acceptedVersion = 0
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
     @AppStorage("weightInPounds") private var weightInPounds = true
     @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
+    @State private var auth = AuthManager.shared
 
     var body: some View {
         ZStack {
@@ -33,7 +34,15 @@ struct RootView: View {
                     .transition(.opacity)
                     .zIndex(1)
             }
+            // Sign-in comes first: shown on top until the user picks a method (or continues as
+            // a guest). After that it falls away to reveal onboarding, then the app.
+            if !auth.isAuthenticated {
+                WelcomeView()
+                    .transition(.opacity)
+                    .zIndex(2)
+            }
         }
+        .animation(.easeInOut, value: auth.isAuthenticated)
         // One-time: seed the weight unit from the device region (user can override in Settings).
         .task {
             if !didInitWeightUnit {

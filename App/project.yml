@@ -44,6 +44,10 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        # Sign in with Apple (native, no backend). Google/Email sign-in route through
+        # AuthManager and require a backend + Google client ID to complete.
+        com.apple.developer.applesignin:
+          - Default
     dependencies:
       - package: PeptideKit
         product: PeptideKit

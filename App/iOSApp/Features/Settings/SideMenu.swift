@@ -6,6 +6,7 @@ import SwiftUI
 struct SideMenuDrawer: View {
     @Binding var isOpen: Bool
     @State private var route: MenuRoute?
+    @State private var auth = AuthManager.shared
 
     var body: some View {
         GeometryReader { geo in
@@ -58,7 +59,17 @@ struct SideMenuDrawer: View {
             }
             .padding(.top, topInset + Space.md)
             .padding(.horizontal, Space.xl)
-            .padding(.bottom, Space.xl)
+            .padding(.bottom, Space.sm)
+
+            HStack(spacing: Space.sm) {
+                Image(systemName: auth.isGuest ? "person.crop.circle.dashed" : "person.crop.circle.fill")
+                    .foregroundStyle(BrandColor.accentText)
+                Text(auth.accountLabel)
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, Space.xl)
+            .padding(.bottom, Space.lg)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -67,11 +78,31 @@ struct SideMenuDrawer: View {
                     row("heart.text.square", "Connections", .health)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     row("info.circle", "About & Legal", .about)
+                    Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
+                    actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
+                              auth.isGuest ? "Sign in" : "Sign out") {
+                        isOpen = false
+                        auth.signOut()
+                    }
                 }
                 .padding(.horizontal, Space.lg)
             }
             Spacer(minLength: 0)
         }
+    }
+
+    private func actionRow(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Space.lg) {
+                Image(systemName: icon).font(.title3).frame(width: 26).foregroundStyle(BrandColor.textSecondary)
+                Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Spacer()
+            }
+            .padding(.vertical, Space.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     private func row(_ icon: String, _ title: String, _ dest: MenuRoute) -> some View {
