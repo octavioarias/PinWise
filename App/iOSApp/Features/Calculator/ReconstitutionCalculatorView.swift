@@ -186,6 +186,10 @@ struct ReconstitutionCalculatorView: View {
     }
 
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
+    private func fmtConc(_ mcgPerMl: Double) -> String {
+        let mgPerMl = mcgPerMl / 1_000
+        return mgPerMl == mgPerMl.rounded() ? String(Int(mgPerMl)) : String(format: "%.2f", mgPerMl)
+    }
 
     private func resultCard(_ r: DoseDisplay) -> some View {
         Card {
@@ -195,9 +199,16 @@ struct ReconstitutionCalculatorView: View {
                     .font(Typo.numberXL).foregroundStyle(BrandColor.accentText)
                 Text("= \(String(format: "%.2f", r.volumeMilliliters)) mL on the syringe")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                // Concentration changes with the water you add — surfacing it makes the water's
+                // effect visible (the draw volume above shifts with it too).
+                Text("Concentration: \(fmtConc(r.concentrationMcgPerMl)) mg/mL")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                 if let doses = r.dosesPerVial {
+                    Divider().overlay(BrandColor.stroke).padding(.vertical, Space.xs)
                     Text("About \(doses) doses in this vial.")
-                        .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                        .font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                    Text("Doses depend on the peptide amount and your dose — not the water. More water just dilutes it, so you draw a larger volume for the same dose.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }
