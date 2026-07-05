@@ -134,6 +134,7 @@ private struct MenuSheet<Content: View>: View {
 
 struct ProfileView: View {
     @AppStorage("profileName") private var name = ""
+    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
 
     var body: some View {
         MenuSheet(title: "My Profile") {
@@ -143,6 +144,18 @@ struct ProfileView: View {
                     FieldRow("Your name", hint: "Optional — used to personalize the app.") {
                         TextField("Name", text: $name).pinwiseField()
                     }
+                }
+            }
+            Card {
+                VStack(alignment: .leading, spacing: Space.md) {
+                    SectionHeader(title: "Injection map body")
+                    Picker("", selection: $bodyGenderRaw) {
+                        Text("Male").tag("male")
+                        Text("Female").tag("female")
+                    }
+                    .pickerStyle(.segmented)
+                    Text("Which body the injection map draws.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }

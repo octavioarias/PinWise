@@ -3,25 +3,47 @@ import SwiftData
 import PeptideKit
 import MuscleMap
 
-/// Injection-site heat map over a professionally-drawn anatomical body (MuscleMap, MIT). Our
-/// 10 sites map onto muscle regions and render as a native SwiftUI heatmap; front/back toggle
-/// (glutes live on the back). Doubles as a rotation aid. No image assets, no WebView.
+/// Rolling time window for the heat map. Old injections age off (tissue recovers), so the map
+/// reflects *recent* rotation load rather than lifetime totals — which would crowd it.
+enum HeatWindow: String, CaseIterable, Identifiable {
+    case twoWeeks = "2 wks", fourWeeks = "4 wks", eightWeeks = "8 wks"
+    var id: String { rawValue }
+    var days: Int { self == .twoWeeks ? 14 : (self == .fourWeeks ? 28 : 56) }
+    var label: String { self == .twoWeeks ? "last 2 weeks" : (self == .fourWeeks ? "last 4 weeks" : "last 8 weeks") }
+    /// Uses at one site that count as "a lot" (fully red) — about 2 per week over the window.
+    var cap: Double { Double(days) / 7.0 * 2.0 }
+}
+
+/// Injection-site heat map over a professionally-drawn anatomical body (MuscleMap, MIT). Color is
+/// an *absolute* read of how heavily each site is used within a rolling window: a few uses stay
+/// green, heavy use goes red. Counts come straight from logged doses in the window (auditable).
 struct BodyMapView: View {
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var doses: [LoggedDose]
+    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
     @State private var side: BodySide = .front
+    @State private var window: HeatWindow = .fourWeeks
 
+    private var bodyGender: BodyGender { bodyGenderRaw == "female" ? .female : .male }
+
+    private var cutoff: Date {
+        Calendar.current.date(byAdding: .day, value: -window.days, to: Date()) ?? .distantPast
+    }
+    /// Injections per site within the window — the exact, auditable basis for the map.
     private var counts: [InjectionSite: Int] {
         var d: [InjectionSite: Int] = [:]
-        for dose in doses { if let s = dose.site { d[s, default: 0] += 1 } }
+        for dose in doses where dose.timestamp >= cutoff {
+            if let s = dose.site { d[s, default: 0] += 1 }
+        }
         return d
     }
-    private var maxCount: Int { counts.values.max() ?? 0 }
     private var totalPlaced: Int { counts.values.reduce(0, +) }
     private var suggested: InjectionSite? {
         SiteRotationAdvisor.suggestNext(history: doses.map { $0.asDomain() })
     }
 
-    /// Map each injection site to a MuscleMap region + side.
+    /// Absolute intensity: few uses → low (green), cap+ uses → 1.0 (red). Not relative to other sites.
+    private func intensity(_ count: Int) -> Double { max(0, min(1, Double(count) / window.cap)) }
+
     private func target(for site: InjectionSite) -> (Muscle, MuscleSide) {
         switch site {
         case .armLeft:           return (.deltoids, .left)
@@ -38,36 +60,51 @@ struct BodyMapView: View {
     }
 
     private var intensities: [MuscleIntensity] {
-        let m = Double(maxCount)
-        guard m > 0 else { return [] }
-        return InjectionSite.allCases.compactMap { site in
+        InjectionSite.allCases.compactMap { site in
             let c = counts[site] ?? 0
             guard c > 0 else { return nil }
             let (muscle, mside) = target(for: site)
-            return MuscleIntensity(muscle: muscle, intensity: Double(c) / m, side: mside)
+            return MuscleIntensity(muscle: muscle, intensity: intensity(c), side: mside)
         }
+    }
+
+    /// Green (light use) → amber → red (heavy use), so color reads the way the user expects.
+    private var heatScale: HeatmapColorScale {
+        HeatmapColorScale(colors: [
+            Color(red: 0.13, green: 0.83, blue: 0.55),
+            Color(red: 1.00, green: 0.69, blue: 0.13),
+            Color(red: 1.00, green: 0.30, blue: 0.30),
+        ])
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("Where you've been injecting. Warmer regions are used more often — rotate toward the cooler ones to give tissue time to recover.")
+                Text("How heavily you've used each site recently. A few uses stay green; heavy repeat use turns red — rotate toward the cooler areas so tissue can recover.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
                 Card {
                     VStack(spacing: Space.md) {
+                        Picker("", selection: $window) {
+                            ForEach(HeatWindow.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+
                         Picker("", selection: $side) {
                             Text("Front").tag(BodySide.front)
                             Text("Back").tag(BodySide.back)
                         }
                         .pickerStyle(.segmented)
 
-                        BodyView(gender: .male, side: side)
-                            .heatmap(intensities, colorScale: .thermalSmooth)
+                        BodyView(gender: bodyGender, side: side)
+                            .heatmap(intensities, colorScale: heatScale)
                             .frame(maxWidth: .infinity)
                             .frame(height: 420)
 
                         legend
+
+                        Text("Counting the \(window.label) — \(totalPlaced) injection\(totalPlaced == 1 ? "" : "s").")
+                            .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                     }
                 }
 
@@ -86,7 +123,7 @@ struct BodyMapView: View {
 
                 Card {
                     VStack(alignment: .leading, spacing: Space.sm) {
-                        SectionHeader(title: "By site")
+                        SectionHeader(title: "By site · \(window.label)")
                         ForEach(InjectionSite.allCases) { site in
                             let c = counts[site] ?? 0
                             HStack(spacing: Space.sm) {
@@ -102,7 +139,7 @@ struct BodyMapView: View {
                 }
 
                 if totalPlaced == 0 {
-                    Text("Log a dose with an injection site to start building your map.")
+                    Text("No injections logged with a site in this window. Log a dose with a site to build the map.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
 
@@ -117,30 +154,25 @@ struct BodyMapView: View {
 
     private var legend: some View {
         HStack(spacing: Space.sm) {
-            Text("Less").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            Text("Light use").font(.caption2).foregroundStyle(BrandColor.textSecondary)
             Capsule()
-                .fill(LinearGradient(colors: [heatColor(0.12), heatColor(0.5), heatColor(0.92)],
+                .fill(LinearGradient(colors: [heatColor(0.1), heatColor(0.5), heatColor(0.95)],
                                      startPoint: .leading, endPoint: .trailing))
                 .frame(height: 6)
-            Text("More").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            Text("Heavy").font(.caption2).foregroundStyle(BrandColor.textSecondary)
         }
     }
 
-    private func intensity(_ count: Int) -> Double {
-        guard maxCount > 0 else { return 0 }
-        return max(0, min(1, Double(count) / Double(maxCount)))
-    }
-
-    /// Thermal ramp for the per-site legend dots (matches the body heatmap's feel).
+    /// Matches the body heatmap ramp for the per-site legend dots.
     private func heatColor(_ t: Double) -> Color {
         let x = max(0, min(1, t))
         func lerp(_ a: Double, _ b: Double, _ u: Double) -> Double { a + (b - a) * u }
         if x < 0.5 {
             let u = x / 0.5
-            return Color(red: lerp(0.10, 1.00, u), green: lerp(0.82, 0.69, u), blue: lerp(0.55, 0.13, u))
+            return Color(red: lerp(0.13, 1.00, u), green: lerp(0.83, 0.69, u), blue: lerp(0.55, 0.13, u))
         } else {
             let u = (x - 0.5) / 0.5
-            return Color(red: lerp(1.00, 0.90, u), green: lerp(0.69, 0.20, u), blue: lerp(0.13, 0.20, u))
+            return Color(red: lerp(1.00, 1.00, u), green: lerp(0.69, 0.30, u), blue: lerp(0.13, 0.30, u))
         }
     }
 }
