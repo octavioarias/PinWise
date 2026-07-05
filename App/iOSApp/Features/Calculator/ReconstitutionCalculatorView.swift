@@ -29,7 +29,7 @@ final class DoseCalculatorViewModel {
     var concentrationText = "2.5"
     var totalVolumeText = ""
 
-    var doseText = "250"
+    var doseText = "2.5"
     var doseUnit: MassUnit = .milligram
     var syringe: SyringeScale = .u100
 
@@ -133,7 +133,7 @@ struct ReconstitutionCalculatorView: View {
                         }
                         FieldRow("What dose do you want?", hint: "The dose you're aiming for this injection.") {
                             HStack {
-                                TextField("e.g. 250", text: $model.doseText).keyboardType(.decimalPad).pinwiseField()
+                                TextField("e.g. 2.5", text: $model.doseText).keyboardType(.decimalPad).pinwiseField()
                                 unitPicker($model.doseUnit)
                             }
                         }

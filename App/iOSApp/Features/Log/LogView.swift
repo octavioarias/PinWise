@@ -61,7 +61,7 @@ struct LogView: View {
 
                             FieldRow("How much?", hint: "The dose you took this time.") {
                                 HStack {
-                                    TextField("e.g. 250", text: $doseText).keyboardType(.decimalPad).pinwiseField()
+                                    TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                                     Picker("", selection: $doseUnit) {
                                         ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                                     }

@@ -151,8 +151,17 @@ struct VialBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
-                        FieldRow("Nickname", hint: "Optional — e.g. \"Batch 3\" or \"Wolverine\".") {
-                            TextField("Nickname", text: $label).pinwiseField()
+                        VStack(alignment: .leading, spacing: Space.sm) {
+                            Text("How did you get it?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Toggle("Came pre-mixed from a pharmacy", isOn: $isPremixed).tint(BrandColor.accent)
+                            Text(isPremixed ? "Already liquid and ready to use." : "A powder you mix with water yourself.")
+                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        }
+                    }
+
+                    Card {
+                        FieldRow("Nickname", hint: "Optional — e.g. \"GLOW\" or \"Wolverine 3mg/3mg/mL\".") {
+                            TextField("GLOW", text: $label).pinwiseField()
                         }
                     }
 
@@ -204,17 +213,17 @@ struct VialBuilderView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow("How much liquid?", hint: "Water you added, or the amount in a pre-mixed vial. Leave blank if not mixed yet.") {
+                            FieldRow(isPremixed ? "How much liquid is in the vial?" : "How much water did you add?",
+                                     hint: isPremixed ? "The volume in the vial — leave blank if you're not sure yet." : "The water you mixed it with — leave blank if not mixed yet.") {
                                 HStack {
                                     TextField("e.g. 2", text: $solventText).keyboardType(.decimalPad).pinwiseField()
                                     Text("mL").foregroundStyle(BrandColor.textSecondary)
                                 }
                             }
-                            Toggle("Came pre-mixed from a pharmacy", isOn: $isPremixed).tint(BrandColor.accent)
                             FieldRow(primaryName.isEmpty ? "Dose per shot" : "Dose of \(primaryName) per shot",
                                      hint: entries.count > 1 ? "The rest of the blend scales with this." : "The dose you take each time.") {
                                 HStack {
-                                    TextField("e.g. 250", text: $doseText).keyboardType(.decimalPad).pinwiseField()
+                                    TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                                     unitPicker($doseUnit)
                                 }
                             }
@@ -223,17 +232,20 @@ struct VialBuilderView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow("Cost", hint: "Optional — used to show cost per dose.") {
-                                HStack {
-                                    Text("$").foregroundStyle(BrandColor.textSecondary)
-                                    TextField("e.g. 200", text: $costText).keyboardType(.decimalPad).pinwiseField()
-                                }
-                            }
-                            Toggle("Has an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
+                            Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
                             if hasExpiration {
                                 FieldRow("Expires") {
                                     DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
                                 }
+                            }
+                        }
+                    }
+
+                    Card {
+                        FieldRow("Cost (optional)", hint: "Add it to see cost per dose — totally fine to skip.") {
+                            HStack {
+                                Text("$").foregroundStyle(BrandColor.textSecondary)
+                                TextField("e.g. 200", text: $costText).keyboardType(.decimalPad).pinwiseField()
                             }
                         }
                     }
