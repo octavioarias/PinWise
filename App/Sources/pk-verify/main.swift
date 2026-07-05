@@ -211,7 +211,7 @@ do {
 // MARK: - Catalog integrity
 section("Compound catalog")
 do {
-    check(CompoundCatalog.all.count == 11, "catalog has 11 seeded compounds")
+    check(CompoundCatalog.all.count == 35, "catalog has 35 seeded compounds")
     check(Set(CompoundCatalog.all.map { $0.id }).count == CompoundCatalog.all.count, "catalog IDs are unique")
     check(CompoundCatalog.tesamorelin.evidenceTier == .fdaApproved && CompoundCatalog.tesamorelin.regulatoryStatus == .fdaApproved,
           "tesamorelin is the FDA-approved anchor")
