@@ -10,11 +10,18 @@ final class HealthManager {
     static let shared = HealthManager()
 
     private let store = HKHealthStore()
+    private static let connectedKey = "healthConnected"
 
-    private(set) var authorized = false
+    /// Whether the user has connected Apple Health. Persisted, so it survives app close/refresh
+    /// (HealthKit deliberately won't reveal read-permission status, so we remember the choice).
+    private(set) var authorized: Bool
     private(set) var latestWeightKg: Double?
     private(set) var restingHeartRate: Double?      // bpm
     private(set) var hrvMilliseconds: Double?       // SDNN
+
+    private init() {
+        authorized = UserDefaults.standard.bool(forKey: Self.connectedKey)
+    }
 
     var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
@@ -32,10 +39,23 @@ final class HealthManager {
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
             authorized = true
+            UserDefaults.standard.set(true, forKey: Self.connectedKey)
             await refresh()
         } catch {
-            authorized = false
+            // Keep any prior connected state — don't force a re-prompt on a transient error.
         }
+    }
+
+    /// Called on launch: if the user already connected, silently refresh the metrics.
+    func refreshIfConnected() async {
+        if authorized { await refresh() }
+    }
+
+    /// Lets the user explicitly disconnect (from Settings) if they want to stop reading Health.
+    func disconnect() {
+        authorized = false
+        UserDefaults.standard.set(false, forKey: Self.connectedKey)
+        latestWeightKg = nil; restingHeartRate = nil; hrvMilliseconds = nil
     }
 
     func refresh() async {

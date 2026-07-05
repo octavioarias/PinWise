@@ -150,6 +150,8 @@ struct ProfileView: View {
 }
 
 struct HealthConnectionsView: View {
+    @State private var health = HealthManager.shared
+
     var body: some View {
         MenuSheet(title: "Apple Health") {
             Text("Connect Apple Health to see the metrics that matter alongside your doses.")
@@ -161,6 +163,13 @@ struct HealthConnectionsView: View {
                     Text("Oura, Whoop, and most rings and watches write to Apple Health. Connect Health above and their weight, heart-rate, and HRV data flows in automatically — no separate login.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
+            }
+            if health.authorized {
+                Button(role: .destructive) { health.disconnect() } label: {
+                    Label("Disconnect Apple Health", systemImage: "xmark.circle")
+                        .font(.body.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, Space.sm)
+                }
+                .foregroundStyle(BrandColor.danger)
             }
         }
     }

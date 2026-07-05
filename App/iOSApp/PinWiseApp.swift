@@ -40,6 +40,8 @@ struct RootView: View {
                 weightInPounds = Locale.current.measurementSystem != .metric
                 didInitWeightUnit = true
             }
+            // If Health was connected in a past session, refresh silently — no re-prompt.
+            await HealthManager.shared.refreshIfConnected()
         }
         .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)
         // Also force the window's UIKit style so dynamic BrandColor tokens resolve to the same
