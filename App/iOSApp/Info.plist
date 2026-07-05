@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>PinWise uses the camera so you can photograph a vial label. The photo is read on your device to fill in the details.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>PinWise displays the weight, heart-rate, and HRV values you choose to share from Health alongside your dose logs.</string>
 	<key>UILaunchScreen</key>

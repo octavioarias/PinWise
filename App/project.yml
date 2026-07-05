@@ -33,6 +33,7 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         NSHealthShareUsageDescription: "PinWise displays the weight, heart-rate, and HRV values you choose to share from Health alongside your dose logs."
+        NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label. The photo is read on your device to fill in the details."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
     entitlements:

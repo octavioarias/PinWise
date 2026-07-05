@@ -84,6 +84,7 @@ struct LabelScannerView: View {
     @State private var isWorking = false
     @State private var result: ScannedLabel?
     @State private var error: String?
+    @State private var showCamera = false
 
     var body: some View {
         NavigationStack {
@@ -92,13 +93,14 @@ struct LabelScannerView: View {
                     Text("Choose a clear photo of the pharmacy label. PinWise reads it on your device — the photo isn't uploaded anywhere.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
-                    PhotosPicker(selection: $pickerItem, matching: .images) {
-                        Label(image == nil ? "Choose a photo" : "Choose a different photo", systemImage: "photo")
-                            .font(.body.weight(.semibold))
-                            .frame(maxWidth: .infinity).padding(.vertical, Space.md)
-                            .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-                            .foregroundStyle(BrandColor.accentText)
+                    HStack(spacing: Space.md) {
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button { showCamera = true } label: { pickerButtonLabel("Take a photo", "camera.fill") }
+                                .buttonStyle(.plain)
+                        }
+                        PhotosPicker(selection: $pickerItem, matching: .images) {
+                            pickerButtonLabel(image == nil ? "Choose a photo" : "Choose another", "photo")
+                        }
                     }
 
                     if let image {
@@ -126,7 +128,20 @@ struct LabelScannerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onChange(of: pickerItem) { _, item in if let item { Task { await load(item) } } }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker(isPresented: $showCamera) { ui in Task { await handle(ui) } }
+                    .ignoresSafeArea()
+            }
         }
+    }
+
+    private func pickerButtonLabel(_ title: String, _ icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.body.weight(.semibold))
+            .frame(maxWidth: .infinity).padding(.vertical, Space.md)
+            .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+            .foregroundStyle(BrandColor.accentText)
     }
 
     @ViewBuilder private func resultCard(_ r: ScannedLabel) -> some View {
@@ -160,16 +175,49 @@ struct LabelScannerView: View {
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
 
     private func load(_ item: PhotosPickerItem) async {
-        isWorking = true; error = nil; result = nil
-        defer { isWorking = false }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let ui = UIImage(data: data) else {
             error = "Couldn't load that image."; return
         }
-        image = ui
+        await handle(ui)
+    }
+
+    /// Shared pipeline for a captured or picked image: OCR on-device, then parse.
+    private func handle(_ ui: UIImage) async {
+        image = ui; isWorking = true; error = nil; result = nil
+        defer { isWorking = false }
         guard let cg = ui.cgImage else { error = "Couldn't read that image."; return }
         let text = await LabelParser.recognizeText(cg)
         guard !text.isEmpty else { error = "No text found. Try a clearer, closer photo."; return }
         result = LabelParser.parse(text)
+    }
+}
+
+/// Minimal camera capture (UIImagePickerController) for photographing a vial label.
+struct CameraPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let onImage: (UIImage) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ parent: CameraPicker) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage { parent.onImage(image) }
+            parent.isPresented = false
+        }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.isPresented = false
+        }
     }
 }
