@@ -14,6 +14,7 @@ struct LogView: View {
     @State private var doseText: String = ""
     @State private var doseUnit: MassUnit = .milligram
     @State private var site: InjectionSite?
+    @State private var showBack = false
     @State private var timestamp: Date = Date()
     @State private var notes: String = ""
     @State private var showMetrics = false
@@ -73,15 +74,22 @@ struct LogView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            FieldRow("Where did you inject?", hint: "Rotating spots helps avoid irritation.") {
-                                Picker("Site", selection: $site) {
-                                    Text("Not set").tag(Optional<InjectionSite>.none)
-                                    ForEach(InjectionSite.allCases) { s in Text(s.displayName).tag(Optional(s)) }
+                            FieldRow("Where did you inject?", hint: "Pick front or back, then a spot. These match your injection map. Rotating helps avoid irritation.") {
+                                VStack(alignment: .leading, spacing: Space.sm) {
+                                    Picker("", selection: $showBack) {
+                                        Text("Front").tag(false)
+                                        Text("Back").tag(true)
+                                    }
+                                    .pickerStyle(.segmented)
+                                    LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.sm), GridItem(.flexible(), spacing: Space.sm)], spacing: Space.sm) {
+                                        ForEach(InjectionSite.allCases.filter { $0.isBack == showBack }) { s in
+                                            siteChip(s)
+                                        }
+                                    }
                                 }
-                                .pickerStyle(.menu).tint(BrandColor.accentText)
                             }
                             if let suggested = suggestedSite, suggested != site {
-                                Button { site = suggested } label: {
+                                Button { site = suggested; showBack = suggested.isBack } label: {
                                     Label("Suggested: \(suggested.displayName)", systemImage: "sparkles")
                                         .font(.caption).foregroundStyle(BrandColor.accentText)
                                 }
@@ -127,6 +135,7 @@ struct LogView: View {
             .onAppear {
                 doseUnit = compound.preferredDoseUnit
                 if site == nil { site = suggestedSite }
+                showBack = site?.isBack ?? false
             }
             .onChange(of: compound) { _, newValue in doseUnit = newValue.preferredDoseUnit }
             .onChange(of: doseText) { _, _ in savedConfirmation = false }
@@ -153,6 +162,26 @@ struct LogView: View {
                 }
             }
         }
+    }
+
+    private func siteChip(_ s: InjectionSite) -> some View {
+        let selected = site == s
+        return Button {
+            site = selected ? nil : s
+        } label: {
+            Text(s.displayName)
+                .font(.caption.weight(.medium))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: 36)
+                .padding(.horizontal, Space.sm)
+                .background(selected ? BrandColor.accent : BrandColor.surfaceElevated,
+                            in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .foregroundStyle(selected ? BrandColor.onAccent : BrandColor.textPrimary)
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .strokeBorder(BrandColor.stroke, lineWidth: selected ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
     private func labeledSlider(_ title: String, value: Binding<Double>) -> some View {
@@ -214,7 +243,14 @@ struct LogView: View {
         notes = ""
         timestamp = Date()
         site = suggestedSite
+        showBack = site?.isBack ?? false
         savedConfirmation = true
         savedCount += 1
     }
+}
+
+private extension InjectionSite {
+    /// Sites the body map shows on its back view (glutes); everything else is on the front —
+    /// so the log's front/back toggle mirrors the injection map.
+    var isBack: Bool { region == .glute }
 }
