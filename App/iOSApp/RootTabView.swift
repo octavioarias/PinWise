@@ -13,6 +13,7 @@ enum AppTab: Hashable {
 struct RootTabView: View {
     @State private var selected: AppTab = .home
     @State private var showMenu = false
+    @State private var showAssistant = false
     @Query(sort: \SavedProtocol.startDate) private var protocols: [SavedProtocol]
 
     /// Changes whenever a reminder-relevant field changes, re-triggering scheduling.
@@ -23,7 +24,7 @@ struct RootTabView: View {
     var body: some View {
         Group {
             switch selected {
-            case .home: HomeView(selected: $selected, showMenu: $showMenu)
+            case .home: HomeView(selected: $selected, showMenu: $showMenu, showAssistant: $showAssistant)
             case .tools: ToolsView()
             case .log: LogView()
             case .protocols: ProtocolsView()
@@ -33,9 +34,12 @@ struct RootTabView: View {
         .overlay(alignment: .bottom) {
             PinWiseTabBar(selected: $selected)
         }
-        // Side menu drawer sits above the tab bar so it covers the full screen when open.
+        // Drawers sit above the tab bar so they cover the full screen when open.
         .overlay {
             SideMenuDrawer(isOpen: $showMenu)
+        }
+        .overlay {
+            AssistantDrawer(isOpen: $showAssistant)
         }
         .tint(BrandColor.accent)
         .grain()    // subtle film-grain texture across the app

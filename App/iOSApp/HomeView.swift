@@ -8,6 +8,7 @@ import PeptideKit
 struct HomeView: View {
     @Binding var selected: AppTab
     @Binding var showMenu: Bool
+    @Binding var showAssistant: Bool
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
 
@@ -65,15 +66,29 @@ struct HomeView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
-            Button { showMenu = true } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(BrandColor.textPrimary)
-                    .frame(width: 44, height: 44, alignment: .leading)
-                    .contentShape(Rectangle())
+            HStack {
+                Button { showMenu = true } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(BrandColor.textPrimary)
+                        .frame(width: 44, height: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Menu — profile, settings, and health connections")
+
+                Spacer()
+
+                Button { showAssistant = true } label: {
+                    Image(systemName: "sparkles")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(BrandColor.accentText)
+                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Assistant")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Menu — profile, settings, and health connections")
 
             Text("Track your protocol.\nKnow the science.")
                 .font(Typo.screenTitle)
