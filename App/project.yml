@@ -56,6 +56,10 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+        # App icon: single 1024 asset per appearance (Light / Dark / Tinted) in
+        # iOSApp/Assets.xcassets/AppIcon.appiconset — iOS picks the slot to match the
+        # user's home-screen style. Source SVGs live in App/design/AppIcon.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # App target uses Swift 5 language mode to avoid strict-concurrency friction during
         # early iteration; PeptideKit stays on Swift 6. Bump to "6.0" once the UI settles.
         SWIFT_VERSION: "5.0"

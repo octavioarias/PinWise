@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="mark" x1="250" y1="300" x2="500" y2="860" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2f5fb"/><stop offset="1" stop-color="#aab4c8"/>
+    </linearGradient></defs>
+  <rect width="1024" height="1024" fill="#0a0b10"/>
+  
+  <path fill="url(#mark)" fill-rule="evenodd" d="
+    M250,300 L452,300
+    C512,300 556,344 556,405
+    C556,466 512,510 452,510
+    L328,510 L328,690 L250,690 Z
+    M328,372 L452,372
+    C486,372 508,388 508,405
+    C508,422 486,438 452,438
+    L328,438 Z"/>
+  <path fill="url(#mark)" d="M279,690 L299,690 L299,792 L279,792 Z"/>
+  <path fill="url(#mark)" d="M254,744 L324,744 L324,760 L254,760 Z"/>
+  <path fill="url(#mark)" d="M279,792 L299,792 L289,860 Z"/>
+  <path fill="none" stroke="url(#mark)" stroke-width="80" stroke-linejoin="miter"
+        stroke-miterlimit="12" stroke-linecap="butt"
+        d="M400,486 L478,782 L566,566 L652,782 L744,486"/>
+</svg>

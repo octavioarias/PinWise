@@ -41,18 +41,16 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     header
+                    HomeHealthCard()
                     if !activeProtocols.isEmpty {
                         heroActive
                         stackCard
-                        HomeHealthCard()
                         bentoGrid
                     } else if !recent.isEmpty {
                         heroActivity
-                        HomeHealthCard()
                         bentoGrid
                     } else {
                         emptyState
-                        HomeHealthCard()
                     }
                     if !recent.isEmpty { recentSection }
                     DisclaimerBanner(text: Disclaimer.calculator)
@@ -259,10 +257,11 @@ private struct HeroSurface: ViewModifier {
     }
 }
 
-/// A unified health snapshot for Home — merges connector metrics (Apple Health: weight, resting
-/// HR, HRV) with the user's logged biomarkers (A1c, glucose, BP, LDL, weight). Shows *only* when
-/// there's real data: users without a connector and without logged labs see nothing here, so Home
-/// stays clean and never nags. Tap to open Labs & metrics. Connecting Health lives in the menu.
+/// A unified health snapshot — the top card on Home. Merges connector metrics (Apple Health:
+/// weight, resting HR, HRV, sleep, steps) with the user's logged biomarkers (A1c, glucose, BP,
+/// LDL, weight). Always visible: shows a metrics grid when there's data, otherwise a one-line
+/// invite to connect a wearable or log a lab. Tap to open Labs & metrics; connecting Health
+/// lives in the menu.
 struct HomeHealthCard: View {
     @AppStorage("weightInPounds") private var pounds = true
     @State private var health = HealthManager.shared
