@@ -169,6 +169,21 @@ public extension NewsFeed {
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         },
         {
+          "id": "reta-prediabetes-reversion-2026",
+          "headline": "Retatrutide reversed prediabetes for most in Phase 2",
+          "summary": "In the Phase 2 obesity trial (NEJM 2023), most participants who had prediabetes at baseline returned to normal blood sugar by 48 weeks on retatrutide — a large absolute improvement over placebo, where far fewer normalized. Retatrutide is investigational and not FDA-approved; these are secondary glycemic findings, and formal diabetes-prevention outcomes await the Phase 3 (TRIUMPH) program.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "NEJM 2023 (Phase 2)", "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2301972", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT04881760", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"}
+          ],
+          "publishedAt": "2026-06-25T00:00:00Z",
+          "popularity": 90,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
           "id": "reta-liver-fat-2024",
           "headline": "Retatrutide sharply cut liver fat, early data show",
           "summary": "A Phase 2 sub-study reported large reductions in liver fat in people with metabolic dysfunction-associated steatotic liver disease (MASLD). Findings are early and investigational; retatrutide is not approved for any use.",
