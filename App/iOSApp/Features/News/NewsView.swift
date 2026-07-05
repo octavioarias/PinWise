@@ -92,7 +92,7 @@ struct NewsView: View {
 
     private var masthead: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center) {
                 Text("News")
                     .font(Typo.screenTitle)
                     .foregroundStyle(BrandColor.textPrimary)
