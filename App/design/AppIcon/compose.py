@@ -46,27 +46,30 @@ baseline = bP
 print(f"P bbox={bbP}  stem x=({sx0},{sx1}) w={stem_w} cx={stem_cx:.1f} baseline={baseline}")
 print(f"PW bbox={bbPW}")
 
-# --- needle geometry (grows from the stem base), sized to the stem ---
-shaft_w   = round(stem_w * 0.34)
-guard_w   = round(stem_w * 1.02)
-guard_h   = round(stem_w * 0.16)
-shaft_len = round(stem_w * 1.15)   # baseline -> crossguard
-tip_len   = round(stem_w * 1.15)   # crossguard -> point
-gx0 = round(stem_cx - guard_w/2); gx1 = round(stem_cx + guard_w/2)
-sxa = round(stem_cx - shaft_w/2); sxb = round(stem_cx + shaft_w/2)
-guard_y = baseline + shaft_len
-tip_y   = guard_y + tip_len
+# --- syringe-needle geometry growing from the P's stem base ---
+# hub shoulder (stem -> needle taper) + thin hub collar + shaft + beveled tip
+nw        = round(stem_w * 0.26)   # needle shaft width
+sh        = round(stem_w * 0.36)   # shoulder height
+collar_w  = round(nw * 1.95)       # hub collar width
+collar_h  = round(stem_w * 0.11)
+shaft_len = round(stem_w * 1.35)
+bevel     = round(stem_w * 0.66)   # angled needle tip
+hs, hn = stem_w/2.0, nw/2.0
+y_sh_bot  = baseline + sh
+y_shaft   = y_sh_bot + collar_h
+y_sbot    = y_shaft + shaft_len
+tip_y     = y_sbot + bevel
 needle = f'''
-    <rect x="{sxa}" y="{baseline-4}" width="{shaft_w}" height="{shaft_len+8}" fill="{{FILL}}"/>
-    <rect x="{gx0}" y="{guard_y}" width="{guard_w}" height="{guard_h}" fill="{{FILL}}"/>
-    <path d="M{sxa},{guard_y+guard_h} L{sxb},{guard_y+guard_h} L{stem_cx:.1f},{tip_y} Z" fill="{{FILL}}"/>'''
+    <path fill="{{FILL}}" d="M{stem_cx-hs:.1f},{baseline} L{stem_cx+hs:.1f},{baseline} L{stem_cx+hn:.1f},{y_sh_bot} L{stem_cx-hn:.1f},{y_sh_bot} Z"/>
+    <rect x="{stem_cx-collar_w/2:.1f}" y="{y_sh_bot}" width="{collar_w}" height="{collar_h}" fill="{{FILL}}"/>
+    <rect x="{stem_cx-hn:.1f}" y="{y_shaft}" width="{nw}" height="{shaft_len}" fill="{{FILL}}"/>
+    <path fill="{{FILL}}" d="M{stem_cx-hn:.1f},{y_sbot} L{stem_cx+hn:.1f},{y_sbot} L{stem_cx-hn:.1f},{tip_y} Z"/>'''
 
-# --- union bbox (text + needle) -> translate to center in 1024 ---
-lU, tU = bbPW[0], bbPW[1]
-rU, bU = bbPW[2], tip_y
+# --- center the LETTERS block in the tile (needle hangs below as a descender) ---
+lU, tU, rU, bU = bbPW
 cx = (lU + rU) / 2.0; cy = (tU + bU) / 2.0
 dx = 512 - cx; dy = 512 - cy
-print(f"union=({lU},{tU},{rU},{bU}) center=({cx:.0f},{cy:.0f}) translate=({dx:.0f},{dy:.0f})")
+print(f"letters=({lU},{tU},{rU},{bU}) center=({cx:.0f},{cy:.0f}) translate=({dx:.0f},{dy:.0f}) tip_y={tip_y}")
 
 def compose(name, bg_defs, bg_layers, fill):
     body = f'''

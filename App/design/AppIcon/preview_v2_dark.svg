@@ -9,9 +9,10 @@
   <rect x="168" y="168" width="688" height="688" rx="154" fill="url(#tl)"/>
   <rect x="168" y="168" width="688" height="688" rx="154" fill="url(#sh)"/>
   <rect x="169" y="169" width="686" height="686" rx="153" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="2"/>
-  <g transform="translate(512 512) scale(0.62) translate(-512 -512) translate(-51.0,-120.5)"><text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
+  <g transform="translate(512 512) scale(0.62) translate(-512 -512) translate(-51.0,-30.5)"><text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
           letter-spacing="4" fill="url(#m)">PW</text>
-    <rect x="246" y="686" width="27" height="98" fill="url(#m)"/>
-    <rect x="219" y="780" width="80" height="12" fill="url(#m)"/>
-    <path d="M246,792 L272,792 L259.0,870 Z" fill="url(#m)"/></g>
+    <path fill="url(#m)" d="M220.0,690 L298.0,690 L269.0,718 L249.0,718 Z"/>
+    <rect x="239.5" y="718" width="39" height="9" fill="url(#m)"/>
+    <rect x="249.0" y="727" width="20" height="105" fill="url(#m)"/>
+    <path fill="url(#m)" d="M249.0,832 L269.0,832 L249.0,883 Z"/></g>
 </svg>

@@ -6,10 +6,11 @@
       <stop offset="0" stop-color="#fff" stop-opacity="0.06"/><stop offset="0.55" stop-color="#fff" stop-opacity="0"/></radialGradient><linearGradient id="m" x1="230" y1="330" x2="800" y2="820" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#3a5bef"/><stop offset="0.5" stop-color="#22b8e6"/><stop offset="1" stop-color="#18e39a"/></linearGradient></defs>
   <rect width="1024" height="1024" fill="#12141c"/><rect width="1024" height="1024" fill="url(#bv)"/><rect width="1024" height="1024" fill="url(#sheen)"/>
-  <g transform="translate(-51.0,-120.5)">
+  <g transform="translate(-51.0,-30.5)">
     <text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
           letter-spacing="4" fill="url(#m)">PW</text>
-    <rect x="246" y="686" width="27" height="98" fill="url(#m)"/>
-    <rect x="219" y="780" width="80" height="12" fill="url(#m)"/>
-    <path d="M246,792 L272,792 L259.0,870 Z" fill="url(#m)"/></g>
+    <path fill="url(#m)" d="M220.0,690 L298.0,690 L269.0,718 L249.0,718 Z"/>
+    <rect x="239.5" y="718" width="39" height="9" fill="url(#m)"/>
+    <rect x="249.0" y="727" width="20" height="105" fill="url(#m)"/>
+    <path fill="url(#m)" d="M249.0,832 L269.0,832 L249.0,883 Z"/></g>
 </svg>
