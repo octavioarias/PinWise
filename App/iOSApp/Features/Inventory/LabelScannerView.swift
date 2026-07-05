@@ -25,7 +25,7 @@ enum LabelParser {
                 request.usesLanguageCorrection = false
                 let handler = VNImageRequestHandler(cgImage: cg, options: [:])
                 try? handler.perform([request])
-                let lines = (request.results as? [VNRecognizedTextObservation] ?? [])
+                let lines = (request.results ?? [])
                     .compactMap { $0.topCandidates(1).first?.string }
                 continuation.resume(returning: lines.joined(separator: "\n"))
             }
@@ -162,8 +162,8 @@ struct LabelScannerView: View {
     private func load(_ item: PhotosPickerItem) async {
         isWorking = true; error = nil; result = nil
         defer { isWorking = false }
-        guard let outer = try? await item.loadTransferable(type: Data.self),
-              let data = outer, let ui = UIImage(data: data) else {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let ui = UIImage(data: data) else {
             error = "Couldn't load that image."; return
         }
         image = ui
