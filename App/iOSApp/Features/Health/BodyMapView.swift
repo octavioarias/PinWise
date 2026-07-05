@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// A body heat map of injection-site frequency over a glassy, translucent front-facing figure
-/// (skeleton hinted inside, à la body-composition apps): warmer, larger blooms mark sites used
-/// more often. Doubles as a rotation aid. Native shapes — no image assets. Mirror-style.
+/// A body heat map of injection-site frequency over a blue "x-ray glow" front-facing figure
+/// (dark translucent body + glowing blue edge, on black — per the reference): warmer, larger
+/// blooms mark sites used more often. Doubles as a rotation aid. Native shapes, no assets.
 struct BodyMapView: View {
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var doses: [LoggedDose]
 
@@ -78,59 +78,49 @@ struct BodyMapView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: Figure
+    // MARK: Figure (blue x-ray glow)
 
     private var figure: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let headSize = CGSize(width: w * 0.15, height: h * 0.115)
+            let headSize = CGSize(width: w * 0.155, height: h * 0.12)
             let headCenter = CGPoint(x: w * 0.5, y: h * 0.075)
+            let body = MaleBodyShape()
             ZStack {
-                // Cool backdrop glow so the glassy body reads against the card.
-                RadialGradient(colors: [Color(hex: 0x123840).opacity(0.55), .clear],
-                               center: .center, startRadius: 10, endRadius: h * 0.62)
+                // Black backdrop so the blue glow reads (per the reference).
+                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                    .fill(RadialGradient(colors: [Color(hex: 0x0A1530), .black],
+                                         center: .center, startRadius: 10, endRadius: max(w, h) * 0.7))
 
-                // Glassy translucent body + head.
-                MaleBodyShape().fill(bodyGlass)
-                Ellipse().fill(bodyGlass).frame(width: headSize.width, height: headSize.height).position(headCenter)
+                // Outer glow — layered blurred strokes (neon x-ray edge).
+                body.stroke(Color(hex: 0x3E8CFF), lineWidth: 7).blur(radius: 20).opacity(0.55)
+                Ellipse().stroke(Color(hex: 0x3E8CFF), lineWidth: 7).blur(radius: 20).opacity(0.55)
+                    .frame(width: headSize.width, height: headSize.height).position(headCenter)
+                body.stroke(Color(hex: 0x4FA8FF), lineWidth: 3).blur(radius: 9).opacity(0.9)
+                Ellipse().stroke(Color(hex: 0x4FA8FF), lineWidth: 3).blur(radius: 9).opacity(0.9)
+                    .frame(width: headSize.width, height: headSize.height).position(headCenter)
 
-                // Hinted skeleton (spine, ribs, collarbones, pelvis), clipped to the torso.
-                SkeletonLines()
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                    .clipShape(MaleBodyShape())
-
-                // Heat blooms, clipped to the body and screen-blended so warmth glows.
-                ZStack {
-                    ForEach(InjectionSite.allCases) { site in
-                        let c = counts[site] ?? 0
-                        if c > 0 {
-                            let t = intensity(c)
-                            let radius = 26 + 36 * t
-                            let p = position(for: site)
-                            Circle()
-                                .fill(RadialGradient(
-                                    colors: [heatColor(t).opacity(0.95), heatColor(t).opacity(0)],
-                                    center: .center, startRadius: 0, endRadius: radius))
-                                .frame(width: radius * 2, height: radius * 2)
-                                .position(x: p.x * w, y: p.y * h)
-                                .blur(radius: 8)
-                        }
-                    }
+                // Translucent blue body + head (x-ray).
+                Group {
+                    body.fill(bodyFill(w, h))
+                    Ellipse().fill(RadialGradient(colors: [Color(hex: 0x2E63E6).opacity(0.5), Color(hex: 0x07122E).opacity(0.55)],
+                                                  center: UnitPoint(x: 0.5, y: 0.4), startRadius: 2, endRadius: headSize.width * 0.7))
+                        .frame(width: headSize.width, height: headSize.height).position(headCenter)
                 }
-                .frame(width: w, height: h)
-                .blendMode(.screen)
-                .clipShape(MaleBodyShape())
 
-                // Rim light on the body + head edges.
-                MaleBodyShape().stroke(rimGradient, lineWidth: 1.2)
-                Ellipse().stroke(rimGradient, lineWidth: 1.2).frame(width: headSize.width, height: headSize.height).position(headCenter)
+                // Heat blooms (warm, glow over the blue body).
+                heatLayer(w, h).blendMode(.screen).clipShape(body)
 
-                // Faint locators so every site is findable even at zero uses.
+                // Crisp bright rim.
+                body.stroke(edgeGradient, lineWidth: 1.4)
+                Ellipse().stroke(edgeGradient, lineWidth: 1.4)
+                    .frame(width: headSize.width, height: headSize.height).position(headCenter)
+
+                // Faint locators for every site.
                 ForEach(InjectionSite.allCases) { site in
                     let p = position(for: site)
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
+                    Circle().strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
                         .frame(width: 8, height: 8)
                         .position(x: p.x * w, y: p.y * h)
                 }
@@ -140,17 +130,33 @@ struct BodyMapView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var bodyGlass: LinearGradient {
-        LinearGradient(colors: [
-            Color(hex: 0x49E0C6).opacity(0.30),
-            Color(hex: 0x2FB6D6).opacity(0.20),
-            Color(hex: 0x3E7FD0).opacity(0.26),
-        ], startPoint: .top, endPoint: .bottom)
+    private func bodyFill(_ w: CGFloat, _ h: CGFloat) -> RadialGradient {
+        RadialGradient(colors: [
+            Color(hex: 0x2E63E6).opacity(0.50),
+            Color(hex: 0x14286E).opacity(0.55),
+            Color(hex: 0x07122E).opacity(0.55),
+        ], center: UnitPoint(x: 0.5, y: 0.4), startRadius: 6, endRadius: max(w, h) * 0.55)
     }
 
-    private var rimGradient: LinearGradient {
-        LinearGradient(colors: [Color.white.opacity(0.5), Color(hex: 0x49E0C6).opacity(0.35), Color.white.opacity(0.15)],
-                       startPoint: .top, endPoint: .bottom)
+    private var edgeGradient: LinearGradient {
+        LinearGradient(colors: [Color(hex: 0xBFD9FF), Color(hex: 0x5C8CFF)], startPoint: .top, endPoint: .bottom)
+    }
+
+    @ViewBuilder private func heatLayer(_ w: CGFloat, _ h: CGFloat) -> some View {
+        ForEach(InjectionSite.allCases) { site in
+            let c = counts[site] ?? 0
+            if c > 0 {
+                let t = intensity(c)
+                let radius = 26 + 36 * t
+                let p = position(for: site)
+                Circle()
+                    .fill(RadialGradient(colors: [heatColor(t).opacity(0.95), heatColor(t).opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: radius))
+                    .frame(width: radius * 2, height: radius * 2)
+                    .position(x: p.x * w, y: p.y * h)
+                    .blur(radius: 8)
+            }
+        }
     }
 
     private var legend: some View {
@@ -187,23 +193,23 @@ struct BodyMapView: View {
     /// Normalized (0…1) marker positions over the figure, mirror-style.
     private func position(for site: InjectionSite) -> CGPoint {
         switch site {
-        case .armLeft:           return CGPoint(x: 0.34, y: 0.32)
-        case .armRight:          return CGPoint(x: 0.66, y: 0.32)
-        case .abdomenUpperLeft:  return CGPoint(x: 0.44, y: 0.33)
-        case .abdomenUpperRight: return CGPoint(x: 0.56, y: 0.33)
-        case .abdomenLowerLeft:  return CGPoint(x: 0.44, y: 0.44)
-        case .abdomenLowerRight: return CGPoint(x: 0.56, y: 0.44)
+        case .armLeft:           return CGPoint(x: 0.32, y: 0.34)
+        case .armRight:          return CGPoint(x: 0.68, y: 0.34)
+        case .abdomenUpperLeft:  return CGPoint(x: 0.44, y: 0.34)
+        case .abdomenUpperRight: return CGPoint(x: 0.56, y: 0.34)
+        case .abdomenLowerLeft:  return CGPoint(x: 0.44, y: 0.45)
+        case .abdomenLowerRight: return CGPoint(x: 0.56, y: 0.45)
         case .gluteLeft:         return CGPoint(x: 0.44, y: 0.53)
         case .gluteRight:        return CGPoint(x: 0.56, y: 0.53)
-        case .thighLeft:         return CGPoint(x: 0.45, y: 0.67)
-        case .thighRight:        return CGPoint(x: 0.55, y: 0.67)
+        case .thighLeft:         return CGPoint(x: 0.45, y: 0.68)
+        case .thighRight:        return CGPoint(x: 0.55, y: 0.68)
         }
     }
 }
 
 /// A smooth front-facing body outline (torso + arms + legs) in normalized proportions.
-/// Landmark points are rounded into a continuous curve (quad curves through midpoints) so the
-/// silhouette reads organically rather than angular. Symmetric; head is drawn separately.
+/// Landmark points are rounded into a continuous curve (quad curves through midpoints).
+/// Symmetric; head is drawn separately.
 struct MaleBodyShape: Shape {
     func path(in rect: CGRect) -> Path {
         func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
@@ -230,34 +236,6 @@ struct MaleBodyShape: Shape {
             p.addQuadCurve(to: mid(curr, next), control: curr)
         }
         p.closeSubpath()
-        return p
-    }
-}
-
-/// Faint anatomical hints (spine + vertebrae, ribs, collarbones, pelvis) for the "glassy x-ray"
-/// look. Drawn in normalized proportions; stroked lightly and clipped to the body.
-struct SkeletonLines: Shape {
-    func path(in rect: CGRect) -> Path {
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
-        }
-        var p = Path()
-        // Spine
-        p.move(to: pt(0.5, 0.170)); p.addLine(to: pt(0.5, 0.520))
-        // Vertebrae ticks
-        var y: CGFloat = 0.190
-        while y < 0.515 { p.move(to: pt(0.480, y)); p.addLine(to: pt(0.520, y)); y += 0.035 }
-        // Ribs (both sides)
-        for ry in [CGFloat(0.235), 0.280, 0.325, 0.370] {
-            p.move(to: pt(0.5, ry)); p.addQuadCurve(to: pt(0.585, ry + 0.05), control: pt(0.575, ry))
-            p.move(to: pt(0.5, ry)); p.addQuadCurve(to: pt(0.415, ry + 0.05), control: pt(0.425, ry))
-        }
-        // Collarbones
-        p.move(to: pt(0.5, 0.188)); p.addQuadCurve(to: pt(0.63, 0.205), control: pt(0.565, 0.188))
-        p.move(to: pt(0.5, 0.188)); p.addQuadCurve(to: pt(0.37, 0.205), control: pt(0.435, 0.188))
-        // Pelvis
-        p.move(to: pt(0.42, 0.495)); p.addQuadCurve(to: pt(0.5, 0.560), control: pt(0.46, 0.548))
-        p.move(to: pt(0.58, 0.495)); p.addQuadCurve(to: pt(0.5, 0.560), control: pt(0.54, 0.548))
         return p
     }
 }
