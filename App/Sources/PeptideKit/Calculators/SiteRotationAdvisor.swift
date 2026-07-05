@@ -48,3 +48,27 @@ public enum SiteRotationAdvisor {
         }
     }
 }
+
+public extension SiteRotationAdvisor {
+    /// The subcutaneous zones commonly used for a compound (informational, not medical advice):
+    /// GLP-1s, GH secretagogues, and metabolic/cosmetic peptides are typically abdomen-favored
+    /// with thigh/arm/flank as alternates; healing peptides are often placed near the area being
+    /// treated, so any site is fair game.
+    static func preferredSites(for category: CompoundCategory) -> [InjectionSite] {
+        switch category {
+        case .healingRecovery:
+            return InjectionSite.allCases
+        default:
+            return InjectionSite.allCases.filter {
+                [.abdomen, .flank, .thigh, .arm].contains($0.region)
+            }
+        }
+    }
+
+    /// Least-recently-used site within the compound's preferred zones (falls back to all sites).
+    static func suggestNext(for compound: Compound, history: [DoseLog]) -> InjectionSite? {
+        let preferred = preferredSites(for: compound.category)
+        return suggestNext(candidates: preferred, history: history)
+            ?? suggestNext(history: history)
+    }
+}

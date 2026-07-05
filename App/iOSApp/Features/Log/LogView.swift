@@ -29,7 +29,13 @@ struct LogView: View {
         return d
     }
     private var suggestedSite: InjectionSite? {
-        SiteRotationAdvisor.suggestNext(history: recent.map { $0.asDomain() })
+        SiteRotationAdvisor.suggestNext(for: compound, history: recent.map { $0.asDomain() })
+    }
+    private var siteRationale: String {
+        switch compound.category {
+        case .healingRecovery: return "Healing peptides are often placed near the area you're treating."
+        default: return "Abdomen is the usual first choice for \(compound.name); rotate to avoid irritation."
+        }
     }
 
     var body: some View {
@@ -94,6 +100,8 @@ struct LogView: View {
                                         .font(.caption).foregroundStyle(BrandColor.accentText)
                                 }
                             }
+                            Text(siteRationale)
+                                .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             FieldRow("When?", hint: "Now by default — change it to log an earlier dose.") {
                                 DatePicker("", selection: $timestamp, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                                     .labelsHidden()
