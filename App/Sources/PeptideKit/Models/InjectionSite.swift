@@ -11,10 +11,14 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
     case flankRight
     case thighLeft
     case thighRight
-    case gluteLeft
-    case gluteRight
     case armLeft
     case armRight
+    case gluteLeft
+    case gluteRight
+    case tricepLeft
+    case tricepRight
+    case lowerBackLeft
+    case lowerBackRight
 
     public var id: String { rawValue }
 
@@ -26,6 +30,16 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
         case .thighLeft, .thighRight: return .thigh
         case .gluteLeft, .gluteRight: return .glute
         case .armLeft, .armRight: return .arm
+        case .tricepLeft, .tricepRight: return .tricep
+        case .lowerBackLeft, .lowerBackRight: return .lowerBack
+        }
+    }
+
+    /// Whether the site sits on the back of the body (drives the front/back views).
+    public var isBack: Bool {
+        switch region {
+        case .glute, .tricep, .lowerBack: return true
+        default: return false
         }
     }
 
@@ -39,14 +53,40 @@ public enum InjectionSite: String, Codable, CaseIterable, Sendable, Identifiable
         case .flankRight: return "Flank — right (love handle)"
         case .thighLeft: return "Thigh — left"
         case .thighRight: return "Thigh — right"
-        case .gluteLeft: return "Glute — left"
-        case .gluteRight: return "Glute — right"
         case .armLeft: return "Arm — left"
         case .armRight: return "Arm — right"
+        case .gluteLeft: return "Glute — left"
+        case .gluteRight: return "Glute — right"
+        case .tricepLeft: return "Tricep — left"
+        case .tricepRight: return "Tricep — right"
+        case .lowerBackLeft: return "Lower back — left (love handle)"
+        case .lowerBackRight: return "Lower back — right (love handle)"
+        }
+    }
+
+    /// Short label for compact chips (region is shown separately).
+    public var shortName: String {
+        switch self {
+        case .abdomenUpperLeft: return "Upper L"
+        case .abdomenUpperRight: return "Upper R"
+        case .abdomenLowerLeft: return "Lower L"
+        case .abdomenLowerRight: return "Lower R"
+        default: return rawValue.hasSuffix("Left") ? "Left" : "Right"
         }
     }
 
     public enum Region: String, Codable, CaseIterable, Sendable {
-        case abdomen, flank, thigh, glute, arm
+        case abdomen, flank, thigh, arm, glute, tricep, lowerBack
+        public var label: String {
+            switch self {
+            case .abdomen: return "Abdomen"
+            case .flank: return "Flank (love handle)"
+            case .thigh: return "Thigh"
+            case .arm: return "Arm"
+            case .glute: return "Glute"
+            case .tricep: return "Tricep"
+            case .lowerBack: return "Lower back (love handle)"
+            }
+        }
     }
 }

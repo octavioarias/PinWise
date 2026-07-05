@@ -113,6 +113,10 @@ struct BodyMapView: View {
         case .gluteRight:        return (.gluteal, .right)
         case .thighLeft:         return (.quadriceps, .left)
         case .thighRight:        return (.quadriceps, .right)
+        case .tricepLeft:        return (.triceps, .left)
+        case .tricepRight:       return (.triceps, .right)
+        case .lowerBackLeft:     return (.lowerBack, .left)
+        case .lowerBackRight:    return (.lowerBack, .right)
         }
     }
 
