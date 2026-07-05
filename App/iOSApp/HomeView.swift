@@ -8,7 +8,6 @@ import PeptideKit
 struct HomeView: View {
     @Binding var selected: AppTab
     @Binding var showMenu: Bool
-    @AppStorage("profileName") private var profileName = ""
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
 
@@ -76,22 +75,12 @@ struct HomeView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Menu — profile, settings, and health connections")
 
-            Text(greeting.uppercased())
-                .font(Typo.caption).tracking(1.2)
-                .foregroundStyle(BrandColor.accentText)
             Text("Track your protocol.\nKnow the science.")
                 .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7).lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let base = hour < 12 ? "Good morning" : (hour < 18 ? "Good afternoon" : "Good evening")
-        let name = profileName.trimmingCharacters(in: .whitespaces)
-        return name.isEmpty ? base : "\(base), \(name)"
     }
 
     // MARK: Hero
