@@ -146,7 +146,7 @@ public extension NewsFeed {
           "category": "General",
           "compounds": ["BPC-157"],
           "sources": [
-            {"name": "Pharmaceutics 2026 (PMID 42198317)", "url": "https://pubmed.ncbi.nlm.nih.gov/42198317/", "kind": "journal"}
+            {"name": "Pharmaceutics 2026 (MDPI 18(5):625)", "url": "https://www.mdpi.com/1999-4923/18/5/625", "kind": "journal"}
           ],
           "publishedAt": "2026-03-10T00:00:00Z",
           "popularity": 60,
@@ -248,7 +248,7 @@ public extension NewsFeed {
           "compounds": ["Tesamorelin"],
           "sources": [
             {"name": "NEJM 2007 (Falutz, tesamorelin)", "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa072375", "kind": "journal"},
-            {"name": "JAMA 2014 (Stanley, liver fat)", "url": "https://jamanetwork.com/journals/jama/fullarticle/1889823", "kind": "journal"},
+            {"name": "JAMA 2014 (Stanley, liver fat)", "url": "https://pubmed.ncbi.nlm.nih.gov/25038357/", "kind": "journal"},
             {"name": "U.S. FDA — Egrifta", "url": "https://www.fda.gov/", "kind": "regulatory"}
           ],
           "publishedAt": "2026-06-12T00:00:00Z",
@@ -263,7 +263,7 @@ public extension NewsFeed {
           "category": "General",
           "compounds": ["CJC-1295 (no DAC)", "CJC-1295 (DAC)", "Ipamorelin", "Sermorelin"],
           "sources": [
-            {"name": "JCEM 2006 (Teichman, CJC-1295)", "url": "https://doi.org/10.1210/jc.2005-2664", "kind": "journal"}
+            {"name": "JCEM 2006 (Teichman, CJC-1295)", "url": "https://academic.oup.com/jcem/article-abstract/91/3/799/2843281", "kind": "journal"}
           ],
           "publishedAt": "2026-05-30T00:00:00Z",
           "popularity": 58,
@@ -277,8 +277,8 @@ public extension NewsFeed {
           "category": "General",
           "compounds": ["BPC-157", "TB-500", "GHK-Cu (injectable)", "KPV", "Thymosin Beta-4"],
           "sources": [
-            {"name": "Pharmaceutics 2026 (BPC-157 review)", "url": "https://pubmed.ncbi.nlm.nih.gov/42198317/", "kind": "journal"},
-            {"name": "GHK-Cu review (Pickart, Int. J. Mol. Sci.)", "url": "https://pubmed.ncbi.nlm.nih.gov/29849626/", "kind": "journal"}
+            {"name": "Pharmaceutics 2026 (MDPI 18(5):625)", "url": "https://www.mdpi.com/1999-4923/18/5/625", "kind": "journal"},
+            {"name": "GHK-Cu review (Pickart, Int. J. Mol. Sci.)", "url": "https://pubmed.ncbi.nlm.nih.gov/29986520/", "kind": "journal"}
           ],
           "publishedAt": "2026-05-18T00:00:00Z",
           "popularity": 62,
