@@ -141,6 +141,7 @@ struct VialBuilderView: View {
     @State private var costText = ""
     @State private var hasExpiration = false
     @State private var expiration = Date()
+    @State private var showScanner = false
 
     private var validEntries: [APIEntry] { entries.filter { ($0.amountText as NSString).doubleValue > 0 } }
     private var canSave: Bool { !validEntries.isEmpty && (Double(doseText) ?? 0) > 0 }
@@ -158,6 +159,18 @@ struct VialBuilderView: View {
                     Text(isPremixed ? "Ready-to-use liquid from a pharmacy." : "A powder you mix with water yourself.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if isPremixed {
+                        Button { showScanner = true } label: {
+                            Label("Scan the pharmacy label", systemImage: "text.viewfinder")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity).padding(.vertical, Space.md)
+                                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                                .foregroundStyle(BrandColor.accentText)
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
@@ -260,7 +273,25 @@ struct VialBuilderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             .onAppear { if let first = entries.first { doseUnit = first.compound.preferredDoseUnit } }
+            .sheet(isPresented: $showScanner) { LabelScannerView { applyScan($0) } }
         }
+    }
+
+    /// Fill the form from an on-device label scan (user confirmed). Everything stays editable.
+    private func applyScan(_ r: ScannedLabel) {
+        guard !entries.isEmpty else { return }
+        if let name = r.compoundName, let c = CompoundCatalog.all.first(where: { $0.name == name }) {
+            entries[0].compound = c
+        }
+        if let conc = r.concentrationMgPerMl, let vol = r.volumeMl {
+            entries[0].unit = .milligram
+            let mg = conc * vol
+            entries[0].amountText = mg == mg.rounded() ? String(Int(mg)) : String(format: "%.2f", mg)
+            solventText = vol == vol.rounded() ? String(Int(vol)) : String(vol)
+        } else if let vol = r.volumeMl {
+            solventText = vol == vol.rounded() ? String(Int(vol)) : String(vol)
+        }
+        if let exp = r.expiration { hasExpiration = true; expiration = exp }
     }
 
     /// Bold unit chooser — the selected unit is accent-filled so the mg default is obvious.
