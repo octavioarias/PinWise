@@ -76,7 +76,7 @@ struct ProtocolBuilderView: View {
                                 VStack(alignment: .leading, spacing: Space.sm) {
                                     HStack {
                                         Picker("", selection: $item.compound) {
-                                            ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                            ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
                                         }
                                         .pickerStyle(.menu).tint(BrandColor.accentText)
                                         Spacer()

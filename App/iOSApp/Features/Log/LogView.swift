@@ -46,7 +46,7 @@ struct LogView: View {
                         VStack(alignment: .leading, spacing: Space.lg) {
                             FieldRow("What did you take?", hint: "The compound you're logging.") {
                                 Picker("Compound", selection: $compound) {
-                                    ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                    ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
                                 }
                                 .pickerStyle(.menu).tint(BrandColor.accentText)
                             }

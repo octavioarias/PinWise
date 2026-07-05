@@ -166,7 +166,7 @@ struct VialBuilderView: View {
                                 VStack(spacing: Space.sm) {
                                     HStack {
                                         Picker("", selection: $entry.compound) {
-                                            ForEach(CompoundCatalog.all, id: \.id) { c in Text(c.name).tag(c) }
+                                            ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
                                         }
                                         .pickerStyle(.menu).tint(BrandColor.accentText)
                                         Spacer()
@@ -260,7 +260,7 @@ struct VialBuilderView: View {
 
     private func applyPreset(_ blend: Blend) {
         entries = blend.components.map { comp in
-            let c = CompoundCatalog.all.first { $0.name == comp.name } ?? CompoundCatalog.bpc157
+            let c = CompoundCatalog.all.first { $0.name == comp.name || $0.name.hasPrefix(comp.name) || $0.aliases.contains(comp.name) } ?? CompoundCatalog.bpc157
             let mg = comp.massPerVial.milligrams
             return APIEntry(compound: c, amountText: mg == mg.rounded() ? String(Int(mg)) : String(mg), unit: .milligram)
         }

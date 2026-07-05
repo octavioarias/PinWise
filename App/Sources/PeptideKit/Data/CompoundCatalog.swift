@@ -471,4 +471,9 @@ public enum CompoundCatalog {
         // Metabolic / other
         nadPlus, glutathione, dsip, selank, semax, igf1lr3,
     ]
+
+    /// Alphabetical order, for pickers and the library list.
+    public static let allSorted: [Compound] = all.sorted {
+        $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+    }
 }
