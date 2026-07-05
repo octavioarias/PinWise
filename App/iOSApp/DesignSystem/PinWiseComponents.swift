@@ -247,7 +247,7 @@ struct AdherenceRing: View {
                 Text("\(pct)%")
                     .font(.system(size: 20, weight: .black, design: .rounded)).monospacedDigit()
                     .foregroundStyle(BrandColor.textPrimary)
-                Text("ADHERENCE")
+                Text("ON TRACK")
                     .font(.system(size: 8.5, weight: .semibold)).tracking(0.5)
                     .foregroundStyle(BrandColor.textSecondary)
             }
@@ -255,8 +255,8 @@ struct AdherenceRing: View {
         .frame(width: size, height: size)
         .onAppear { animated = true }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Adherence")
-        .accessibilityValue("\(pct) percent over the last 14 days")
+        .accessibilityLabel("On track")
+        .accessibilityValue("\(pct) percent of scheduled doses taken over the last 14 days")
     }
 }
 

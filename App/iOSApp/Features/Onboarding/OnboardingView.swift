@@ -55,7 +55,7 @@ struct OnboardingView: View {
                 .font(Typo.title).textCase(.uppercase)
                 .foregroundStyle(BrandColor.textPrimary)
             VStack(alignment: .leading, spacing: Space.lg) {
-                featureRow("syringe.fill", "Track doses & protocols", "Log in a couple taps; see adherence and what's next.")
+                featureRow("syringe.fill", "Track doses & protocols", "Log in a couple taps; see how on-track you are and what's next.")
                 featureRow("function", "Accurate dosing math", "Reconstitution, blends, and units — done right.")
                 featureRow("newspaper.fill", "Neutral, cited News", "Trials, results, and regulatory updates in plain language.")
             }
