@@ -56,7 +56,7 @@ struct CompoundedDoseSafetyTests {
 @Suite("Compound catalog")
 struct CompoundCatalogTests {
     @Test func integrity() {
-        #expect(CompoundCatalog.all.count == 11)
+        #expect(CompoundCatalog.all.count == 35)
         #expect(Set(CompoundCatalog.all.map { $0.id }).count == CompoundCatalog.all.count)
     }
 
