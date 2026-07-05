@@ -114,6 +114,11 @@ struct AssistantView: View {
 
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+    @Query(sort: \SymptomEntry.timestamp, order: .reverse) private var symptoms: [SymptomEntry]
+    @Query(sort: \BiomarkerEntry.timestamp, order: .reverse) private var biomarkers: [BiomarkerEntry]
+    @State private var health = HealthManager.shared
+    @AppStorage("aiDisclaimerAccepted") private var aiAccepted = false
     @State private var engine = AssistantEngine()
     @State private var input = ""
     @FocusState private var inputFocused: Bool
@@ -131,13 +136,51 @@ struct AssistantView: View {
         return counts.max { $0.value < $1.value }?.key
     }
 
+    /// A rich, bounded snapshot of everything PinWise knows about this user, so the assistant can
+    /// actually reason about their stack, logs, symptoms, labs, and connected health.
     private var contextString: String {
-        var parts: [String] = ["Doses logged this week: \(thisWeek)."]
+        func day(_ d: Date) -> String { d.formatted(.dateTime.month().day()) }
+        var lines: [String] = []
+
         if !activeProtocols.isEmpty {
-            parts.append("Active protocols: " + activeProtocols.map { "\($0.name) — \($0.contentsSummary), \($0.cadenceText)" }.joined(separator: "; ") + ".")
+            lines.append("ACTIVE PROTOCOLS:")
+            for p in activeProtocols {
+                var s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
+                if p.isTitrating, let label = p.titrationLabel { s += " · \(label) (current \(p.effectiveDose.displayString))" }
+                lines.append(s)
+            }
         }
-        if let m = mostUsedSite { parts.append("Most-used injection site: \(m.displayName).") }
-        return parts.joined(separator: " ")
+        if !vials.isEmpty {
+            lines.append("INVENTORY:")
+            for v in vials.prefix(8) {
+                lines.append("- \(v.displayName): \(max(0, v.totalDoses - v.dosesTaken)) of \(v.totalDoses) doses left")
+            }
+        }
+        if !recent.isEmpty {
+            lines.append("RECENT DOSES (\(thisWeek) this week):")
+            for d in recent.prefix(8) {
+                lines.append("- \(day(d.timestamp)): \(d.compoundName) \(d.dose.displayString)" + (d.site.map { " @ \($0.displayName)" } ?? ""))
+            }
+            if let m = mostUsedSite { lines.append("Most-used site: \(m.displayName).") }
+        }
+        if !symptoms.isEmpty {
+            lines.append("RECENT SYMPTOMS: " + symptoms.prefix(6).map { "\($0.symptomRaw) \($0.severity)/10 (\(day($0.timestamp)))" }.joined(separator: ", "))
+        }
+        if !biomarkers.isEmpty {
+            var latestByType: [String: BiomarkerEntry] = [:]
+            for b in biomarkers where latestByType[b.typeRaw] == nil { latestByType[b.typeRaw] = b }
+            lines.append("LATEST LABS/METRICS: " + latestByType.values.map { "\($0.typeRaw) \($0.value)" }.joined(separator: ", "))
+        }
+        if health.authorized {
+            var h: [String] = []
+            if let kg = health.latestWeightKg { h.append("weight \(String(format: "%.1f", kg)) kg") }
+            if let hr = health.restingHeartRate { h.append("resting HR \(Int(hr.rounded()))") }
+            if let hrv = health.hrvMilliseconds { h.append("HRV \(Int(hrv.rounded())) ms") }
+            if let sl = health.sleepHoursLastNight { h.append("slept \(String(format: "%.1f", sl)) h") }
+            if let st = health.stepsToday { h.append("\(Int(st)) steps today") }
+            if !h.isEmpty { lines.append("HEALTH (Apple Health): " + h.joined(separator: ", ")) }
+        }
+        return lines.isEmpty ? "The user hasn't logged anything yet." : lines.joined(separator: "\n")
     }
 
     private let starters = ["What is BPC-157?", "Explain the evidence tiers", "What does half-life mean?", "How's my week looking?"]
@@ -158,29 +201,68 @@ struct AssistantView: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.sm)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    Text("On-device — informational only, never dosing or medical advice.")
-                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            if aiAccepted {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Space.md) {
+                        Text("On-device — informational only, never dosing or medical advice.")
+                            .font(.caption2).foregroundStyle(BrandColor.textSecondary)
 
-                    if engine.messages.isEmpty {
-                        starterCard
-                        snapshotCard
-                    } else {
-                        ForEach(engine.messages) { bubble($0) }
-                        if engine.isThinking {
-                            HStack(spacing: Space.sm) { ProgressView(); Text("Thinking…").font(.caption).foregroundStyle(BrandColor.textSecondary) }
+                        if engine.messages.isEmpty {
+                            starterCard
+                            snapshotCard
+                        } else {
+                            ForEach(engine.messages) { bubble($0) }
+                            if engine.isThinking {
+                                HStack(spacing: Space.sm) { ProgressView(); Text("Thinking…").font(.caption).foregroundStyle(BrandColor.textSecondary) }
+                            }
                         }
                     }
+                    .padding(.horizontal, Space.lg)
+                    .padding(.bottom, Space.md)
                 }
-                .padding(.horizontal, Space.lg)
-                .padding(.bottom, Space.md)
-            }
 
-            inputBar
+                inputBar
+            } else {
+                disclaimerGate
+            }
         }
+        .task { if health.authorized { await health.refresh() } }
         .sheet(isPresented: $showCompounds) { NavigationStack { CompoundsView() } }
         .sheet(isPresented: $showLegend) { CompoundLegendView() }
+    }
+
+    /// First-use liability gate — the assistant is unusable until the user accepts.
+    private var disclaimerGate: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    Image(systemName: "exclamationmark.bubble")
+                        .font(.largeTitle).foregroundStyle(BrandColor.accentText)
+                    Text("Before you use the assistant")
+                        .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
+                    VStack(alignment: .leading, spacing: Space.md) {
+                        gatePoint("It's AI, and it can be wrong. Responses may be inaccurate, incomplete, or out of date — always fact-check them against the linked/primary sources.")
+                        gatePoint("It is not medical advice. It does not diagnose, treat, or recommend doses. Decisions about your health belong with a licensed healthcare professional.")
+                        gatePoint("You use it at your own risk. PinWise and its makers are not liable for any actions or outcomes based on the assistant's responses.")
+                    }
+                    Text("By continuing you acknowledge and accept the above.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                }
+                .padding(Space.lg)
+            }
+            PrimaryButton(title: "Accept & continue", systemImage: "checkmark") { aiAccepted = true }
+                .padding(.horizontal, Space.lg)
+                .padding(.top, Space.sm)
+                .padding(.bottom, Space.lg)
+                .background(BrandColor.surface)
+        }
+    }
+
+    private func gatePoint(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: Space.sm) {
+            Image(systemName: "checkmark.shield").font(.body).foregroundStyle(BrandColor.warning).padding(.top, 2)
+            Text(text).font(.callout).foregroundStyle(BrandColor.textPrimary)
+        }
     }
 
     private var starterCard: some View {
