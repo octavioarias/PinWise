@@ -3,6 +3,56 @@ import SwiftData
 import PeptideKit
 import MuscleMap
 
+/// Explains the green→red scale + the research behind it. Presented from the map's "?" button.
+struct InjectionMapInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.md) {
+                            SectionHeader(title: "Reading the colors")
+                            colorRow(Color(red: 0.13, green: 0.83, blue: 0.55), "Green — light or well-rotated use. Good to keep using.")
+                            colorRow(Color(red: 1.00, green: 0.69, blue: 0.13), "Amber — you're leaning on this area; start spreading out.")
+                            colorRow(Color(red: 1.00, green: 0.30, blue: 0.30), "Red — heavy reliance on one area. Rotate elsewhere so it can recover.")
+                        }
+                    }
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.sm) {
+                            SectionHeader(title: "Why — the research")
+                            Text("Injection-technique guidance is to keep injections about a finger-width (≥1 cm) apart and let a spot rest ~2–3 weeks before reusing it. Poor rotation is the biggest risk for lipohypertrophy — firm, fatty lumps that can change how a dose absorbs. A region warms toward red as you use it more often than that spacing and rest allow (around daily use of one area).")
+                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        }
+                    }
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.sm) {
+                            SectionHeader(title: "The time window")
+                            Text("The map counts only recent injections (2, 4, or 8 weeks), so sites you've let recover cool back down — older injections don't linger on the map. We track broad regions, so it shows how you're spreading load across the body, not exact spots.")
+                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        }
+                    }
+                    DisclaimerBanner(text: "General education from injection-technique research — not medical advice.")
+                }
+                .padding(Space.lg)
+            }
+            .heroScreen()
+            .navigationTitle("Heavy vs. light use")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private func colorRow(_ c: Color, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: Space.md) {
+            Circle().fill(c).frame(width: 12, height: 12).padding(.top, 3)
+            Text(text).font(.caption).foregroundStyle(BrandColor.textPrimary)
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 /// Rolling time window for the heat map. Old injections age off (tissue recovers), so the map
 /// reflects *recent* rotation load rather than lifetime totals — which would crowd it.
 enum HeatWindow: String, CaseIterable, Identifiable {
@@ -26,6 +76,7 @@ struct BodyMapView: View {
     @AppStorage("bodyGender") private var bodyGenderRaw = "male"
     @State private var side: BodySide = .front
     @State private var window: HeatWindow = .fourWeeks
+    @State private var showInfo = false
 
     private var bodyGender: BodyGender { bodyGenderRaw == "female" ? .female : .male }
 
@@ -156,7 +207,15 @@ struct BodyMapView: View {
         }
         .heroScreen()
         .navigationTitle("Injection map")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showInfo = true } label: { Image(systemName: "questionmark.circle") }
+                    .tint(BrandColor.accentText)
+                    .accessibilityLabel("What heavy and light use mean")
+            }
+        }
+        .sheet(isPresented: $showInfo) { InjectionMapInfoView() }
     }
 
     private var legend: some View {
