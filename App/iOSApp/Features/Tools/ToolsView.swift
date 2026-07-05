@@ -29,6 +29,9 @@ struct ToolsView: View {
                         ToolCard(title: "How you feel", subtitle: "Track side effects over time", systemImage: "heart.text.square") {
                             SymptomsView()
                         }
+                        ToolCard(title: "Labs & metrics", subtitle: "Weight, A1c, lipids, BP trends", systemImage: "chart.xyaxis.line") {
+                            BiomarkersView()
+                        }
                     }
                     DisclaimerBanner(text: Disclaimer.calculator)
                 }

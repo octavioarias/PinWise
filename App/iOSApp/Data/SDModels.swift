@@ -131,6 +131,21 @@ extension SavedProtocol {
     }
 }
 
+/// A logged lab value / body metric (A1c, glucose, lipids, blood pressure, weight, waist) at a
+/// point in time. Lets users watch biomarkers move with their protocol. CloudKit-safe.
+@Model
+final class BiomarkerEntry {
+    var id: UUID = UUID()
+    var timestamp: Date = Date()
+    var typeRaw: String = ""   // BiomarkerType rawValue
+    var value: Double = 0
+    var notes: String = ""
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), typeRaw: String = "", value: Double = 0, notes: String = "") {
+        self.id = id; self.timestamp = timestamp; self.typeRaw = typeRaw; self.value = value; self.notes = notes
+    }
+}
+
 /// A self-reported symptom / side effect at a point in time (0–10 severity). Independent of
 /// doses so users can log how they feel anytime. CloudKit-safe (defaults, no unique keys).
 @Model
