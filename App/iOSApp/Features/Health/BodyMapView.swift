@@ -84,8 +84,8 @@ struct BodyMapView: View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
-            let headSize = CGSize(width: w * 0.155, height: h * 0.12)
-            let headCenter = CGPoint(x: w * 0.5, y: h * 0.075)
+            let headSize = CGSize(width: w * 0.135, height: h * 0.125)
+            let headCenter = CGPoint(x: w * 0.5, y: h * 0.072)
             let body = MaleBodyShape()
             ZStack {
                 // Black backdrop so the blue glow reads (per the reference).
@@ -193,49 +193,78 @@ struct BodyMapView: View {
     /// Normalized (0…1) marker positions over the figure, mirror-style.
     private func position(for site: InjectionSite) -> CGPoint {
         switch site {
-        case .armLeft:           return CGPoint(x: 0.32, y: 0.34)
-        case .armRight:          return CGPoint(x: 0.68, y: 0.34)
-        case .abdomenUpperLeft:  return CGPoint(x: 0.44, y: 0.34)
-        case .abdomenUpperRight: return CGPoint(x: 0.56, y: 0.34)
-        case .abdomenLowerLeft:  return CGPoint(x: 0.44, y: 0.45)
-        case .abdomenLowerRight: return CGPoint(x: 0.56, y: 0.45)
-        case .gluteLeft:         return CGPoint(x: 0.44, y: 0.53)
-        case .gluteRight:        return CGPoint(x: 0.56, y: 0.53)
-        case .thighLeft:         return CGPoint(x: 0.45, y: 0.68)
-        case .thighRight:        return CGPoint(x: 0.55, y: 0.68)
+        case .armLeft:           return CGPoint(x: 0.335, y: 0.33)
+        case .armRight:          return CGPoint(x: 0.665, y: 0.33)
+        case .abdomenUpperLeft:  return CGPoint(x: 0.455, y: 0.33)
+        case .abdomenUpperRight: return CGPoint(x: 0.545, y: 0.33)
+        case .abdomenLowerLeft:  return CGPoint(x: 0.455, y: 0.44)
+        case .abdomenLowerRight: return CGPoint(x: 0.545, y: 0.44)
+        case .gluteLeft:         return CGPoint(x: 0.455, y: 0.52)
+        case .gluteRight:        return CGPoint(x: 0.545, y: 0.52)
+        case .thighLeft:         return CGPoint(x: 0.46, y: 0.66)
+        case .thighRight:        return CGPoint(x: 0.54, y: 0.66)
         }
     }
 }
 
-/// A smooth front-facing body outline (torso + arms + legs) in normalized proportions.
-/// Landmark points are rounded into a continuous curve (quad curves through midpoints).
-/// Symmetric; head is drawn separately.
+/// A front-facing male body — torso+legs as one subpath and each arm as its own subpath, so the
+/// natural gap between arm and torso shows through. Anatomical contours: deltoids, tapered waist,
+/// hip flare, thigh/calf bulges, feet. Landmark points are rounded into smooth curves. Head is
+/// drawn separately. All subpaths are wound the same way so overlaps (shoulders) fill solid.
 struct MaleBodyShape: Shape {
     func path(in rect: CGRect) -> Path {
-        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
+        func pt(_ p: (CGFloat, CGFloat)) -> CGPoint {
+            CGPoint(x: rect.minX + p.0 * rect.width, y: rect.minY + p.1 * rect.height)
         }
-        let rightNorm: [(CGFloat, CGFloat)] = [
-            (0.50, 0.150), (0.565, 0.150), (0.605, 0.180), (0.700, 0.240),
-            (0.690, 0.400), (0.662, 0.520), (0.668, 0.565), (0.620, 0.552),
-            (0.600, 0.400), (0.585, 0.258), (0.575, 0.420), (0.628, 0.500),
-            (0.600, 0.620), (0.575, 0.740), (0.575, 0.860), (0.552, 0.955),
-            (0.566, 0.985), (0.516, 0.978), (0.520, 0.860), (0.526, 0.740),
-            (0.505, 0.600), (0.500, 0.585),
-        ]
-        var points = rightNorm.map { pt($0.0, $0.1) }
-        points += rightNorm.reversed().map { pt(1 - $0.0, $0.1) }
+        func mirror(_ p: (CGFloat, CGFloat)) -> (CGFloat, CGFloat) { (1 - p.0, p.1) }
 
-        var p = Path()
-        guard points.count > 2 else { return p }
+        // Right half of torso+legs: top-center of neck → clockwise down the right side → back up
+        // the inner right leg to the crotch center. Left half is the mirror (reversed, sans the
+        // shared center endpoints), giving one closed loop.
+        let torsoRight: [(CGFloat, CGFloat)] = [
+            (0.500, 0.128), (0.545, 0.132), (0.560, 0.172), (0.610, 0.192),
+            (0.605, 0.246), (0.590, 0.320), (0.575, 0.420), (0.600, 0.485),
+            (0.612, 0.520), (0.590, 0.610), (0.575, 0.720), (0.560, 0.762),
+            (0.585, 0.820), (0.560, 0.910), (0.552, 0.958), (0.590, 0.990),
+            (0.512, 0.992), (0.516, 0.958), (0.520, 0.860), (0.523, 0.762),
+            (0.512, 0.650), (0.503, 0.545), (0.500, 0.520),
+        ]
+        let torso = torsoRight + torsoRight.reversed().dropFirst().dropLast().map(mirror)
+
+        // Right arm as its own loop (hangs slightly out; inner edge clears the torso → gap).
+        let armRight: [(CGFloat, CGFloat)] = [
+            (0.615, 0.185), (0.700, 0.250), (0.695, 0.345), (0.678, 0.470),
+            (0.672, 0.545), (0.676, 0.578), (0.632, 0.572), (0.636, 0.500),
+            (0.646, 0.360), (0.628, 0.255), (0.618, 0.200),
+        ]
+        let armLeft = armRight.map(mirror)
+
+        var path = Path()
+        addLoop(&path, torso.map(pt))
+        addLoop(&path, armRight.map(pt))
+        addLoop(&path, armLeft.map(pt))
+        return path
+    }
+
+    /// Add a smooth closed loop (quad curves through midpoints), normalized to a consistent
+    /// winding so overlapping subpaths union instead of punching holes.
+    private func addLoop(_ path: inout Path, _ raw: [CGPoint]) {
+        let pts = normalizedWinding(raw)
+        guard pts.count > 2 else { return }
         func mid(_ a: CGPoint, _ b: CGPoint) -> CGPoint { CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
-        p.move(to: mid(points[points.count - 1], points[0]))
-        for i in 0..<points.count {
-            let curr = points[i]
-            let next = points[(i + 1) % points.count]
-            p.addQuadCurve(to: mid(curr, next), control: curr)
+        path.move(to: mid(pts[pts.count - 1], pts[0]))
+        for i in pts.indices {
+            path.addQuadCurve(to: mid(pts[i], pts[(i + 1) % pts.count]), control: pts[i])
         }
-        p.closeSubpath()
-        return p
+        path.closeSubpath()
+    }
+
+    private func normalizedWinding(_ pts: [CGPoint]) -> [CGPoint] {
+        var area: CGFloat = 0
+        for i in pts.indices {
+            let j = (i + 1) % pts.count
+            area += pts[i].x * pts[j].y - pts[j].x * pts[i].y
+        }
+        return area < 0 ? Array(pts.reversed()) : pts
     }
 }
