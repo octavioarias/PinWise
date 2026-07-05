@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="m" x1="230" y1="330" x2="800" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3a5bef"/><stop offset="0.5" stop-color="#22b8e6"/><stop offset="1" stop-color="#18e39a"/></linearGradient>
+    <linearGradient id="tl" x1="0" y1="168" x2="0" y2="856" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#20232e"/><stop offset="1" stop-color="#070810"/></linearGradient>
+    <radialGradient id="sh" cx="512" cy="208" r="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".07"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#0c0d12"/>
+  <rect x="168" y="168" width="688" height="688" rx="154" fill="url(#tl)"/>
+  <rect x="168" y="168" width="688" height="688" rx="154" fill="url(#sh)"/>
+  <rect x="169" y="169" width="686" height="686" rx="153" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="2"/>
+  <g transform="translate(512 512) scale(0.62) translate(-512 -512) translate(-51.0,-120.5)"><text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
+          letter-spacing="4" fill="url(#m)">PW</text>
+    <rect x="246" y="686" width="27" height="98" fill="url(#m)"/>
+    <rect x="219" y="780" width="80" height="12" fill="url(#m)"/>
+    <path d="M246,792 L272,792 L259.0,870 Z" fill="url(#m)"/></g>
+</svg>

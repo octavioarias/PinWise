@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="m" x1="240" y1="380" x2="500" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2f5fb"/><stop offset="1" stop-color="#aab4c8"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="#0a0b10"/>
+  <g transform="translate(-51.0,-120.5)">
+    <text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
+          letter-spacing="4" fill="url(#m)">PW</text>
+    <rect x="246" y="686" width="27" height="98" fill="url(#m)"/>
+    <rect x="219" y="780" width="80" height="12" fill="url(#m)"/>
+    <path d="M246,792 L272,792 L259.0,870 Z" fill="url(#m)"/></g>
+</svg>

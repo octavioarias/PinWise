@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="bv" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f6f8fd"/><stop offset="1" stop-color="#dfe4f1"/></linearGradient><linearGradient id="m" x1="230" y1="330" x2="800" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f45d8"/><stop offset="0.5" stop-color="#0f9fd0"/><stop offset="1" stop-color="#0fbf86"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="#eef1f8"/><rect width="1024" height="1024" fill="url(#bv)"/>
+  <g transform="translate(-51.0,-120.5)">
+    <text x="190" y="690" font-family="Futura" font-weight="bold" font-size="390"
+          letter-spacing="4" fill="url(#m)">PW</text>
+    <rect x="246" y="686" width="27" height="98" fill="url(#m)"/>
+    <rect x="219" y="780" width="80" height="12" fill="url(#m)"/>
+    <path d="M246,792 L272,792 L259.0,870 Z" fill="url(#m)"/></g>
+</svg>
