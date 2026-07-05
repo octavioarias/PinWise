@@ -131,6 +131,21 @@ extension SavedProtocol {
     }
 }
 
+/// A self-reported symptom / side effect at a point in time (0–10 severity). Independent of
+/// doses so users can log how they feel anytime. CloudKit-safe (defaults, no unique keys).
+@Model
+final class SymptomEntry {
+    var id: UUID = UUID()
+    var timestamp: Date = Date()
+    var symptomRaw: String = ""   // SymptomType rawValue
+    var severity: Int = 0         // 0–10
+    var notes: String = ""
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), symptomRaw: String = "", severity: Int = 0, notes: String = "") {
+        self.id = id; self.timestamp = timestamp; self.symptomRaw = symptomRaw; self.severity = severity; self.notes = notes
+    }
+}
+
 /// One active pharmaceutical ingredient (API) inside a vial's formula.
 struct VialAPI: Codable, Hashable, Identifiable {
     var id: UUID = UUID()
