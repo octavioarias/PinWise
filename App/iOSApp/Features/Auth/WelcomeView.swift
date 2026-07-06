@@ -3,12 +3,9 @@ import AuthenticationServices
 
 /// First-launch sign-in gate. Sign in with Apple works on-device; Google & Email are present
 /// and route through `AuthManager` (pending backend). "Continue without an account" keeps the
-/// app usable locally. On-brand: dark, hero mesh, the PW mark up top.
+/// app usable locally. On-brand: dark, hero mesh.
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
-
-    private let brandBlue = Color(red: 0.227, green: 0.357, blue: 0.937)
-    private let brandMint = Color(red: 0.094, green: 0.890, blue: 0.604)
 
     var body: some View {
         ZStack {
@@ -22,7 +19,6 @@ struct WelcomeView: View {
 
             VStack(alignment: .leading, spacing: Space.lg) {
                 Spacer()
-                markTile
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("Welcome to PinWise")
                         .font(.system(size: 32, weight: .black))
@@ -67,18 +63,6 @@ struct WelcomeView: View {
         .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
             Button("OK", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
-    }
-
-    private var markTile: some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(LinearGradient(colors: [brandBlue, brandMint], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .frame(width: 84, height: 84)
-            .overlay(
-                Text("PW")
-                    .font(.system(size: 40, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-            )
-            .shadow(color: brandBlue.opacity(0.4), radius: 18, y: 10)
     }
 
     private func providerButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
