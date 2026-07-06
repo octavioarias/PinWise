@@ -335,8 +335,10 @@ struct LogView: View {
         }
         .contextMenu {
             Button(role: .destructive) {
-                // Give the dose back to its vial if it drew one down.
-                if let vid = entry.vialID, let vial = vials.first(where: { $0.id == vid }), vial.dosesTaken > 0 {
+                // Restore the vial only for the record that actually decremented it (so a blend
+                // stack — one decrement, several records — gives back exactly one dose).
+                if entry.didDecrement, let vid = entry.vialID,
+                   let vial = vials.first(where: { $0.id == vid }), vial.dosesTaken > 0 {
                     vial.dosesTaken -= 1
                 }
                 context.delete(entry)
@@ -387,6 +389,7 @@ struct LogView: View {
     }
 
     private func insertDose(compoundName: String, doseMicrograms: Double, vial: StoredVial?, decrement: Bool) {
+        let willDecrement = decrement && (vial.map { $0.dosesTaken < $0.totalDoses } ?? false)
         let entry = LoggedDose(
             timestamp: timestamp,
             compoundName: compoundName,
@@ -394,6 +397,7 @@ struct LogView: View {
             siteRaw: site?.rawValue,
             notes: notes,
             vialID: vial?.id,
+            didDecrement: willDecrement,
             energy: showMetrics ? energy : nil,
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )

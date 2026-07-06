@@ -29,14 +29,13 @@ final class HealthManager {
 
     private var readTypes: Set<HKObjectType> {
         var set = Set<HKObjectType>()
-        // Body, heart, and the activity/fitness/wearable metrics that Oura, Whoop, Apple Fitness,
-        // Garmin, etc. write into Apple Health.
-        for id in [HKQuantityTypeIdentifier.bodyMass, .restingHeartRate, .heartRateVariabilitySDNN,
-                   .heartRate, .stepCount, .activeEnergyBurned, .appleExerciseTime, .vo2Max, .respiratoryRate] {
+        // Request ONLY the metrics we actually read + display (Apple guideline 5.1.3 — request the
+        // minimum). Oura/Whoop/Fitness/Garmin write these into Apple Health. Add more here only
+        // when refresh() + the UI actually consume them.
+        for id in [HKQuantityTypeIdentifier.bodyMass, .restingHeartRate, .heartRateVariabilitySDNN, .stepCount] {
             if let t = HKObjectType.quantityType(forIdentifier: id) { set.insert(t) }
         }
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { set.insert(sleep) }
-        set.insert(HKObjectType.workoutType())
         return set
     }
 
@@ -62,6 +61,7 @@ final class HealthManager {
         authorized = false
         UserDefaults.standard.set(false, forKey: Self.connectedKey)
         latestWeightKg = nil; restingHeartRate = nil; hrvMilliseconds = nil
+        sleepHoursLastNight = nil; stepsToday = nil
     }
 
     func refresh() async {

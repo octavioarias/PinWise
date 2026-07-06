@@ -16,9 +16,13 @@ final class LoggedDose {
     var doseMicrograms: Double = 0
     var siteRaw: String?
     var notes: String = ""
-    /// The vial this dose drew from — enables inventory decrement, restore-on-delete, and
+    /// The vial this dose drew from — enables inventory attribution, restore-on-delete, and
     /// cost-per-dose. Optional/default nil to stay CloudKit-safe.
     var vialID: UUID?
+    /// Whether THIS record actually decremented its vial's dosesTaken. For a stack that resolves
+    /// to one blend vial we decrement once but stamp vialID on every line, so only the record that
+    /// decremented may restore it on delete — keeps decrement and restore symmetric.
+    var didDecrement: Bool = false
     /// Optional 0–10 quick self-reports (nil = not recorded).
     var energy: Double?
     var sideEffectSeverity: Double?
@@ -31,6 +35,7 @@ final class LoggedDose {
         siteRaw: String? = nil,
         notes: String = "",
         vialID: UUID? = nil,
+        didDecrement: Bool = false,
         energy: Double? = nil,
         sideEffectSeverity: Double? = nil
     ) {
@@ -41,6 +46,7 @@ final class LoggedDose {
         self.siteRaw = siteRaw
         self.notes = notes
         self.vialID = vialID
+        self.didDecrement = didDecrement
         self.energy = energy
         self.sideEffectSeverity = sideEffectSeverity
     }

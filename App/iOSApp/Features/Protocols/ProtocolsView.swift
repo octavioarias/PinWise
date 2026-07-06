@@ -15,6 +15,7 @@ struct ProtocolsView: View {
     private struct EditTarget: Identifiable { let id = UUID(); let proto: SavedProtocol }
 
     private var active: [SavedProtocol] { protocols.filter(\.isActive) }
+    private var inactive: [SavedProtocol] { protocols.filter { !$0.isActive } }
 
     var body: some View {
         NavigationStack {
@@ -60,6 +61,25 @@ struct ProtocolsView: View {
                 .contextMenu {
                     Button { editTarget = EditTarget(proto: proto) } label: {
                         Label("Edit", systemImage: "pencil")
+                    }
+                    Button(role: .destructive) { context.delete(proto) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        }
+
+        if !inactive.isEmpty {
+            SectionHeader(title: "Inactive").padding(.top, Space.sm)
+            ForEach(inactive, id: \.id) { proto in
+                Button { editTarget = EditTarget(proto: proto) } label: {
+                    ProtocolRow(proto: proto)
+                }
+                .buttonStyle(PressableStyle())
+                .opacity(0.55)
+                .contextMenu {
+                    Button { editTarget = EditTarget(proto: proto) } label: {
+                        Label("Edit / reactivate", systemImage: "pencil")
                     }
                     Button(role: .destructive) { context.delete(proto) } label: {
                         Label("Delete", systemImage: "trash")
@@ -118,7 +138,7 @@ struct ProtocolRow: View {
             VStack(alignment: .leading, spacing: Space.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                     Text(proto.name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
+                    if proto.isStack { TagChip(text: "Blend", color: BrandColor.accentText) }
                     if proto.isTitrating { TagChip(text: "Ramp-up", color: BrandColor.warning) }
                     Spacer()
                     Text(proto.effectiveDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)

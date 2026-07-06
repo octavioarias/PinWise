@@ -142,7 +142,7 @@ struct HomeView: View {
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     HStack {
-                        SectionHeader(title: "Your stack")
+                        SectionHeader(title: "Your protocols")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                     }
@@ -219,7 +219,7 @@ struct HomeView: View {
             SectionHeader(title: "Get started")
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("Set up your stack").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text("Set up your protocols").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                     Text("Add a protocol and log your first dose — then Home fills in with your adherence, stack, and health at a glance.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     PrimaryButton(title: "Create a protocol", systemImage: "plus") { selected = .protocols }

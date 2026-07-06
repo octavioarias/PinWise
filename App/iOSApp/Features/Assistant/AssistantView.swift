@@ -52,6 +52,9 @@ final class AssistantEngine {
 
     var messages: [Message] = []
     var isThinking = false
+    /// The live model session, reused across turns so the assistant remembers the conversation.
+    /// Typed `Any?` because `LanguageModelSession` is gated behind iOS 26 + FoundationModels.
+    private var session: Any?
 
     /// The safety contract. Written to resist persuasion / jailbreak attempts.
     static let guardrails = """
@@ -93,9 +96,17 @@ final class AssistantEngine {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), case .available = SystemLanguageModel.default.availability {
             do {
-                let instructions = Self.guardrails + "\n\nContext about this user (for reference only): " + context
-                let session = LanguageModelSession(instructions: instructions)
-                let response = try await session.respond(to: trimmed)
+                // Reuse one session across the conversation so earlier turns are remembered
+                // (follow-ups like "and its half-life?" keep context).
+                let active: LanguageModelSession
+                if let existing = session as? LanguageModelSession {
+                    active = existing
+                } else {
+                    let instructions = Self.guardrails + "\n\nContext about this user (for reference only): " + context
+                    active = LanguageModelSession(instructions: instructions)
+                    session = active
+                }
+                let response = try await active.respond(to: trimmed)
                 messages.append(Message(isUser: false, text: response.content))
             } catch {
                 messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Try rephrasing, and remember I can't give medical advice."))

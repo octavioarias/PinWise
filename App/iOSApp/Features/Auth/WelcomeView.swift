@@ -23,7 +23,7 @@ struct WelcomeView: View {
                     Text("Welcome to PinWise")
                         .font(.system(size: 32, weight: .black))
                         .foregroundStyle(BrandColor.textPrimary)
-                    Text("Sign in to save your protocols, doses, and progress — and sync them across your devices.")
+                    Text("Sign in to save your protocols, doses, and progress — or continue as a guest.")
                         .font(Typo.body)
                         .foregroundStyle(BrandColor.textSecondary)
                 }

@@ -20,7 +20,7 @@ struct ToolsView: View {
                         ToolCard(title: "Blend", subtitle: "Doses in a mixed vial", systemImage: "circle.grid.2x2.fill") {
                             BlendCalculatorView()
                         }
-                        ToolCard(title: "Ramp-up plan", subtitle: "GLP-1 dose schedule", systemImage: "chart.line.uptrend.xyaxis") {
+                        ToolCard(title: "Ramp-up plan", subtitle: "Typical label ladder (reference)", systemImage: "chart.line.uptrend.xyaxis") {
                             TitrationPreviewView()
                         }
                         ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand") {
@@ -244,7 +244,7 @@ struct TitrationPreviewView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("See how a GLP-1 dose typically steps up over the first weeks.")
+                Text("Example only — the manufacturer's typical label ladder. Informational, not a recommendation or prescription. Discuss any dose with your clinician.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
                 Card {
@@ -263,7 +263,7 @@ struct TitrationPreviewView: View {
                 }
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        SectionHeader(title: "Your schedule")
+                        SectionHeader(title: "Example ladder")
                         ForEach(phases) { phase in
                             HStack(alignment: .firstTextBaseline) {
                                 VStack(alignment: .leading, spacing: 2) {
