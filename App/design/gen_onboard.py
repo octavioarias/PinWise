@@ -1,102 +1,120 @@
 #!/usr/bin/env python3
-"""Representative on-brand mockup 'screenshots' of the three pipeline screens for onboarding."""
+"""Faithful on-brand mockups of the three pipeline screens, matching PinWiseTheme tokens:
+accent #2536E6 (solid CTA, UPPERCASE), gradient cards, hero-mesh top, native segmented, chips.
+Authored in POINTS (390pt-wide screen) then scaled into a 1080 square device frame."""
 import subprocess, os
 SP = os.path.dirname(os.path.abspath(__file__))
-W, H, M = 1080, 1080, 64
-BLUE, MINT, ACC = "#3a5bef", "#18e39a", "#3f7bff"
-INK, SUB, CARD, LINE, ELEV = "#e9edf7", "#8b96b4", "#14161f", "#2a2f40", "#1b1f2b"
+CANVAS = 1080
+SCREEN_W_PT, SCREEN_H_PT = 390.0, 480.0
+S = CANVAS / SCREEN_H_PT                     # 2.25
+SCREEN_PX = SCREEN_W_PT * S                  # 877.5
+OFF = (CANVAS - SCREEN_PX) / 2               # 101.25
+M = 16
+CW = SCREEN_W_PT - 2 * M                     # content width 358
+
+INK, SUB, ACC, ACCT, MINT = "#FFFFFF", "#9AA3B8", "#2536E6", "#8A97FF", "#18E39A"
+ELEV, STROKE = "#171A2C", "#2A2F45"
 
 def esc(s): return s.replace("&", "&amp;").replace("<", "&lt;")
-def txt(x, y, s, size=30, fill=INK, w=600, anchor="start"):
+def txt(x, y, s, size, fill=INK, w=600, anchor="start"):
     return (f'<text x="{x}" y="{y}" font-family="-apple-system,Helvetica,Arial,sans-serif" '
             f'font-size="{size}" font-weight="{w}" fill="{fill}" text-anchor="{anchor}">{esc(s)}</text>')
-def card(x, y, w, h, r=28):
-    return f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r}" fill="{CARD}" stroke="{LINE}" stroke-width="2"/>'
-def field(x, y, w, s):
-    return (f'<rect x="{x}" y="{y}" width="{w}" height="66" rx="16" fill="{ELEV}" stroke="{LINE}" stroke-width="2"/>'
-            + txt(x + 24, y + 44, s, 28, SUB, 500))
-def chip(x, y, w, s, active=False, h=56):
-    fill = ACC if active else ELEV
-    fg = "#ffffff" if active else INK
-    stroke_attr = "" if active else f' stroke="{LINE}" stroke-width="2"'
-    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{h/2}" fill="{fill}"{stroke_attr}/>'
-            + txt(x + w/2, y + h/2 + 10, s, 26, fg, 700, "middle"))
-def segmented(x, y, w, left, right, leftActive=True):
-    half = w/2
-    return (f'<rect x="{x}" y="{y}" width="{w}" height="70" rx="18" fill="{ELEV}" stroke="{LINE}" stroke-width="2"/>'
-            f'<rect x="{x+6}" y="{y+6}" width="{half-9}" height="58" rx="14" fill="{ACC if leftActive else "none"}"/>'
-            f'<rect x="{x+half+3}" y="{y+6}" width="{half-9}" height="58" rx="14" fill="{"none" if leftActive else ACC}"/>'
-            + txt(x + half/2, y + 46, left, 26, "#fff" if leftActive else SUB, 700, "middle")
-            + txt(x + half + half/2, y + 46, right, 26, SUB if leftActive else "#fff", 700, "middle"))
-def button(x, y, w, s):
-    return (f'<rect x="{x}" y="{y}" width="{w}" height="78" rx="20" fill="url(#g)"/>'
-            + txt(x + w/2, y + 51, s, 30, "#fff", 800, "middle"))
+def card(x, y, w, h):
+    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="url(#cardg)"/>'
+            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="18" fill="none" stroke="{STROKE}" stroke-width="1.2"/>')
+def fieldbox(x, y, w, h, left, right=None):
+    out = (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{ELEV}" stroke="{STROKE}" stroke-width="1"/>'
+           + txt(x + 12, y + h/2 + 5, left, 15, SUB, 500))
+    if right: out += txt(x + w - 12, y + h/2 + 5, right, 15, INK, 700, "end")
+    return out
+def seg(x, y, w, h, left, right, leftActive):
+    half = w / 2
+    thumb_x = x + 2 + (0 if leftActive else half - 2)
+    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="{ELEV}" stroke="{STROKE}" stroke-width="1"/>'
+            f'<rect x="{thumb_x}" y="{y+2}" width="{half-2}" height="{h-4}" rx="6" fill="#3A3F52"/>'
+            + txt(x + half/2, y + h/2 + 5, left, 14, INK if leftActive else SUB, 700, "middle")
+            + txt(x + half + half/2, y + h/2 + 5, right, 14, SUB if leftActive else INK, 700, "middle"))
+def chip(x, y, w, h, label, active):
+    if active:
+        return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{ACC}"/>'
+                + txt(x + w/2, y + h/2 + 5, label, 14, "#fff", 700, "middle"))
+    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{ELEV}" stroke="{STROKE}" stroke-width="1"/>'
+            + txt(x + w/2, y + h/2 + 5, label, 14, INK, 700, "middle"))
+def button(x, y, w, h, label):
+    return (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="url(#btn)"/>'
+            + txt(x + w/2, y + h/2 + 6, label.upper(), 16, "#fff", 800, "middle"))
+def title(t): return txt(M, 50, t, 34, INK, 900)
 
-def screen(title, body):
+def frame(content):
     return f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}">
+<svg xmlns="http://www.w3.org/2000/svg" width="{CANVAS}" height="{CANVAS}" viewBox="0 0 {CANVAS} {CANVAS}">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="{W}" y2="78" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="{BLUE}"/><stop offset="1" stop-color="{MINT}"/></linearGradient>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="{H}" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#12141c"/><stop offset="1" stop-color="#0a0b10"/></linearGradient>
+    <linearGradient id="cardg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16182c"/><stop offset="1" stop-color="#0f1120"/></linearGradient>
+    <linearGradient id="btn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{ACC}"/><stop offset="1" stop-color="#1f2ec0"/></linearGradient>
+    <radialGradient id="mesh" cx="540" cy="30" r="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="{ACC}" stop-opacity="0.55"/><stop offset="0.42" stop-color="#0C1A66" stop-opacity="0.35"/>
+      <stop offset="0.8" stop-color="#04050B" stop-opacity="0"/></radialGradient>
+    <clipPath id="screen"><rect x="{OFF}" y="0" width="{SCREEN_PX}" height="{CANVAS}" rx="62"/></clipPath>
   </defs>
-  <rect width="{W}" height="{H}" fill="url(#bg)"/>
-  {txt(M, 78, "9:41", 26, INK, 700)}
-  <rect x="{W-150}" y="58" width="60" height="26" rx="8" fill="{SUB}" opacity="0.5"/>
-  {txt(M, 190, title, 56, INK, 800)}
-  {body}
+  <rect width="{CANVAS}" height="{CANVAS}" fill="#04050B"/>
+  <rect x="{OFF-9}" y="-10" width="{SCREEN_PX+18}" height="{CANVAS+20}" rx="72" fill="#05060d"/>
+  <g clip-path="url(#screen)">
+    <rect x="{OFF}" y="0" width="{SCREEN_PX}" height="{CANVAS}" fill="#04050B"/>
+    <rect x="{OFF}" y="0" width="{SCREEN_PX}" height="{CANVAS}" fill="url(#mesh)"/>
+    <g transform="translate({OFF},0) scale({S})">{content}</g>
+  </g>
+  <rect x="{OFF}" y="0" width="{SCREEN_PX}" height="{CANVAS}" rx="62" fill="none" stroke="#2c3350" stroke-width="2"/>
 </svg>'''
 
-# --- Screen 1: Add a vial ---
-s1 = "".join([
-    segmented(M, 236, W-2*M, "Pre-mixed", "Powder", False),
-    card(M, 340, W-2*M, 300),
-    txt(M+36, 400, "What's in the vial?", 30, INK, 700),
-    field(M+36, 430, W-2*M-72, "Semaglutide            5 mg"),
-    txt(M+36, 560, "+ Add ingredient", 26, ACC, 700),
-    txt(W-M-36, 560, "Use a blend preset", 26, ACC, 700, "end"),
-    card(M, 668, W-2*M, 120),
-    txt(M+36, 726, "Nickname (optional)", 28, SUB, 600),
-    txt(M+36, 762, "GLOW", 30, INK, 700),
-    button(M, 955, W-2*M, "Add vial"),
+vial = "".join([
+    title("New vial"),
+    seg(M, 68, CW, 32, "Pre-mixed", "Powder", False),
+    card(M, 118, CW, 158),
+    txt(M+16, 146, "What's in the vial?", 16, INK, 700),
+    fieldbox(M+16, 158, CW-32, 42, "Semaglutide", "5 mg"),
+    txt(M+16, 236, "＋ Add ingredient", 13, ACCT, 700),
+    txt(M+CW-16, 236, "Use a blend preset", 13, ACCT, 700, "end"),
+    card(M, 292, CW, 66),
+    txt(M+16, 316, "Nickname (optional)", 13, SUB, 600),
+    txt(M+16, 340, "GLOW", 16, INK, 700),
+    button(M, 392, CW, 46, "Add vial"),
 ])
 
-# --- Screen 2: Build a protocol ---
-s2 = "".join([
-    card(M, 236, W-2*M, 118),
-    txt(M+36, 294, "Name this protocol", 28, SUB, 600),
-    txt(M+36, 332, "Weekly stack", 30, INK, 700),
-    card(M, 382, W-2*M, 330),
-    txt(M+36, 442, "What's in this protocol?", 30, INK, 700),
-    chip(M+36, 470, 300, "＋ Use one of your vials", True, 56),
-    field(M+36, 548, W-2*M-72, "Semaglutide            2.5 mg"),
-    txt(M+36, 672, "Linked to GLOW", 26, MINT, 700),
-    card(M, 740, W-2*M, 150),
-    txt(M+36, 800, "How often?", 28, SUB, 600),
-    chip(M+36, 826, 240, "Every few days", False, 56),
-    button(M, 955, W-2*M, "Save protocol"),
+protocol = "".join([
+    title("New protocol"),
+    card(M, 68, CW, 58),
+    txt(M+16, 90, "Name this protocol", 13, SUB, 600),
+    txt(M+16, 112, "Weekly stack", 16, INK, 700),
+    card(M, 140, CW, 196),
+    txt(M+16, 166, "What's in this protocol?", 16, INK, 700),
+    chip(M+16, 178, 214, 30, "＋ Use one of your vials", True),
+    fieldbox(M+16, 220, CW-32, 42, "Semaglutide", "2.5 mg"),
+    txt(M+16, 300, "Linked to GLOW", 13, MINT, 700),
+    card(M, 350, CW, 54),
+    txt(M+16, 372, "How often?", 13, SUB, 600),
+    txt(M+CW-16, 380, "Every few days", 16, INK, 700, "end"),
+    button(M, 420, CW, 46, "Save protocol"),
 ])
 
-# --- Screen 3: Log a dose ---
-s3 = "".join([
-    segmented(M, 236, W-2*M, "Protocol", "One-time", True),
-    card(M, 340, W-2*M, 250),
-    txt(M+36, 400, "Weekly stack", 30, INK, 700),
-    txt(M+36, 452, "Semaglutide", 28, SUB, 600), txt(W-M-36, 452, "2.5 mg", 28, ACC, 700, "end"),
-    txt(M+36, 506, "BPC-157", 28, SUB, 600), txt(W-M-36, 506, "250 mcg", 28, ACC, 700, "end"),
-    txt(M+36, 558, "Logs both at once.", 24, SUB, 500),
-    txt(M, 660, "Where did you inject?", 30, INK, 700),
-    chip(M, 700, 150, "Upper L", False), chip(M+166, 700, 150, "Upper R", True), chip(M+332, 700, 150, "Lower L", False),
-    button(M, 955, W-2*M, "Log dose"),
+log = "".join([
+    title("Log a dose"),
+    seg(M, 68, CW, 32, "Protocol", "One-time", True),
+    card(M, 118, CW, 150),
+    txt(M+16, 146, "Weekly stack", 16, INK, 700),
+    txt(M+16, 178, "Semaglutide", 15, SUB, 500), txt(M+CW-16, 178, "2.5 mg", 15, ACCT, 700, "end"),
+    txt(M+16, 206, "BPC-157", 15, SUB, 500), txt(M+CW-16, 206, "250 mcg", 15, ACCT, 700, "end"),
+    txt(M+16, 236, "Logs both at once.", 12, SUB, 500),
+    txt(M, 296, "Where did you inject?", 16, INK, 700),
+    chip(M, 310, 110, 32, "Upper L", False), chip(M+120, 310, 110, 32, "Upper R", True), chip(M+240, 310, 110, 32, "Lower L", False),
+    button(M, 392, CW, 46, "Log dose"),
 ])
 
 def render(name, svg):
     p = os.path.join(SP, name + ".svg"); png = p + ".png"; open(p, "w").write(svg)
     if os.path.exists(png): os.remove(png)
-    subprocess.run(["qlmanage", "-t", "-s", str(H), "-o", SP, p], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["qlmanage", "-t", "-s", str(CANVAS), "-o", SP, p], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print("ok" if os.path.exists(png) else "FAIL", name)
 
-render("onboard-vial", screen("New vial", s1))
-render("onboard-protocol", screen("New protocol", s2))
-render("onboard-log", screen("Log a dose", s3))
+render("onboard-vial", frame(vial))
+render("onboard-protocol", frame(protocol))
+render("onboard-log", frame(log))
