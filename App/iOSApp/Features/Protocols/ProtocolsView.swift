@@ -26,7 +26,7 @@ struct ProtocolsView: View {
 
                     Picker("", selection: $panel) {
                         Text("My Protocols").tag(Panel.protocols)
-                        Text("My Inventory").tag(Panel.inventory)
+                        Text("My Vials").tag(Panel.inventory)
                     }
                     .pickerStyle(.segmented)
 
@@ -36,7 +36,7 @@ struct ProtocolsView: View {
                         InventoryList()
                     }
 
-                    DisclaimerBanner(text: "Protocols and inventory are personal records you configure — not medical advice.")
+                    DisclaimerBanner(text: "Protocols and vials are personal records you configure — not medical advice.")
                 }
                 .padding(Space.lg)
             }

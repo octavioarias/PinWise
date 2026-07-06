@@ -13,7 +13,7 @@ struct LogView: View {
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
 
-    @State private var mode: LogMode = .compound
+    @AppStorage("logMode") private var modeRaw: String = LogMode.protocolBased.rawValue
     @State private var selectedProtocolID: UUID?
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
@@ -30,6 +30,7 @@ struct LogView: View {
     /// One-time mode: the vial the user chose to log from (nil = pick any compound).
     @State private var selectedVialID: UUID?
 
+    private var mode: LogMode { LogMode(rawValue: modeRaw) ?? .compound }
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
     private var doseValue: Double? {
@@ -68,7 +69,7 @@ struct LogView: View {
                         .minimumScaleFactor(0.7).lineLimit(1)
 
                     if !activeProtocols.isEmpty {
-                        Picker("", selection: $mode) {
+                        Picker("", selection: Binding(get: { mode }, set: { modeRaw = $0.rawValue })) {
                             ForEach(LogMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
                         .pickerStyle(.segmented)
@@ -99,13 +100,21 @@ struct LogView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
-                if activeProtocols.isEmpty { mode = .compound }
-                else { mode = .protocolBased; if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id } }
+                // Respect the last-chosen mode; only force one-time when there are no protocols.
+                if activeProtocols.isEmpty { modeRaw = LogMode.compound.rawValue }
+                else if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id }
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
                 // rotation suggestion. The "Suggested" hint below applies the pick on tap.
             }
-            .onChange(of: compound) { _, newValue in doseUnit = newValue.preferredDoseUnit }
+            .onChange(of: compound) { _, newValue in
+                doseUnit = newValue.preferredDoseUnit
+                // Drop the vial link if the user switches to a compound that vial doesn't hold,
+                // so the "From <vial>" label and prefilled dose don't go stale.
+                if let id = selectedVialID, let v = vials.first(where: { $0.id == id }), v.primaryAPI?.name != newValue.name {
+                    selectedVialID = nil
+                }
+            }
             .onChange(of: doseText) { _, _ in savedConfirmation = false }
         }
     }

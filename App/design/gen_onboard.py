@@ -103,7 +103,7 @@ def frame(content, active):
 # Screen 1 — Protocols ▸ My Inventory (add a vial). Example: Wolverine (BPC-157 + TB-500).
 vial = "".join([
     title("Stack"),
-    seg(M, 66, CW, 32, "My Protocols", "My Inventory", False),
+    seg(M, 66, CW, 32, "My Protocols", "My Vials", False),
     button(M, 110, CW, 42, "Add vial"),
     card(M, 166, CW, 150),
     txt(M+16, 196, "Wolverine", 16, INK, 700),
@@ -118,7 +118,7 @@ vial = "".join([
 # Screen 2 — Protocols ▸ My Protocols (build a protocol from a vial).
 protocol = "".join([
     title("Stack"),
-    seg(M, 66, CW, 32, "My Protocols", "My Inventory", True),
+    seg(M, 66, CW, 32, "My Protocols", "My Vials", True),
     button(M, 110, CW, 42, "New protocol"),
     card(M, 166, CW, 150),
     txt(M+16, 196, "Wolverine recovery", 16, INK, 700),

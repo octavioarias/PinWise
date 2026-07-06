@@ -30,7 +30,7 @@ struct IntroTourView: View {
 
                 TabView(selection: $page) {
                     screenSlide("OnboardVial", step: 1, title: "Add your vials",
-                                text: "Under Stack ▸ My Inventory — log a compound or a blend (like Wolverine) and nickname it.").tag(0)
+                                text: "Under Stack ▸ My Vials — add a compound or a blend (like Wolverine) and nickname it.").tag(0)
                     screenSlide("OnboardProtocol", step: 2, title: "Build a protocol",
                                 text: "Under Stack ▸ My Protocols — build from a vial; it links back to it and pulls your dose.").tag(1)
                     screenSlide("OnboardLog", step: 3, title: "Log every dose",

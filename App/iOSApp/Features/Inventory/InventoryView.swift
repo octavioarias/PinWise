@@ -10,10 +10,12 @@ struct InventoryList: View {
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var showBuilder = false
 
-    /// Project a vial against a matching active protocol (matched on any of its APIs), else as-needed.
+    /// Project a vial against its protocol. Prefer the protocol explicitly LINKED to this vial
+    /// (ProtocolItem.vialID), and only fall back to a compound-name match when nothing is linked.
     private func schedule(for vial: StoredVial) -> DoseSchedule {
-        protocols.first { p in p.isActive && p.compoundNames.contains(where: { vial.apiNames.contains($0) }) }?.schedule
-            ?? DoseSchedule(kind: .asNeeded)
+        let linked = protocols.first { $0.isActive && $0.items.contains { $0.vialID == vial.id } }
+        let named = protocols.first { $0.isActive && $0.compoundNames.contains { vial.apiNames.contains($0) } }
+        return (linked ?? named)?.schedule ?? DoseSchedule(kind: .asNeeded)
     }
 
     var body: some View {
@@ -30,8 +32,7 @@ struct InventoryList: View {
                 }
             } else {
                 ForEach(vials, id: \.id) { vial in
-                    VialRow(vial: vial, projection: vial.projection(schedule: schedule(for: vial)),
-                            onUseDose: { useDose(vial) })
+                    VialRow(vial: vial, projection: vial.projection(schedule: schedule(for: vial)))
                         .contextMenu {
                             Button(role: .destructive) { context.delete(vial) } label: {
                                 Label("Delete", systemImage: "trash")
@@ -42,17 +43,11 @@ struct InventoryList: View {
         }
         .sheet(isPresented: $showBuilder) { VialBuilderView() }
     }
-
-    private func useDose(_ vial: StoredVial) {
-        vial.dosesTaken += 1
-        try? context.save()
-    }
 }
 
 struct VialRow: View {
     let vial: StoredVial
     let projection: InventoryEstimator.Projection
-    let onUseDose: () -> Void
 
     private var barColor: Color {
         if projection.needsReorder { return BrandColor.danger }
@@ -75,18 +70,8 @@ struct VialRow: View {
 
                 ProgressView(value: vial.fractionRemaining).tint(barColor)
 
-                HStack {
-                    Text("\(projection.wholeDosesRemaining) of \(vial.totalDoses) doses left")
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    Spacer()
-                    Button(action: onUseDose) {
-                        Label("Used a dose", systemImage: "minus.circle")
-                            .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(projection.wholeDosesRemaining <= 0)
-                    .accessibilityLabel("Record a used dose from \(vial.displayName)")
-                }
+                Text("\(projection.wholeDosesRemaining) of \(vial.totalDoses) doses left · log a dose to draw down")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
                 if let breakdown = vial.doseBreakdown() {
                     Text("Per shot: " + breakdown.map { "\($0.name) \($0.deliveredDose.displayString)" }.joined(separator: " · "))
