@@ -41,7 +41,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     header
-                    HomeHealthCard()
+                    // Dosing leads; the (optional) health snapshot sits below it.
                     if !activeProtocols.isEmpty {
                         heroActive
                         stackCard
@@ -52,6 +52,7 @@ struct HomeView: View {
                     } else {
                         emptyState
                     }
+                    HomeHealthCard()
                     if !recent.isEmpty { recentSection }
                     DisclaimerBanner(text: "For personal record-keeping only — not medical advice.")
                 }
