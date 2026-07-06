@@ -217,10 +217,10 @@ struct HomeView: View {
             SectionHeader(title: "Get started")
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("Set up your protocols").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text("Add a protocol and log your first dose — then Home fills in with your adherence, stack, and health at a glance.")
+                    Text("Add your first vial").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text("Head to Stack ▸ My Vials — add a compound or blend, build a protocol from it, then log. Home fills in with your adherence and health as you go.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                    PrimaryButton(title: "Create a protocol", systemImage: "plus") { selected = .protocols }
+                    PrimaryButton(title: "Go to Stack", systemImage: "square.stack.3d.up.fill") { selected = .protocols }
                         .padding(.top, Space.sm)
                 }
             }

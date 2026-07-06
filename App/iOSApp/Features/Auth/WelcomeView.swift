@@ -1,11 +1,13 @@
 import SwiftUI
 import AuthenticationServices
+import PeptideKit
 
-/// First-launch sign-in gate. Sign in with Apple works on-device; Google & Email are present
-/// and route through `AuthManager` (pending backend). "Continue without an account" keeps the
-/// app usable locally. On-brand: dark, hero mesh.
+/// First-launch sign-in gate. Sign in with Apple works on-device; Google & Email are marked
+/// "Soon" (pending backend). "Continue without an account" keeps the app usable locally.
+/// On-brand: dark, hero mesh. Terms/Privacy are reachable before authenticating.
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
+    @State private var showLegal = false
 
     var body: some View {
         ZStack {
@@ -37,8 +39,8 @@ struct WelcomeView: View {
                     .frame(height: 52)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
 
-                    providerButton("Continue with Google", systemImage: "globe") { auth.signInWithGoogle() }
-                    providerButton("Continue with email", systemImage: "envelope.fill") { auth.startEmailSignIn() }
+                    providerButton("Continue with Google", systemImage: "globe", soon: true) { auth.signInWithGoogle() }
+                    providerButton("Continue with email", systemImage: "envelope.fill", soon: true) { auth.startEmailSignIn() }
 
                     Button { auth.continueAsGuest() } label: {
                         Text("Continue without an account")
@@ -50,11 +52,16 @@ struct WelcomeView: View {
                     .buttonStyle(.plain)
                 }
 
-                Text("By continuing you agree to PinWise's terms and acknowledge it is not medical advice.")
-                    .font(.caption2)
-                    .foregroundStyle(BrandColor.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: 3) {
+                    Text("Informational only — not medical advice.")
+                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                        .multilineTextAlignment(.center)
+                    Button { showLegal = true } label: {
+                        Text("Terms & Privacy").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxWidth: .infinity)
             }
             .padding(Space.xl)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -63,15 +70,21 @@ struct WelcomeView: View {
         .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
             Button("OK", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
+        .sheet(isPresented: $showLegal) { LegalSheet() }
     }
 
-    private func providerButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func providerButton(_ title: String, systemImage: String, soon: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: Space.sm) {
                 Image(systemName: systemImage)
                 Text(title).fontWeight(.semibold)
+                if soon {
+                    Text("SOON").font(.caption2.weight(.bold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(BrandColor.textSecondary.opacity(0.22), in: Capsule())
+                }
             }
-            .foregroundStyle(BrandColor.textPrimary)
+            .foregroundStyle(soon ? BrandColor.textSecondary : BrandColor.textPrimary)
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
@@ -81,5 +94,25 @@ struct WelcomeView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Terms & Privacy, reachable before sign-in (App Store 3.1.2 / 5.1.1). Shows the app's legal
+/// text; swap in hosted Terms of Use / Privacy Policy documents before submission.
+private struct LegalSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                Text(Disclaimer.onboarding)
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Space.lg)
+            }
+            .background(BrandColor.background.ignoresSafeArea())
+            .navigationTitle("Terms & Privacy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
     }
 }

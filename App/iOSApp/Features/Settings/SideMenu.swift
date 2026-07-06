@@ -7,6 +7,7 @@ struct SideMenuDrawer: View {
     @Binding var isOpen: Bool
     @State private var route: MenuRoute?
     @State private var auth = AuthManager.shared
+    @State private var showSignOut = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
 
     var body: some View {
@@ -83,13 +84,18 @@ struct SideMenuDrawer: View {
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
                               auth.isGuest ? "Sign in" : "Sign out") {
-                        isOpen = false
-                        auth.signOut()
+                        if auth.isGuest { auth.signOut(); isOpen = false } else { showSignOut = true }
                     }
                 }
                 .padding(.horizontal, Space.lg)
             }
             Spacer(minLength: 0)
+        }
+        .confirmationDialog("Sign out?", isPresented: $showSignOut, titleVisibility: .visible) {
+            Button("Sign out", role: .destructive) { auth.signOut(); isOpen = false }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your protocols, doses, and vials stay on this device.")
         }
     }
 
@@ -200,17 +206,17 @@ struct HealthConnectionsView: View {
 
     var body: some View {
         MenuSheet(title: "Connections") {
-            Text("PinWise syncs through Apple Health. Connect once and the metrics that matter — weight, resting heart rate, HRV, sleep, and activity — flow in, including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write to Apple Health. No separate logins.")
+            Text("PinWise reads from Apple Health. Connect once and it shows your weight, resting heart rate, HRV, sleep, and steps — including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write into Apple Health. No separate logins.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
             Card {
                 VStack(alignment: .leading, spacing: Space.md) {
                     SectionHeader(title: "Sources")
                     sourceRow("Apple Health", "heart.fill", health.authorized ? "Connected — the hub for everything below." : "The hub — connect above to sync.", on: health.authorized)
-                    sourceRow("Apple Fitness", "figure.run", "Workouts, move & exercise minutes — via Apple Health.")
-                    sourceRow("Oura Ring", "circle.circle", "Sleep, HRV, readiness — turn on Apple Health sharing in the Oura app.")
-                    sourceRow("Whoop", "bolt.heart.fill", "Recovery, strain, sleep — turn on Apple Health sharing in the Whoop app.")
-                    sourceRow("Garmin", "figure.outdoor.cycle", "Activity & sleep — enable Apple Health in Garmin Connect.")
+                    sourceRow("Apple Fitness", "figure.run", "Steps & activity — via Apple Health.")
+                    sourceRow("Oura Ring", "circle.circle", "Sleep & HRV — turn on Apple Health sharing in the Oura app.")
+                    sourceRow("Whoop", "bolt.heart.fill", "Sleep & HRV — turn on Apple Health sharing in the Whoop app.")
+                    sourceRow("Garmin", "figure.outdoor.cycle", "Steps & sleep — enable Apple Health in Garmin Connect.")
                 }
             }
             if health.authorized {
@@ -244,7 +250,7 @@ struct AboutView: View {
     }
 
     var body: some View {
-        MenuSheet(title: "About") {
+        MenuSheet(title: "About & Legal") {
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("PinWise").font(Typo.title).foregroundStyle(BrandColor.textPrimary)

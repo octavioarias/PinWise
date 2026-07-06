@@ -115,7 +115,7 @@ final class AssistantEngine {
         }
         #endif
 
-        messages.append(Message(isUser: false, text: "On-device AI isn't available on this device yet (it needs Apple Intelligence). You can still use the snapshot, compound lookup, and the tiers/half-life guide below — and please talk to a clinician for any medical questions."))
+        messages.append(Message(isUser: false, text: "The on-device assistant needs Apple Intelligence, which isn't available here yet. For anything health-related, please talk to a licensed clinician."))
     }
 }
 
@@ -345,6 +345,7 @@ struct AssistantView: View {
             }
             .buttonStyle(.plain)
             .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || engine.isThinking)
+            .accessibilityLabel("Send message")
         }
         .padding(.horizontal, Space.lg)
         .padding(.top, Space.sm)
