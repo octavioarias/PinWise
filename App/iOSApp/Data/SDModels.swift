@@ -16,6 +16,9 @@ final class LoggedDose {
     var doseMicrograms: Double = 0
     var siteRaw: String?
     var notes: String = ""
+    /// The vial this dose drew from — enables inventory decrement, restore-on-delete, and
+    /// cost-per-dose. Optional/default nil to stay CloudKit-safe.
+    var vialID: UUID?
     /// Optional 0–10 quick self-reports (nil = not recorded).
     var energy: Double?
     var sideEffectSeverity: Double?
@@ -27,6 +30,7 @@ final class LoggedDose {
         doseMicrograms: Double = 0,
         siteRaw: String? = nil,
         notes: String = "",
+        vialID: UUID? = nil,
         energy: Double? = nil,
         sideEffectSeverity: Double? = nil
     ) {
@@ -36,6 +40,7 @@ final class LoggedDose {
         self.doseMicrograms = doseMicrograms
         self.siteRaw = siteRaw
         self.notes = notes
+        self.vialID = vialID
         self.energy = energy
         self.sideEffectSeverity = sideEffectSeverity
     }
@@ -48,7 +53,7 @@ extension LoggedDose {
     /// Bridge to the pure-domain type so PeptideKit logic can operate on logs.
     func asDomain() -> DoseLog {
         let compoundID = CompoundCatalog.all.first { $0.name == compoundName }?.id ?? UUID()
-        return DoseLog(id: id, compoundID: compoundID, timestamp: timestamp, dose: dose, site: site, notes: notes)
+        return DoseLog(id: id, compoundID: compoundID, vialID: vialID, timestamp: timestamp, dose: dose, site: site, notes: notes)
     }
 }
 

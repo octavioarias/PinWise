@@ -298,7 +298,13 @@ struct LogView: View {
             }
         }
         .contextMenu {
-            Button(role: .destructive) { context.delete(entry) } label: { Label("Delete", systemImage: "trash") }
+            Button(role: .destructive) {
+                // Give the dose back to its vial if it drew one down.
+                if let vid = entry.vialID, let vial = vials.first(where: { $0.id == vid }), vial.dosesTaken > 0 {
+                    vial.dosesTaken -= 1
+                }
+                context.delete(entry)
+            } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
@@ -313,7 +319,9 @@ struct LogView: View {
 
     private func saveCompound() {
         guard let d = doseValue else { return }
-        insertDose(compoundName: compound.name, doseMicrograms: Mass(d, doseUnit).micrograms)
+        let vial = resolveVial(for: compound.name)
+        insertDose(compoundName: compound.name, doseMicrograms: Mass(d, doseUnit).micrograms,
+                   vial: vial, decrement: vial != nil)
         try? context.save()
         doseText = ""
         finishSave()
@@ -321,25 +329,37 @@ struct LogView: View {
 
     private func saveProtocol() {
         guard let p = selectedProtocol, !p.items.isEmpty else { return }
+        // Draw down each DISTINCT vial once per session, even when several stack items resolve
+        // to the same blend vial (one physical injection) — prevents double-counting.
+        var decremented = Set<UUID>()
         for (i, item) in p.items.enumerated() {
-            insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms)
+            let vial = resolveVial(for: item.compoundName)
+            let firstForThisVial = vial.map { decremented.insert($0.id).inserted } ?? false
+            insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms,
+                       vial: vial, decrement: firstForThisVial)
         }
         try? context.save()
         finishSave()
     }
 
-    private func insertDose(compoundName: String, doseMicrograms: Double) {
+    /// The vial a logged compound draws from: the newest non-depleted vial containing that API.
+    private func resolveVial(for compoundName: String) -> StoredVial? {
+        vials.first { $0.apiNames.contains(compoundName) && $0.dosesTaken < $0.totalDoses }
+    }
+
+    private func insertDose(compoundName: String, doseMicrograms: Double, vial: StoredVial?, decrement: Bool) {
         let entry = LoggedDose(
             timestamp: timestamp,
             compoundName: compoundName,
             doseMicrograms: doseMicrograms,
             siteRaw: site?.rawValue,
             notes: notes,
+            vialID: vial?.id,
             energy: showMetrics ? energy : nil,
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )
         context.insert(entry)
-        if let vial = vials.first(where: { $0.apiNames.contains(compoundName) && $0.dosesTaken < $0.totalDoses }) {
+        if decrement, let vial, vial.dosesTaken < vial.totalDoses {
             vial.dosesTaken += 1
         }
     }
