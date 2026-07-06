@@ -8,12 +8,14 @@ import PeptideKit
 struct ProtocolBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
 
     private struct ItemEntry: Identifiable {
         let id = UUID()
         var compound: Compound
         var doseText: String
         var doseUnit: MassUnit
+        var vialID: UUID? = nil
     }
 
     @State private var name: String = ""
@@ -38,7 +40,7 @@ struct ProtocolBuilderView: View {
             let comp = CompoundCatalog.all.first { $0.name == item.compoundName } ?? CompoundCatalog.semaglutide
             let unit = comp.preferredDoseUnit
             let val = Mass(micrograms: item.doseMicrograms).value(in: unit)
-            return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit)
+            return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit, vialID: item.vialID)
         }
         _items = State(initialValue: entries.isEmpty
             ? [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
@@ -59,6 +61,17 @@ struct ProtocolBuilderView: View {
     private var needsResearchNote: Bool { items.contains { $0.compound.requiresResearchDisclaimer } }
     private var titrationTitle: String {
         titrationID.isEmpty ? "None (fixed dose)" : (TitrationTemplates.all.first { $0.id == titrationID }?.name ?? "None (fixed dose)")
+    }
+
+    /// Prefill the first line from one of the user's vials — carrying its nickname link, compound,
+    /// and per-shot dose so the protocol references the vial rather than a raw catalog compound.
+    private func applyVial(_ vial: StoredVial) {
+        let comp = CompoundCatalog.all.first { $0.name == vial.primaryAPI?.name } ?? CompoundCatalog.semaglutide
+        let unit = comp.preferredDoseUnit
+        let v = vial.perDose.value(in: unit)
+        let entry = ItemEntry(compound: comp, doseText: v == v.rounded() ? String(Int(v)) : String(v), doseUnit: unit, vialID: vial.id)
+        if items.isEmpty { items = [entry] } else { items[0] = entry }
+        if trimmedName.isEmpty { name = vial.displayName }
     }
 
     private func applyTitration(_ t: TitrationTemplate) {
@@ -86,6 +99,15 @@ struct ProtocolBuilderView: View {
                             Text("One compound is a single protocol. Add more to build a stack — they'll share the schedule below.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
+                            if !vials.isEmpty {
+                                Menu {
+                                    ForEach(vials) { v in Button(v.displayName) { applyVial(v) } }
+                                } label: {
+                                    Label("Use one of your vials", systemImage: "cross.vial")
+                                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                                }
+                            }
+
                             ForEach($items) { $item in
                                 VStack(alignment: .leading, spacing: Space.sm) {
                                     HStack {
@@ -112,6 +134,10 @@ struct ProtocolBuilderView: View {
                                         EvidenceBadge(tier: item.compound.evidenceTier)
                                         if item.compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
                                         Spacer()
+                                    }
+                                    if let vid = item.vialID, let v = vials.first(where: { $0.id == vid }) {
+                                        Label("Linked to \(v.displayName)", systemImage: "cross.vial.fill")
+                                            .font(.caption2).foregroundStyle(BrandColor.accentText)
                                     }
                                 }
                                 .padding(.bottom, Space.xs)
@@ -247,7 +273,7 @@ struct ProtocolBuilderView: View {
     private func save() {
         let built = items.compactMap { e -> ProtocolItem? in
             guard let d = Double(e.doseText), d > 0 else { return nil }
-            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms)
+            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms, vialID: e.vialID)
         }
         guard !built.isEmpty else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)

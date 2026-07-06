@@ -333,7 +333,8 @@ struct LogView: View {
         // to the same blend vial (one physical injection) — prevents double-counting.
         var decremented = Set<UUID>()
         for (i, item) in p.items.enumerated() {
-            let vial = resolveVial(for: item.compoundName)
+            // Prefer the vial the protocol is explicitly linked to; fall back to a name match.
+            let vial = item.vialID.flatMap { id in vials.first { $0.id == id } } ?? resolveVial(for: item.compoundName)
             let firstForThisVial = vial.map { decremented.insert($0.id).inserted } ?? false
             insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms,
                        vial: vial, decrement: firstForThisVial)

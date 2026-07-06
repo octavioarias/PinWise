@@ -62,6 +62,8 @@ struct ProtocolItem: Codable, Hashable, Identifiable {
     var id: UUID = UUID()
     var compoundName: String = ""
     var doseMicrograms: Double = 0
+    /// The inventory vial this line draws from (nil = not linked to a specific vial).
+    var vialID: UUID? = nil
 }
 
 /// A saved dosing protocol — one shared schedule covering one or more compounds (a stack).
