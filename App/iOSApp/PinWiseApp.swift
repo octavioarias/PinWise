@@ -24,25 +24,30 @@ struct RootView: View {
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
     @AppStorage("weightInPounds") private var weightInPounds = true
     @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
+    @AppStorage("completedIntroTour") private var completedIntroTour = false
     @State private var auth = AuthManager.shared
 
     var body: some View {
         ZStack {
             RootTabView()
-            if acceptedVersion < Disclaimer.currentVersion {
-                OnboardingView(acceptedVersion: $acceptedVersion)
-                    .transition(.opacity)
-                    .zIndex(1)
-            }
-            // Sign-in comes first: shown on top until the user picks a method (or continues as
-            // a guest). After that it falls away to reveal onboarding, then the app.
+            // First-run gates, shown one at a time in order: sign-in → disclaimer → the intro
+            // tour (workflow carousel + personalization) → the app (Home).
             if !auth.isAuthenticated {
                 WelcomeView()
                     .transition(.opacity)
+                    .zIndex(3)
+            } else if acceptedVersion < Disclaimer.currentVersion {
+                OnboardingView(acceptedVersion: $acceptedVersion)
+                    .transition(.opacity)
                     .zIndex(2)
+            } else if !completedIntroTour {
+                IntroTourView()
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
         .animation(.easeInOut, value: auth.isAuthenticated)
+        .animation(.easeInOut, value: completedIntroTour)
         // One-time: seed the weight unit from the device region (user can override in Settings).
         .task {
             if !didInitWeightUnit {

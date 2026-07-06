@@ -142,6 +142,7 @@ struct VialBuilderView: View {
     @State private var hasExpiration = false
     @State private var expiration = Date()
     @State private var showScanner = false
+    @AppStorage("onboardFocus") private var onboardFocusRaw = ""
 
     private var validEntries: [APIEntry] { entries.filter { ($0.amountText as NSString).doubleValue > 0 } }
     private var canSave: Bool { !validEntries.isEmpty && (Double(doseText) ?? 0) > 0 }
@@ -275,7 +276,15 @@ struct VialBuilderView: View {
             .navigationTitle("New vial")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .onAppear { if let first = entries.first { doseUnit = first.compound.preferredDoseUnit } }
+            .onAppear {
+                // Seed the first ingredient from the user's onboarding focus (tailored default).
+                if entries.count == 1, entries[0].amountText.isEmpty,
+                   let f = OnboardFocus(rawValue: onboardFocusRaw), let name = f.defaultCompoundName,
+                   let c = CompoundCatalog.all.first(where: { $0.name == name }) {
+                    entries[0].compound = c
+                }
+                if let first = entries.first { doseUnit = first.compound.preferredDoseUnit }
+            }
             .sheet(isPresented: $showScanner) { LabelScannerView { applyScan($0) } }
         }
     }

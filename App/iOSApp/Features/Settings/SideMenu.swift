@@ -7,7 +7,7 @@ struct SideMenuDrawer: View {
     @Binding var isOpen: Bool
     @State private var route: MenuRoute?
     @State private var auth = AuthManager.shared
-    @AppStorage("dismissedGettingStarted") private var dismissedGettingStarted = false
+    @AppStorage("completedIntroTour") private var completedIntroTour = false
 
     var body: some View {
         GeometryReader { geo in
@@ -79,7 +79,7 @@ struct SideMenuDrawer: View {
                     row("heart.text.square", "Connections", .health)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     row("info.circle", "About & Legal", .about)
-                    actionRow("sparkles", "Show me around") { dismissedGettingStarted = false; isOpen = false }
+                    actionRow("sparkles", "Show me around") { completedIntroTour = false; isOpen = false }
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
                               auth.isGuest ? "Sign in" : "Sign out") {

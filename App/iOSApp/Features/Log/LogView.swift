@@ -27,6 +27,7 @@ struct LogView: View {
     @State private var sideEffect: Double = 0
     @State private var savedConfirmation = false
     @State private var savedCount = 0
+    @AppStorage("onboardFocus") private var onboardFocusRaw = ""
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
@@ -99,6 +100,12 @@ struct LogView: View {
             .onAppear {
                 if activeProtocols.isEmpty { mode = .compound }
                 else { mode = .protocolBased; if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id } }
+                // Seed the one-time compound from the user's onboarding focus (tailored default).
+                if compound.id == CompoundCatalog.semaglutide.id,
+                   let f = OnboardFocus(rawValue: onboardFocusRaw), let name = f.defaultCompoundName,
+                   let c = CompoundCatalog.all.first(where: { $0.name == name }) {
+                    compound = c
+                }
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
                 // rotation suggestion. The "Suggested" hint below applies the pick on tap.
