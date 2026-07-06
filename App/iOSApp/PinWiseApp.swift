@@ -46,8 +46,10 @@ struct RootView: View {
                     .zIndex(1)
             }
         }
-        .animation(.easeInOut, value: auth.isAuthenticated)
-        .animation(.easeInOut, value: completedIntroTour)
+        // Slow, eased cross-dissolves between gates so the hand-off feels premium (not abrupt).
+        .animation(.easeInOut(duration: 0.55), value: auth.isAuthenticated)
+        .animation(.easeInOut(duration: 0.55), value: acceptedVersion)
+        .animation(.easeInOut(duration: 0.55), value: completedIntroTour)
         // One-time: seed the weight unit from the device region (user can override in Settings).
         .task {
             if !didInitWeightUnit {

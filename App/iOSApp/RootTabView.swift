@@ -64,7 +64,7 @@ private struct PinWiseTabBar: View {
             tab(.home, icon: "house.fill", label: "Home")
             tab(.tools, icon: "function", label: "Tools")
             tab(.log, icon: "plus", label: "Log", prominent: true)
-            tab(.protocols, icon: "list.bullet.rectangle", label: "Protocols")
+            tab(.protocols, icon: "square.stack.3d.up.fill", label: "Stack")
             tab(.news, icon: "newspaper.fill", label: "News")
         }
         .padding(.top, Space.md)

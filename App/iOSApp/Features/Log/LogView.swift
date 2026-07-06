@@ -27,7 +27,8 @@ struct LogView: View {
     @State private var sideEffect: Double = 0
     @State private var savedConfirmation = false
     @State private var savedCount = 0
-    @AppStorage("onboardFocus") private var onboardFocusRaw = ""
+    /// One-time mode: the vial the user chose to log from (nil = pick any compound).
+    @State private var selectedVialID: UUID?
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
@@ -100,12 +101,6 @@ struct LogView: View {
             .onAppear {
                 if activeProtocols.isEmpty { mode = .compound }
                 else { mode = .protocolBased; if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id } }
-                // Seed the one-time compound from the user's onboarding focus (tailored default).
-                if compound.id == CompoundCatalog.semaglutide.id,
-                   let f = OnboardFocus(rawValue: onboardFocusRaw), let name = f.defaultCompoundName,
-                   let c = CompoundCatalog.all.first(where: { $0.name == name }) {
-                    compound = c
-                }
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
                 // rotation suggestion. The "Suggested" hint below applies the pick on tap.
@@ -163,10 +158,44 @@ struct LogView: View {
 
     // MARK: Compound mode
 
+    private var selectedVialName: String? {
+        guard let id = selectedVialID, let v = vials.first(where: { $0.id == id }) else { return nil }
+        return "From \(v.displayName)"
+    }
+
+    /// One-time log from a vial: pull the primary compound + its per-shot dose and link the vial
+    /// so the draw-down hits the right one. (Protocols remain the way to log a full stack at once.)
+    private func applyVial(_ v: StoredVial) {
+        if let c = CompoundCatalog.all.first(where: { $0.name == v.primaryAPI?.name }) { compound = c }
+        doseUnit = compound.preferredDoseUnit
+        let dose = v.perDose.value(in: doseUnit)
+        doseText = dose == dose.rounded() ? String(Int(dose)) : String(dose)
+        selectedVialID = v.id
+    }
+
     private var compoundCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.lg) {
-                FieldRow("What did you take?", hint: "The compound you're logging.") {
+                if !vials.isEmpty {
+                    // Log straight from a vial you own (by nickname) — or pick any compound below.
+                    Menu {
+                        Button("Any compound (no vial)") { selectedVialID = nil }
+                        Divider()
+                        ForEach(vials) { v in Button(v.displayName) { applyVial(v) } }
+                    } label: {
+                        HStack(spacing: Space.sm) {
+                            Image(systemName: "cross.vial.fill")
+                            Text(selectedVialName ?? "Log from one of your vials").fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down").font(.caption)
+                        }
+                        .foregroundStyle(BrandColor.accentText)
+                        .padding(.vertical, Space.sm).padding(.horizontal, Space.md)
+                        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                    }
+                }
+                FieldRow("What did you take?", hint: vials.isEmpty ? "The compound you're logging." : "Pick a vial above, or choose any compound.") {
                     Picker("Compound", selection: $compound) {
                         ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
                     }
@@ -326,7 +355,9 @@ struct LogView: View {
 
     private func saveCompound() {
         guard let d = doseValue else { return }
-        let vial = resolveVial(for: compound.name)
+        // Draw down the vial the user picked (if it still contains this compound), else name-match.
+        let vial = selectedVialID.flatMap { id in vials.first { $0.id == id && $0.apiNames.contains(compound.name) } }
+            ?? resolveVial(for: compound.name)
         insertDose(compoundName: compound.name, doseMicrograms: Mass(d, doseUnit).micrograms,
                    vial: vial, decrement: vial != nil)
         try? context.save()
@@ -377,6 +408,7 @@ struct LogView: View {
         timestamp = Date()
         site = nil          // clear so the next log starts unselected (no silently-wrong location)
         showBack = false
+        selectedVialID = nil
         savedConfirmation = true
         savedCount += 1
     }

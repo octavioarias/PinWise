@@ -84,12 +84,12 @@ struct ProtocolsView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text("What you're running.")
+            Text("Stack")
                 .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text("Your protocols and what's on hand — the plan you track against.")
+            Text("Your protocols and your vials — the plan you track against.")
                 .font(Typo.body)
                 .foregroundStyle(BrandColor.textSecondary)
         }

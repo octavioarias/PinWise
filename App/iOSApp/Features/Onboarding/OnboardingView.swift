@@ -93,7 +93,7 @@ struct OnboardingView: View {
                 .foregroundStyle(BrandColor.textPrimary)
             PrimaryButton(title: "Agree & continue", systemImage: "checkmark") {
                 acceptTrigger += 1
-                withAnimation { acceptedVersion = Disclaimer.currentVersion }
+                withAnimation(.easeInOut(duration: 0.55)) { acceptedVersion = Disclaimer.currentVersion }
             }
             .disabled(!is18)
             .opacity(is18 ? 1 : 0.5)
