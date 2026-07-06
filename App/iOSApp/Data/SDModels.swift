@@ -88,21 +88,17 @@ final class SavedProtocol {
     var remindersOn: Bool = false
     var reminderHour: Int = 9
     var reminderMinute: Int = 0
-    /// Optional ramp-up plan (TitrationTemplate.id); empty = fixed dose.
-    var titrationTemplateID: String = ""
 
     init(
         id: UUID = UUID(), name: String = "", items: [ProtocolItem] = [],
         scheduleKindRaw: String = "daily", intervalDays: Int = 1, weekdays: [Int] = [],
         startDate: Date = Date(), isActive: Bool = true, notes: String = "",
-        remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0,
-        titrationTemplateID: String = ""
+        remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0
     ) {
         self.id = id; self.name = name; self.items = items
         self.scheduleKindRaw = scheduleKindRaw; self.intervalDays = intervalDays; self.weekdays = weekdays
         self.startDate = startDate; self.isActive = isActive; self.notes = notes
         self.remindersOn = remindersOn; self.reminderHour = reminderHour; self.reminderMinute = reminderMinute
-        self.titrationTemplateID = titrationTemplateID
     }
 }
 
@@ -118,25 +114,9 @@ extension SavedProtocol {
     /// Human summary of contents, e.g. "Semaglutide · BPC-157".
     var contentsSummary: String { items.isEmpty ? "No compounds" : compoundNames.joined(separator: " · ") }
 
-    // MARK: Ramp-up (titration)
-
-    var titrationTemplate: TitrationTemplate? {
-        titrationTemplateID.isEmpty ? nil : TitrationTemplates.all.first { $0.id == titrationTemplateID }
-    }
-    var isTitrating: Bool { titrationTemplate != nil }
-    /// The titration phase active today (or the last phase once the ramp completes).
-    func currentTitrationPhase(on date: Date = Date()) -> TitrationPlanner.Phase? {
-        guard let t = titrationTemplate else { return nil }
-        let phases = TitrationPlanner.plan(steps: t.steps, startDate: startDate)
-        return TitrationPlanner.phase(on: date, in: phases) ?? phases.last
-    }
-    /// Dose to show/use now: the ramp-up phase dose if titrating, else the primary item's dose.
-    var effectiveDose: Mass { currentTitrationPhase()?.dose ?? dose }
-    /// Short "step N of M" label while ramping.
-    var titrationLabel: String? {
-        guard let t = titrationTemplate, let phase = currentTitrationPhase() else { return nil }
-        return "Ramp-up · step \(phase.id + 1) of \(t.steps.count)"
-    }
+    /// The dose to show/use — always the dose the user set. The app never auto-advances a dose
+    /// over time; every dose change is an explicit user edit to the protocol (record-keeper posture).
+    var effectiveDose: Mass { dose }
 
     var scheduleKind: DoseSchedule.Kind { DoseSchedule.Kind(rawValue: scheduleKindRaw) ?? .daily }
     var schedule: DoseSchedule { DoseSchedule(kind: scheduleKind, intervalDays: intervalDays, weekdays: weekdays) }

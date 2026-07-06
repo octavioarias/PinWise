@@ -20,7 +20,6 @@ struct ProtocolBuilderView: View {
 
     @State private var name: String = ""
     @State private var items: [ItemEntry] = [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
-    @State private var titrationID: String = ""
     @State private var kind: DoseSchedule.Kind = .specificWeekdays
     @State private var intervalDays: Int = 2
     @State private var weekdays: Set<Int> = [1]
@@ -45,7 +44,6 @@ struct ProtocolBuilderView: View {
         _items = State(initialValue: entries.isEmpty
             ? [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
             : entries)
-        _titrationID = State(initialValue: p.titrationTemplateID)
         _kind = State(initialValue: p.scheduleKind)
         _intervalDays = State(initialValue: p.intervalDays)
         _weekdays = State(initialValue: Set(p.weekdays))
@@ -59,9 +57,6 @@ struct ProtocolBuilderView: View {
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
     private var canSave: Bool { items.contains { (Double($0.doseText) ?? 0) > 0 } }
     private var needsResearchNote: Bool { items.contains { $0.compound.requiresResearchDisclaimer } }
-    private var titrationTitle: String {
-        titrationID.isEmpty ? "None (fixed dose)" : (TitrationTemplates.all.first { $0.id == titrationID }?.name ?? "None (fixed dose)")
-    }
 
     /// Prefill the first line from one of the user's vials — carrying its nickname link, compound,
     /// and per-shot dose so the protocol references the vial rather than a raw catalog compound.
@@ -72,15 +67,6 @@ struct ProtocolBuilderView: View {
         let entry = ItemEntry(compound: comp, doseText: v == v.rounded() ? String(Int(v)) : String(v), doseUnit: unit, vialID: vial.id)
         if items.isEmpty { items = [entry] } else { items[0] = entry }
         if trimmedName.isEmpty { name = vial.displayName }
-    }
-
-    private func applyTitration(_ t: TitrationTemplate) {
-        titrationID = t.id
-        if let comp = CompoundCatalog.all.first(where: { $0.name == t.compoundName }), let first = t.steps.first, !items.isEmpty {
-            let unit = comp.preferredDoseUnit
-            let v = first.dose.value(in: unit)
-            items[0] = ItemEntry(compound: comp, doseText: v == v.rounded() ? String(Int(v)) : String(v), doseUnit: unit)
-        }
     }
 
     var body: some View {
@@ -150,29 +136,6 @@ struct ProtocolBuilderView: View {
 
                             if needsResearchNote {
                                 Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
-                            }
-                        }
-                    }
-
-                    Card {
-                        VStack(alignment: .leading, spacing: Space.md) {
-                            Text("Ramp-up plan (optional)").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                            Menu {
-                                Button("None (fixed dose)") { titrationID = "" }
-                                ForEach(TitrationTemplates.all) { t in Button(t.name) { applyTitration(t) } }
-                            } label: {
-                                HStack {
-                                    Text(titrationTitle).foregroundStyle(BrandColor.accentText)
-                                    Spacer()
-                                    Image(systemName: "chevron.up.chevron.down").font(.caption).foregroundStyle(BrandColor.textSecondary)
-                                }
-                                .padding(.vertical, Space.sm).padding(.horizontal, Space.md)
-                                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-                            }
-                            if !titrationID.isEmpty {
-                                Text("The dose steps up automatically along the plan from your start date — a label-derived calendar you can adjust, not medical advice.")
-                                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
@@ -290,7 +253,6 @@ struct ProtocolBuilderView: View {
         target.remindersOn = remindersOn
         target.reminderHour = time.hour ?? 9
         target.reminderMinute = time.minute ?? 0
-        target.titrationTemplateID = titrationID
         if editing == nil { context.insert(target) }
         try? context.save()
         dismiss()

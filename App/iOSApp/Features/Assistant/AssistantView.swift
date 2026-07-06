@@ -156,8 +156,7 @@ struct AssistantView: View {
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {
-                var s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
-                if p.isTitrating, let label = p.titrationLabel { s += " · \(label) (current \(p.effectiveDose.displayString))" }
+                let s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
                 lines.append(s)
             }
         }
