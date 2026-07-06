@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The Protocols tab: your active dosing protocols, plus a link into the compound library.
+/// The Stack tab: your protocols and your vials (a "My Protocols / My Inventory" segmented
+/// control), plus a link into the compound library.
 struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]

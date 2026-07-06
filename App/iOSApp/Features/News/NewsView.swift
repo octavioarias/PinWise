@@ -18,6 +18,19 @@ private extension NewsCategory {
     }
 }
 
+/// Formats a feed item's ISO-8601 `publishedAt` as a friendly abbreviated date (falls back to
+/// the raw date substring if parsing ever fails).
+func newsDisplayDate(_ iso: String) -> String {
+    if let d = ISO8601DateFormatter().date(from: iso) {
+        return d.formatted(date: .abbreviated, time: .omitted)
+    }
+    let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = TimeZone(identifier: "UTC")
+    if let d = df.date(from: String(iso.prefix(10))) {
+        return d.formatted(date: .abbreviated, time: .omitted)
+    }
+    return String(iso.prefix(10))
+}
+
 struct NewsView: View {
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
@@ -39,7 +52,12 @@ struct NewsView: View {
         return s
     }
     private func matchesStack(_ item: NewsItem) -> Bool {
-        !userCompounds.isEmpty && item.compounds.contains { userCompounds.contains($0.lowercased()) }
+        guard !userCompounds.isEmpty else { return false }
+        // Substring match both ways so catalog aliases line up (e.g. "GHK-Cu" ⟷ "GHK-Cu (injectable)").
+        return item.compounds.contains { ic in
+            let icl = ic.lowercased()
+            return userCompounds.contains { uc in uc == icl || uc.contains(icl) || icl.contains(uc) }
+        }
     }
 
     private var items: [NewsItem] { feed.trending }
@@ -139,7 +157,7 @@ struct NewsView: View {
             resultsList
         } else {
             if let featured {
-                SectionHeader(title: "Popular")
+                SectionHeader(title: "Top story")
                 newsLink(featured) { FeaturedNewsCard(item: featured) }
             }
             SectionHeader(title: "Latest")
@@ -242,7 +260,7 @@ struct FeaturedNewsCard: View {
                     TagChip(text: item.category.rawValue, color: item.category.tint)
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
                     Spacer()
-                    Text(String(item.publishedAt.prefix(10)))
+                    Text(newsDisplayDate(item.publishedAt))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text(item.headline)
@@ -276,13 +294,13 @@ struct NewsRow: View {
             HStack(alignment: .top, spacing: Space.md) {
                 FeedImage(urlString: item.imageURL, tint: item.category.tint)
                     .frame(width: 66, height: 66)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
 
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
-                        Text(String(item.publishedAt.prefix(10)))
+                        Text(newsDisplayDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)
                     }
@@ -316,7 +334,7 @@ struct NewsDetailView: View {
                     HStack {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
-                        Text(String(item.publishedAt.prefix(10)))
+                        Text(newsDisplayDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)
                     }

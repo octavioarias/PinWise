@@ -53,7 +53,7 @@ struct HomeView: View {
                         emptyState
                     }
                     if !recent.isEmpty { recentSection }
-                    DisclaimerBanner(text: Disclaimer.calculator)
+                    DisclaimerBanner(text: "For personal record-keeping only — not medical advice.")
                 }
                 .padding(Space.lg)
             }
@@ -172,11 +172,9 @@ struct HomeView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)],
                   spacing: Space.md) {
             bentoTile("Sites in rotation", "\(sitesInRotation)", "circle.grid.3x3.fill")
-            if activeProtocols.isEmpty {
-                bentoTile("Doses logged", "\(recent.count)", "syringe.fill")
-            } else {
-                bentoTile("Active protocols", "\(activeProtocols.count)", "list.bullet.rectangle.fill")
-            }
+            // Total doses logged — not shown elsewhere (the hero shows "this week"); the stack
+            // card already lists active protocols, so don't repeat that count here.
+            bentoTile("Doses logged", "\(recent.count)", "syringe.fill")
         }
     }
 

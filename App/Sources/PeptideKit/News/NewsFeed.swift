@@ -185,7 +185,7 @@ public extension NewsFeed {
         },
         {
           "id": "reta-liver-fat-2024",
-          "headline": "Retatrutide sharply cut liver fat, early data show",
+          "headline": "Retatrutide cut liver fat in early data",
           "summary": "A Phase 2 sub-study reported large reductions in liver fat in people with metabolic dysfunction-associated steatotic liver disease (MASLD). Findings are early and investigational; retatrutide is not approved for any use.",
           "category": "Trial results",
           "compounds": ["Retatrutide"],
@@ -287,7 +287,7 @@ public extension NewsFeed {
         },
         {
           "id": "cagrisema-phase3",
-          "headline": "CagriSema posts strong Phase 3 results",
+          "headline": "CagriSema posts Phase 3 weight-loss results",
           "summary": "The amylin analog cagrilintide combined with semaglutide (CagriSema) reported Phase 3 weight-loss results. Both are dosed weekly; cagrilintide is investigational and CagriSema is not FDA-approved.",
           "category": "Trial results",
           "compounds": ["Cagrilintide", "Semaglutide"],
