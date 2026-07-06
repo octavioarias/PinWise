@@ -69,9 +69,6 @@ struct IntroTourView: View {
     @AppStorage("onboardFocus") private var focusRaw = ""
     @AppStorage("onboardGoal") private var goalRaw = ""
     @State private var page = 0
-
-    private let brandBlue = Color(red: 0.227, green: 0.357, blue: 0.937)
-    private let brandMint = Color(red: 0.094, green: 0.890, blue: 0.604)
     private let lastPage = 4
 
     var body: some View {
@@ -96,12 +93,12 @@ struct IntroTourView: View {
                 TabView(selection: $page) {
                     focusPage.tag(0)
                     goalPage.tag(1)
-                    workflowSlide(icon: "cross.vial.fill", step: 1, title: "Add your vials",
-                                  text: "Log what you have — a single compound or a blend. Give it a nickname so it's easy to grab.").tag(2)
-                    workflowSlide(icon: "calendar", step: 2, title: "Build a protocol",
-                                  text: "Pick a vial, set your dose and how often. Titration ramps are built in.").tag(3)
-                    workflowSlide(icon: "syringe.fill", step: 3, title: "Log every dose",
-                                  text: "One tap from a protocol, or a quick one-time log — your map and stats update automatically.").tag(4)
+                    screenSlide("OnboardVial", step: 1, title: "Add your vials",
+                                text: "Log what you have — one compound or a blend. Nickname it so it's easy to grab.").tag(2)
+                    screenSlide("OnboardProtocol", step: 2, title: "Build a protocol",
+                                text: "Pick a vial, set your dose and how often. Titration ramps are built in.").tag(3)
+                    screenSlide("OnboardLog", step: 3, title: "Log every dose",
+                                text: "One tap from a protocol, or a quick one-time log.").tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .always))
                 .indexViewStyle(.page(backgroundDisplayMode: .interactive))
@@ -181,18 +178,18 @@ struct IntroTourView: View {
         }
     }
 
-    // MARK: Workflow carousel
+    // MARK: Workflow carousel (real screen previews)
 
-    private func workflowSlide(icon: String, step: Int, title: String, text: String) -> some View {
-        VStack(spacing: Space.xl) {
+    private func screenSlide(_ image: String, step: Int, title: String, text: String) -> some View {
+        VStack(spacing: Space.lg) {
             Spacer(minLength: 0)
-            ZStack {
-                RoundedRectangle(cornerRadius: 40, style: .continuous)
-                    .fill(LinearGradient(colors: [brandBlue, brandMint], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 168, height: 168)
-                    .shadow(color: brandBlue.opacity(0.4), radius: 24, y: 12)
-                Image(systemName: icon).font(.system(size: 72, weight: .semibold)).foregroundStyle(.white)
-            }
+            Image(image)
+                .resizable()
+                .scaledToFit()
+                .frame(maxHeight: 400)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                .shadow(color: .black.opacity(0.45), radius: 24, y: 14)
             VStack(spacing: Space.sm) {
                 Text("Step \(step)").font(.caption.weight(.bold)).tracking(1).foregroundStyle(BrandColor.accentText)
                 Text(title).font(.system(size: 26, weight: .black)).foregroundStyle(BrandColor.textPrimary)
