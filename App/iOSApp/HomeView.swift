@@ -11,6 +11,9 @@ struct HomeView: View {
     @Binding var showAssistant: Bool
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @Query private var storedVials: [StoredVial]
+    @AppStorage("dismissedGettingStarted") private var dismissedGettingStarted = false
+    @AppStorage("deepLinkInventory") private var deepLinkInventory = false
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var thisWeekCount: Int {
@@ -41,6 +44,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     header
+                    if showGettingStarted { gettingStartedCard }
                     HomeHealthCard()
                     if !activeProtocols.isEmpty {
                         heroActive
@@ -49,7 +53,7 @@ struct HomeView: View {
                     } else if !recent.isEmpty {
                         heroActivity
                         bentoGrid
-                    } else {
+                    } else if !showGettingStarted {
                         emptyState
                     }
                     if !recent.isEmpty { recentSection }
@@ -209,6 +213,70 @@ struct HomeView: View {
                         Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
                             .font(.caption).foregroundStyle(BrandColor.textSecondary)
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: Get started (first-run checklist)
+
+    /// Three outcome-based steps; each is "done" when the matching data exists (self-healing,
+    /// order-tolerant — no event flags). Research favors an action-driven checklist over
+    /// coach-marks/carousels for lowest barrier + activation.
+    private struct GetStartedStep { let title: String; let subtitle: String; let done: Bool; let tab: AppTab; let inventory: Bool }
+    private var getStartedSteps: [GetStartedStep] {
+        [
+            .init(title: "Add a vial", subtitle: "One compound or a blend — give it a nickname.",
+                  done: !storedVials.isEmpty, tab: .protocols, inventory: true),
+            .init(title: "Create a protocol", subtitle: "Set your dose and cadence from a vial.",
+                  done: !protocols.isEmpty, tab: .protocols, inventory: false),
+            .init(title: "Log your first dose", subtitle: "From a protocol, or a quick one-time log.",
+                  done: !recent.isEmpty, tab: .log, inventory: false),
+        ]
+    }
+    private var showGettingStarted: Bool { !dismissedGettingStarted && getStartedSteps.contains { !$0.done } }
+
+    private var gettingStartedCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
+                HStack {
+                    SectionHeader(title: "Get started")
+                    Spacer()
+                    Button { withAnimation { dismissedGettingStarted = true } } label: {
+                        Image(systemName: "xmark").font(.caption.weight(.bold))
+                            .foregroundStyle(BrandColor.textSecondary)
+                            .frame(width: 28, height: 28).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("Dismiss get started")
+                }
+                Text("Three steps to your first tracked dose.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                ForEach(Array(getStartedSteps.enumerated()), id: \.offset) { i, step in
+                    Button {
+                        if step.inventory { deepLinkInventory = true }
+                        selected = step.tab
+                    } label: {
+                        HStack(spacing: Space.md) {
+                            Image(systemName: step.done ? "checkmark.circle.fill" : "\(i + 1).circle")
+                                .font(.title2)
+                                .foregroundStyle(step.done ? BrandColor.success : BrandColor.accentText)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(step.title).font(.body.weight(.semibold))
+                                    .strikethrough(step.done)
+                                    .foregroundStyle(step.done ? BrandColor.textSecondary : BrandColor.textPrimary)
+                                if !step.done {
+                                    Text(step.subtitle).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                            Spacer()
+                            if !step.done {
+                                Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(step.done)
                 }
             }
         }

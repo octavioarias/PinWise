@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "Single compound" }
+private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-time" }
 
 /// The Log tab — record a dose against a protocol (all its compounds at once) or a single
 /// compound. A grouped front/back picker keeps injection sites compact; a success haptic

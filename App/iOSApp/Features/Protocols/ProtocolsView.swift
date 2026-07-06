@@ -9,6 +9,7 @@ struct ProtocolsView: View {
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
     @State private var panel: Panel = .protocols
+    @AppStorage("deepLinkInventory") private var deepLinkInventory = false
     private enum Panel: Hashable { case protocols, inventory }
     /// Identifiable wrapper so a tapped protocol can drive `.sheet(item:)` without relying on
     /// the model's own identity semantics.
@@ -42,6 +43,9 @@ struct ProtocolsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
             .sheet(item: $editTarget) { ProtocolBuilderView(editing: $0.proto) }
+            // Home's "Add a vial" step deep-links here; jump straight to My Inventory.
+            .onAppear { if deepLinkInventory { panel = .inventory; deepLinkInventory = false } }
+            .onChange(of: deepLinkInventory) { _, v in if v { panel = .inventory; deepLinkInventory = false } }
         }
     }
 

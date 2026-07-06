@@ -238,11 +238,14 @@ struct VialBuilderView: View {
                     }
 
                     Card {
+                        FieldRow("Nickname (optional)", hint: "Name it so a protocol can reference it — e.g. \"GLOW\" or \"Wolverine 3/3\".") {
+                            TextField("GLOW", text: $label).pinwiseField()
+                        }
+                    }
+
+                    Card {
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: Space.lg) {
-                                FieldRow("Nickname", hint: "e.g. \"GLOW\" or \"Wolverine 3mg/3mg/mL\".") {
-                                    TextField("GLOW", text: $label).pinwiseField()
-                                }
                                 Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
                                 if hasExpiration {
                                     FieldRow("Expires") {
@@ -258,7 +261,7 @@ struct VialBuilderView: View {
                             }
                             .padding(.top, Space.sm)
                         } label: {
-                            Text("Optional — nickname, expiry, cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("Optional — expiry & cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                         }
                         .tint(BrandColor.accentText)
                     }
