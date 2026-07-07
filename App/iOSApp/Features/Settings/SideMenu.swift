@@ -238,6 +238,8 @@ struct HealthConnectionsView: View {
 }
 
 struct AboutView: View {
+    @State private var showTerms = false
+
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -266,6 +268,19 @@ struct AboutView: View {
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
             }
+            Button { showTerms = true } label: {
+                HStack {
+                    Image(systemName: "doc.text").foregroundStyle(BrandColor.accentText)
+                    Text("Terms of Service & Privacy Policy").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                }
+                .padding(Space.lg)
+                .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showTerms) { LegalDocumentView() }
         }
     }
 }

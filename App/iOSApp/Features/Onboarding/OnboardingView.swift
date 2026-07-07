@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @State private var page = 0
     @State private var is18 = false
     @State private var acceptTrigger = 0
+    @State private var showTerms = false
 
     var body: some View {
         ZStack {
@@ -77,6 +78,13 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 180)
+            Button { showTerms = true } label: {
+                Text("Read the full Terms of Service & Privacy Policy")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BrandColor.accentText)
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showTerms) { LegalDocumentView() }
             VStack(alignment: .leading, spacing: Space.xs) {
                 Text("Body for your injection map").font(.footnote.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
                 Picker("", selection: $bodyGenderRaw) {
@@ -87,7 +95,7 @@ struct OnboardingView: View {
                 Text("Used to draw your body map — change it anytime in My Profile.")
                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
             }
-            Toggle("I'm 18 or older and understand this is not medical advice.", isOn: $is18)
+            Toggle("I'm 18 or older and I agree to the Terms of Service and Privacy Policy.", isOn: $is18)
                 .tint(BrandColor.accent)
                 .font(.footnote)
                 .foregroundStyle(BrandColor.textPrimary)

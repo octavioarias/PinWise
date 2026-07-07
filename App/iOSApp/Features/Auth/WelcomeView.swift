@@ -67,7 +67,7 @@ struct WelcomeView: View {
         .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
             Button("OK", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
-        .sheet(isPresented: $showLegal) { LegalSheet() }
+        .sheet(isPresented: $showLegal) { LegalDocumentView() }
     }
 
     private func providerButton(_ title: String, systemImage: String, soon: Bool = false, action: @escaping () -> Void) -> some View {
@@ -94,22 +94,3 @@ struct WelcomeView: View {
     }
 }
 
-/// Terms & Privacy, reachable before sign-in (App Store 3.1.2 / 5.1.1). Shows the app's legal
-/// text; swap in hosted Terms of Use / Privacy Policy documents before submission.
-private struct LegalSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                Text(Disclaimer.onboarding)
-                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Space.lg)
-            }
-            .background(BrandColor.background.ignoresSafeArea())
-            .navigationTitle("Terms & Privacy")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }
-    }
-}

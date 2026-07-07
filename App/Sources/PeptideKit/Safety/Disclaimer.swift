@@ -9,7 +9,8 @@ import Foundation
 /// (Isabella Cruz advisor doc) before launch.
 public enum Disclaimer {
     /// Bump when the acceptance copy materially changes, to re-prompt users for consent.
-    public static let currentVersion = 2
+    /// v3: full Terms of Service + Privacy Policy (LegalDocuments) replace the short text.
+    public static let currentVersion = 3
 
     /// The short, always-visible line for calculator and dosing surfaces.
     public static let calculator = """
@@ -25,14 +26,16 @@ public enum Disclaimer {
     medical advice.
     """
 
-    /// The onboarding acceptance text.
+    /// The onboarding acceptance summary. The binding documents are the full Terms of
+    /// Service and Privacy Policy (LegalDocuments in the app target); this is the plain-
+    /// language digest shown above the acceptance toggle.
     public static let onboarding = """
     PinWise is a personal tracking and organization tool. It is not a medical device, \
     does not diagnose or treat any condition, and does not provide medical advice or dosing \
     recommendations. You are responsible for your own health decisions — always consult a \
-    qualified healthcare provider. The information you enter — including logs, protocols, and \
-    any Apple Health data you connect — is stored on your device and in any backup you choose \
-    to enable. By continuing you acknowledge this.
+    qualified healthcare provider. Your records are stored on your device and in any backup \
+    or sync you choose to enable; usage analytics may be used to improve the app as described \
+    in the Privacy Policy. By continuing you agree to the Terms of Service and Privacy Policy.
     """
 
     /// Footer stamped onto exported reports.
