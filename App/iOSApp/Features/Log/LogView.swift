@@ -247,10 +247,7 @@ struct LogView: View {
                     }
                 }
                 FieldRow("What did you take?", hint: vials.isEmpty ? "The compound you're logging." : "Pick a vial above, or choose any compound.") {
-                    Picker("Compound", selection: $compound) {
-                        ForEach(pickerOptions(including: compound), id: \.id) { c in Text(c.name).tag(c) }
-                    }
-                    .pickerStyle(.menu).tint(BrandColor.accentText)
+                    CompoundMenu(selection: $compound, options: pickerOptions(including: compound))
                 }
                 HStack(spacing: Space.sm) {
                     EvidenceBadge(tier: compound.evidenceTier)

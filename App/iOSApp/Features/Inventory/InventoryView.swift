@@ -281,11 +281,9 @@ struct VialBuilderView: View {
                             ForEach($entries) { $entry in
                                 VStack(spacing: Space.sm) {
                                     HStack {
-                                        Picker("", selection: $entry.compound) {
-                                            ForEach(pickerOptions(including: entry.compound), id: \.id) { c in Text(c.name).tag(c) }
-                                        }
-                                        .pickerStyle(.menu).tint(BrandColor.accentText)
-                                        Spacer()
+                                        CompoundMenu(selection: $entry.compound,
+                                                     options: pickerOptions(including: entry.compound))
+                                        Spacer(minLength: Space.sm)
                                         if entries.count > 1 {
                                             Button { entries.removeAll { $0.id == entry.id } } label: {
                                                 Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)

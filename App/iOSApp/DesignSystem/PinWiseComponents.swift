@@ -274,6 +274,31 @@ extension String {
     var decimalValue: Double? { Double(replacingOccurrences(of: ",", with: ".")) }
 }
 
+/// Menu-style compound chooser with a single-line, truncating label. A bare `.menu` Picker
+/// lets long names ("GHK-Cu (injectable)") overflow into neighboring fields — this never does.
+struct CompoundMenu: View {
+    @Binding var selection: Compound
+    let options: [Compound]
+
+    var body: some View {
+        Menu {
+            ForEach(options, id: \.id) { c in
+                Button(c.name) { selection = c }
+            }
+        } label: {
+            HStack(spacing: Space.xs) {
+                Text(selection.name)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+            }
+            .font(.body.weight(.semibold))
+            .foregroundStyle(BrandColor.accentText)
+        }
+    }
+}
+
 extension View {
     /// Styles a text/number field as a themed input (elevated surface, hairline border).
     func pinwiseField() -> some View {

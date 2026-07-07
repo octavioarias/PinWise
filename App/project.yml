@@ -31,10 +31,9 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        # Launch: a plain brand-black page (custom launch art shelved for now).
-        # Launch config must live HERE — xcodegen regenerates Info.plist from this block.
-        UILaunchScreen:
-          UIColorName: LaunchBackground
+        # Launch: gradient PinWise wordmark centered on brand black. Config must live HERE —
+        # xcodegen regenerates Info.plist. V5 filename = fresh launch-snapshot cache key.
+        UILaunchStoryboardName: LaunchScreenV5
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false

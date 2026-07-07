@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PeptideKit
 
 /// The Tools tab — a grid of plain-language calculators, each backed by verified PeptideKit.
@@ -154,13 +155,32 @@ struct ReverseDoseView: View {
 // MARK: - Blend (one draw → each component's dose)
 
 struct BlendCalculatorView: View {
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
     @State private var blend: Blend = BlendPresets.wolverine
     @State private var solventText = "2"
     @State private var unitsText = "20"
     @State private var syringe: SyringeScale = .u100
 
+    /// The user's own multi-compound vials — a real blend beats any preset.
+    private var blendVials: [StoredVial] { vials.filter { $0.apis.count > 1 } }
+
+    /// Preset list, plus the current blend when it came from a vial (so the picker's
+    /// selection always matches one of its options).
+    private var blendOptions: [Blend] {
+        BlendPresets.all.contains(where: { $0.id == blend.id }) ? BlendPresets.all : [blend] + BlendPresets.all
+    }
+
+    private func applyVial(_ v: StoredVial) {
+        blend = Blend(name: v.displayName,
+                      components: v.apis.map { BlendComponent(name: $0.name, massPerVial: Mass(micrograms: $0.massMicrograms)) })
+        if v.solventVolumeMilliliters > 0 {
+            let s = v.solventVolumeMilliliters
+            solventText = s == s.rounded() ? String(Int(s)) : String(format: "%.2f", s)
+        }
+    }
+
     private var result: BlendDoseResult? {
-        guard let s = Double(solventText), let u = Double(unitsText) else { return nil }
+        guard let s = solventText.decimalValue, let u = unitsText.decimalValue else { return nil }
         return try? BlendCalculator.dose(blend: blend, solventVolumeMilliliters: s, syringeUnits: u, syringe: syringe)
     }
 
@@ -172,11 +192,27 @@ struct BlendCalculatorView: View {
 
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        FieldRow("Which blend?", hint: "Pick a common blend, or the closest match.") {
-                            Picker("Blend", selection: $blend) {
-                                ForEach(BlendPresets.all, id: \.id) { Text($0.name).tag($0) }
+                        if !blendVials.isEmpty {
+                            Menu {
+                                ForEach(blendVials) { v in Button(v.displayName) { applyVial(v) } }
+                            } label: {
+                                Label("Use one of your blend vials", systemImage: "cross.vial")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(BrandColor.accentText)
+                                    .lineLimit(1)
                             }
-                            .pickerStyle(.menu).tint(BrandColor.accentText)
+                        }
+                        FieldRow("Which blend?", hint: blendVials.isEmpty ? "Pick a common blend, or the closest match." : "From your vials above, or a common preset.") {
+                            Menu {
+                                ForEach(blendOptions, id: \.id) { b in Button(b.name) { blend = b } }
+                            } label: {
+                                HStack(spacing: Space.xs) {
+                                    Text(blend.name).lineLimit(1).truncationMode(.tail)
+                                    Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.semibold))
+                                }
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(BrandColor.accentText)
+                            }
                         }
                         ForEach(blend.components) { c in
                             HStack {
