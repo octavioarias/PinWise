@@ -57,6 +57,16 @@ struct BiomarkersView: View {
     }
     private var canSave: Bool { (Double(valueText) ?? 0) > 0 }
 
+    /// Y domain fitted to the data with headroom — a 170–190 lb weight series reads as its own
+    /// range, not a sliver above zero. Position (not bar area) encodes the value on a line chart,
+    /// so the axis doesn't need to include zero.
+    private var yDomain: ClosedRange<Double> {
+        let values = seriesForSelected.map(\.value)
+        guard let lo = values.min(), let hi = values.max() else { return 0...1 }
+        let pad = (hi - lo) > 0 ? (hi - lo) * 0.15 : Swift.max(hi * 0.05, 1)
+        return Swift.max(0, lo - pad)...(hi + pad)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
@@ -98,6 +108,7 @@ struct BiomarkersView: View {
                                 PointMark(x: .value("Date", e.timestamp), y: .value(selected.rawValue, e.value))
                                     .foregroundStyle(BrandColor.accentText)
                             }
+                            .chartYScale(domain: yDomain)
                             .frame(height: 200)
                         }
                     }
@@ -130,7 +141,6 @@ struct BiomarkersView: View {
                     Text("No metrics logged yet.").font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
 
-                DisclaimerBanner(text: "A personal record of your numbers — not medical advice. Discuss results with a clinician.")
             }
             .padding(Space.lg)
         }

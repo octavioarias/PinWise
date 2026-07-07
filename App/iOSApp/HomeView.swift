@@ -54,7 +54,6 @@ struct HomeView: View {
                     }
                     HomeHealthCard()
                     if !recent.isEmpty { recentSection }
-                    DisclaimerBanner(text: "For personal record-keeping only — not medical advice.")
                 }
                 .padding(Space.lg)
             }

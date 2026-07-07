@@ -53,9 +53,6 @@ struct WelcomeView: View {
                 }
 
                 VStack(spacing: 3) {
-                    Text("Informational only — not medical advice.")
-                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
-                        .multilineTextAlignment(.center)
                     Button { showLegal = true } label: {
                         Text("Terms & Privacy").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.accentText)
                     }

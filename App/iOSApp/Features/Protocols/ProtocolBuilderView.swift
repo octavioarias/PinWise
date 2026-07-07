@@ -2,13 +2,14 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// Create or edit a dosing protocol in plain language: what compound(s), how much, how often.
-/// One protocol shares a schedule and can hold several compounds (a stack). Presented as a sheet.
-/// It's a schedule you configure — never a recommendation (disclaimer shown).
+/// Create or edit a dosing protocol in plain language: which of your vials, how much, how
+/// often. One protocol shares a schedule and can hold several vials (a stack). Presented as
+/// a sheet. Protocols draw from vials you own — compounds aren't added here directly.
 struct ProtocolBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+    @Query(sort: \CustomCompound.name) private var customCompounds: [CustomCompound]
 
     private struct ItemEntry: Identifiable {
         let id = UUID()
@@ -19,7 +20,7 @@ struct ProtocolBuilderView: View {
     }
 
     @State private var name: String = ""
-    @State private var items: [ItemEntry] = [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
+    @State private var items: [ItemEntry] = []
     @State private var kind: DoseSchedule.Kind = .specificWeekdays
     @State private var intervalDays: Int = 2
     @State private var weekdays: Set<Int> = [1]
@@ -36,14 +37,15 @@ struct ProtocolBuilderView: View {
         guard let p = editing else { return }
         _name = State(initialValue: p.name)
         let entries = p.items.map { item -> ItemEntry in
-            let comp = CompoundCatalog.all.first { $0.name == item.compoundName } ?? CompoundCatalog.semaglutide
+            // Custom compounds aren't queryable in init — a placeholder by name keeps legacy
+            // and custom-compound protocols editable (the name is all that's persisted).
+            let comp = CompoundCatalog.all.first { $0.name == item.compoundName }
+                ?? Compound(name: item.compoundName, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
             let unit = comp.preferredDoseUnit
             let val = Mass(micrograms: item.doseMicrograms).value(in: unit)
             return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit, vialID: item.vialID)
         }
-        _items = State(initialValue: entries.isEmpty
-            ? [ItemEntry(compound: CompoundCatalog.semaglutide, doseText: "", doseUnit: .milligram)]
-            : entries)
+        _items = State(initialValue: entries)
         _kind = State(initialValue: p.scheduleKind)
         _intervalDays = State(initialValue: p.intervalDays)
         _weekdays = State(initialValue: Set(p.weekdays))
@@ -56,16 +58,23 @@ struct ProtocolBuilderView: View {
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
     private var canSave: Bool { items.contains { (Double($0.doseText) ?? 0) > 0 } }
-    private var needsResearchNote: Bool { items.contains { $0.compound.requiresResearchDisclaimer } }
 
-    /// Prefill the first line from one of the user's vials — carrying its nickname link, compound,
-    /// and per-shot dose so the protocol references the vial rather than a raw catalog compound.
-    private func applyVial(_ vial: StoredVial) {
-        let comp = CompoundCatalog.all.first { $0.name == vial.primaryAPI?.name } ?? CompoundCatalog.semaglutide
+    private func resolveCompound(_ name: String) -> Compound {
+        CompoundCatalog.all.first { $0.name == name }
+            ?? customCompounds.first { $0.name == name }?.asCompound
+            ?? Compound(name: name, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
+    }
+
+    /// Add a line from one of the user's vials — carrying its nickname link, compound, and
+    /// per-shot dose. Protocols always reference vials, never raw catalog compounds.
+    private func addVial(_ vial: StoredVial) {
+        let comp = resolveCompound(vial.primaryAPI?.name ?? "")
         let unit = comp.preferredDoseUnit
         let v = vial.perDose.value(in: unit)
-        let entry = ItemEntry(compound: comp, doseText: v == v.rounded() ? String(Int(v)) : String(v), doseUnit: unit, vialID: vial.id)
-        if items.isEmpty { items = [entry] } else { items[0] = entry }
+        let entry = ItemEntry(compound: comp,
+                              doseText: v > 0 ? (v == v.rounded() ? String(Int(v)) : String(v)) : "",
+                              doseUnit: unit, vialID: vial.id)
+        items.append(entry)
         if trimmedName.isEmpty { name = vial.displayName }
     }
 
@@ -82,32 +91,26 @@ struct ProtocolBuilderView: View {
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
                             Text("What's in this protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                            Text("One compound is a single protocol. Add more to build a stack — they'll share the schedule below.")
+                            Text("Protocols schedule doses from your vials. One vial is a single protocol; add more to build a stack — they share the schedule below.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
-
-                            if !vials.isEmpty {
-                                Menu {
-                                    ForEach(vials) { v in Button(v.displayName) { applyVial(v) } }
-                                } label: {
-                                    Label("Use one of your vials", systemImage: "cross.vial")
-                                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
-                                }
-                            }
 
                             ForEach($items) { $item in
                                 VStack(alignment: .leading, spacing: Space.sm) {
-                                    HStack {
-                                        Picker("", selection: $item.compound) {
-                                            ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
-                                        }
-                                        .pickerStyle(.menu).tint(BrandColor.accentText)
-                                        Spacer()
-                                        if items.count > 1 {
-                                            Button { items.removeAll { $0.id == item.id } } label: {
-                                                Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)
+                                    HStack(alignment: .firstTextBaseline) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.compound.name)
+                                                .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                                            if let vid = item.vialID, let v = vials.first(where: { $0.id == vid }) {
+                                                Label("From \(v.displayName)", systemImage: "cross.vial.fill")
+                                                    .font(.caption2).foregroundStyle(BrandColor.accentText)
                                             }
-                                            .buttonStyle(.plain)
                                         }
+                                        Spacer()
+                                        Button { items.removeAll { $0.id == item.id } } label: {
+                                            Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel("Remove \(item.compound.name)")
                                     }
                                     HStack {
                                         TextField("Dose per shot", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
@@ -116,26 +119,20 @@ struct ProtocolBuilderView: View {
                                         }
                                         .pickerStyle(.segmented).frame(width: 120)
                                     }
-                                    HStack(spacing: Space.sm) {
-                                        EvidenceBadge(tier: item.compound.evidenceTier)
-                                        if item.compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
-                                        Spacer()
-                                    }
-                                    if let vid = item.vialID, let v = vials.first(where: { $0.id == vid }) {
-                                        Label("Linked to \(v.displayName)", systemImage: "cross.vial.fill")
-                                            .font(.caption2).foregroundStyle(BrandColor.accentText)
-                                    }
                                 }
                                 .padding(.bottom, Space.xs)
                             }
 
-                            Button { items.append(ItemEntry(compound: CompoundCatalog.bpc157, doseText: "", doseUnit: .milligram)) } label: {
-                                Label("Add compound", systemImage: "plus").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
-                            }
-                            .buttonStyle(.plain)
-
-                            if needsResearchNote {
-                                Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            if vials.isEmpty {
+                                Text("No vials yet — add one under My Vials first. Protocols schedule doses from the vials you own.")
+                                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            } else {
+                                Menu {
+                                    ForEach(vials) { v in Button(v.displayName) { addVial(v) } }
+                                } label: {
+                                    Label(items.isEmpty ? "Choose a vial" : "Add another vial", systemImage: "plus")
+                                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                                }
                             }
                         }
                     }
@@ -196,8 +193,6 @@ struct ProtocolBuilderView: View {
                         }
                         .foregroundStyle(BrandColor.danger)
                     }
-
-                    DisclaimerBanner(text: "A protocol is a personal schedule you configure — not medical advice or a recommendation.")
                 }
                 .padding(Space.lg)
             }
@@ -205,6 +200,14 @@ struct ProtocolBuilderView: View {
             .navigationTitle(editing == nil ? "New protocol" : "Edit protocol")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            // Custom compounds aren't queryable in init — swap placeholders for the real thing.
+            .onAppear {
+                items = items.map { e in
+                    var e = e
+                    e.compound = resolveCompound(e.compound.name)
+                    return e
+                }
+            }
         }
     }
 

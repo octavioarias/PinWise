@@ -9,8 +9,8 @@ struct ProtocolsView: View {
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
-    @State private var panel: Panel = .protocols
-    private enum Panel: Hashable { case protocols, inventory }
+    @State private var panel: Panel = .inventory   // vials lead — protocols schedule from them
+    private enum Panel: Hashable { case inventory, protocols }
     /// Identifiable wrapper so a tapped protocol can drive `.sheet(item:)` without relying on
     /// the model's own identity semantics.
     private struct EditTarget: Identifiable { let id = UUID(); let proto: SavedProtocol }
@@ -25,8 +25,8 @@ struct ProtocolsView: View {
                     header
 
                     Picker("", selection: $panel) {
-                        Text("My Protocols").tag(Panel.protocols)
                         Text("My Vials").tag(Panel.inventory)
+                        Text("My Protocols").tag(Panel.protocols)
                     }
                     .pickerStyle(.segmented)
 
@@ -35,8 +35,6 @@ struct ProtocolsView: View {
                     } else {
                         InventoryList()
                     }
-
-                    DisclaimerBanner(text: "Protocols and vials are personal records you configure — not medical advice.")
                 }
                 .padding(Space.lg)
             }
@@ -88,19 +86,6 @@ struct ProtocolsView: View {
                 }
             }
         }
-
-        NavigationLink { CompoundsView() } label: {
-            HStack {
-                Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
-                Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
-            }
-            .padding(Space.lg)
-            .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private var header: some View {

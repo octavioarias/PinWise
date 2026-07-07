@@ -1,30 +1,56 @@
 import SwiftUI
+import SwiftData
 import PeptideKit
 
-// The Protocols tab (first real pass): a browsable compound library from the verified
-// catalog, with evidence tiers and detail views. Building protocols & inventory from these
-// is the next batch.
+// The compound library (reached from My Vials): the verified catalog with evidence tiers,
+// plus the user's own added compounds.
 
 struct CompoundsView: View {
+    @Environment(\.modelContext) private var context
+    @Query(sort: \CustomCompound.name) private var custom: [CustomCompound]
     @State private var search = ""
     @State private var showLegend = false
+    @State private var showAdd = false
+
+    private var query: String { search.trimmingCharacters(in: .whitespaces).lowercased() }
 
     /// Alphabetical, filtered by name/alias/category.
     private var results: [Compound] {
-        let q = search.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return CompoundCatalog.allSorted }
+        guard !query.isEmpty else { return CompoundCatalog.allSorted }
         return CompoundCatalog.allSorted.filter { c in
-            c.name.lowercased().contains(q)
-            || c.aliases.contains { $0.lowercased().contains(q) }
-            || c.category.rawValue.lowercased().contains(q)
+            c.name.lowercased().contains(query)
+            || c.aliases.contains { $0.lowercased().contains(query) }
+            || c.category.rawValue.lowercased().contains(query)
         }
+    }
+
+    private var customResults: [CustomCompound] {
+        guard !query.isEmpty else { return custom }
+        return custom.filter { $0.name.lowercased().contains(query) || $0.categoryRaw.lowercased().contains(query) }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
                 searchBar
-                if results.isEmpty {
+
+                if !customResults.isEmpty {
+                    SectionHeader(title: "Your compounds")
+                    ForEach(customResults, id: \.id) { cc in
+                        NavigationLink { CompoundDetailView(compound: cc.asCompound, isCustom: true) } label: {
+                            CompoundRow(compound: cc.asCompound, isCustom: true)
+                        }
+                        .buttonStyle(PressableStyle())
+                        .contextMenu {
+                            Button(role: .destructive) { context.delete(cc); try? context.save() } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                    SectionHeader(title: "Library")
+                }
+
+                if results.isEmpty && customResults.isEmpty {
                     Card {
                         Text("No compounds match “\(search)”.")
                             .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
@@ -38,9 +64,19 @@ struct CompoundsView: View {
                         .buttonStyle(PressableStyle())
                     }
                 }
-                DisclaimerBanner(
-                    text: "Reference information summarized from public research — not medical advice. Evidence tiers reflect how much human data exists."
-                )
+
+                Button { showAdd = true } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill").foregroundStyle(BrandColor.accentText)
+                        Text("Add your own compound").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                    }
+                    .padding(Space.lg)
+                    .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
             .padding(Space.lg)
         }
@@ -49,12 +85,18 @@ struct CompoundsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button { showAdd = true } label: { Image(systemName: "plus") }
+                    .tint(BrandColor.accentText)
+                    .accessibilityLabel("Add your own compound")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button { showLegend = true } label: { Image(systemName: "questionmark.circle") }
                     .tint(BrandColor.accentText)
                     .accessibilityLabel("What the tiers and labels mean")
             }
         }
         .sheet(isPresented: $showLegend) { CompoundLegendView() }
+        .sheet(isPresented: $showAdd) { AddCustomCompoundView() }
     }
 
     private var searchBar: some View {
@@ -142,6 +184,7 @@ struct CompoundLegendView: View {
 
 struct CompoundRow: View {
     let compound: Compound
+    var isCustom: Bool = false
 
     var body: some View {
         Card {
@@ -152,8 +195,12 @@ struct CompoundRow: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: Space.xs) {
-                    EvidenceBadge(tier: compound.evidenceTier)
-                    if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                    if isCustom {
+                        TagChip(text: "Custom", color: BrandColor.accentText)
+                    } else {
+                        EvidenceBadge(tier: compound.evidenceTier)
+                        if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                    }
                 }
             }
         }
@@ -173,6 +220,7 @@ struct CompoundRow: View {
 
 struct CompoundDetailView: View {
     let compound: Compound
+    var isCustom: Bool = false
 
     var body: some View {
         ScrollView {
@@ -184,16 +232,24 @@ struct CompoundDetailView: View {
                             .font(.caption).foregroundStyle(BrandColor.textSecondary)
                     }
                     HStack(spacing: Space.sm) {
-                        EvidenceBadge(tier: compound.evidenceTier)
-                        if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                        if isCustom {
+                            TagChip(text: "Custom", color: BrandColor.accentText)
+                        } else {
+                            EvidenceBadge(tier: compound.evidenceTier)
+                            if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
+                        }
                     }
                 }
 
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
                         detailRow("Category", compound.category.rawValue)
-                        detailRow("Regulatory status", regulatoryLabel)
-                        detailRow("Evidence", compound.evidenceTier.label)
+                        if isCustom {
+                            detailRow("Source", "Added by you")
+                        } else {
+                            detailRow("Regulatory status", regulatoryLabel)
+                            detailRow("Evidence", compound.evidenceTier.label)
+                        }
                         if let h = compound.halfLifeHours { detailRow("Half-life", halfLifeLong(h)) }
                         detailRow("Dosed in", compound.preferredDoseUnit.rawValue)
                     }
@@ -204,8 +260,8 @@ struct CompoundDetailView: View {
                     Text(compound.notes).font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                 }
 
-                if compound.requiresResearchDisclaimer {
-                    DisclaimerBanner(text: Disclaimer.researchCompound, systemImage: "exclamationmark.triangle")
+                if isCustom {
+                    DisclaimerBanner(text: Self.customCompoundNote, systemImage: "exclamationmark.triangle")
                 }
             }
             .padding(Space.lg)
@@ -214,6 +270,9 @@ struct CompoundDetailView: View {
         .navigationTitle(compound.name)
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    /// The one place a strong warning stays by design: compounds the user added themselves.
+    static let customCompoundNote = "You added this compound yourself — PinWise has no verified data on it. Confirm identity, purity, and handling with your supplier's certificate of analysis. PinWise provides no information or assurances for user-added compounds and takes no responsibility for them."
 
     private var regulatoryLabel: String {
         switch compound.regulatoryStatus {
@@ -233,5 +292,80 @@ struct CompoundDetailView: View {
         if h >= 24 { return "~\(Int((h / 24).rounded())) days" }
         if h >= 1 { return "~\(Int(h.rounded())) hours" }
         return "under 1 hour"
+    }
+}
+
+/// Add a compound of your own — for anything the library doesn't carry. Name first, then
+/// just enough structure for the rest of the app (category, dose unit) to work with it.
+struct AddCustomCompoundView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+    @Query private var existing: [CustomCompound]
+
+    @State private var name = ""
+    @State private var category: CompoundCategory = .metabolic
+    @State private var doseUnit: MassUnit = .milligram
+    @State private var notes = ""
+
+    private var trimmed: String { name.trimmingCharacters(in: .whitespaces) }
+    private var isDuplicate: Bool {
+        CompoundCatalog.all.contains { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }
+            || existing.contains { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }
+    }
+    private var canSave: Bool { !trimmed.isEmpty && !isDuplicate }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.lg) {
+                            FieldRow("Compound name") {
+                                TextField("e.g. KPV", text: $name).pinwiseField()
+                            }
+                            if isDuplicate {
+                                Text("Already in the library — search for it instead.")
+                                    .font(.caption).foregroundStyle(BrandColor.warning)
+                            }
+                            FieldRow("Category") {
+                                Picker("", selection: $category) {
+                                    ForEach(CompoundCategory.allCases.filter { $0 != .blend }, id: \.self) {
+                                        Text($0.rawValue).tag($0)
+                                    }
+                                }
+                                .pickerStyle(.menu).tint(BrandColor.accentText)
+                            }
+                            FieldRow("Usually dosed in") {
+                                Picker("", selection: $doseUnit) {
+                                    ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                                }
+                                .pickerStyle(.segmented)
+                            }
+                            FieldRow("Notes", hint: "Optional — source, batch, anything worth remembering.") {
+                                TextField("Anything worth remembering", text: $notes, axis: .vertical).pinwiseField()
+                            }
+                        }
+                    }
+
+                    DisclaimerBanner(text: CompoundDetailView.customCompoundNote, systemImage: "exclamationmark.triangle")
+
+                    PrimaryButton(title: "Add compound", systemImage: "checkmark") { save() }
+                        .disabled(!canSave).opacity(canSave ? 1 : 0.5)
+                }
+                .padding(Space.lg)
+            }
+            .heroScreen()
+            .navigationTitle("Your compound")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+
+    private func save() {
+        guard canSave else { return }
+        context.insert(CustomCompound(name: trimmed, categoryRaw: category.rawValue,
+                                      doseUnitRaw: doseUnit.rawValue, notes: notes))
+        try? context.save()
+        dismiss()
     }
 }

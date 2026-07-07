@@ -215,9 +215,6 @@ struct LogView: View {
                     if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
                     Spacer()
                 }
-                if compound.requiresResearchDisclaimer {
-                    Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
                 FieldRow("How much?", hint: "The dose you took this time.") {
                     HStack {
                         TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()

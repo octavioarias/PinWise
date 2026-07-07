@@ -143,7 +143,6 @@ struct ReconstitutionCalculatorView: View {
                 advancedCard
                 if let r = model.result { resultCard(r) }
                 if let error = model.errorMessage { errorCard(error) }
-                DisclaimerBanner(text: Disclaimer.calculator)
             }
             .padding(Space.lg)
         }

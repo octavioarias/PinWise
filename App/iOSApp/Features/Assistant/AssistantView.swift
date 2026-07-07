@@ -109,7 +109,7 @@ final class AssistantEngine {
                 let response = try await active.respond(to: trimmed)
                 messages.append(Message(isUser: false, text: response.content))
             } catch {
-                messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Try rephrasing, and remember I can't give medical advice."))
+                messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Try rephrasing."))
             }
             return
         }

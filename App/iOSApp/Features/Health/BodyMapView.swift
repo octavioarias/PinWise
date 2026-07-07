@@ -33,7 +33,6 @@ struct InjectionMapInfoView: View {
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
                         }
                     }
-                    DisclaimerBanner(text: "General education from injection-technique research — not medical advice.")
                 }
                 .padding(Space.lg)
             }
@@ -206,8 +205,6 @@ struct BodyMapView: View {
 
                 Text("Why the colors: injection-technique guidance is to keep shots about a finger-width (≥1 cm) apart and let a spot rest ~2–3 weeks before reusing it. A region warms toward red as you rely on it more heavily than that allows.")
                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
-
-                DisclaimerBanner(text: "Rotation guidance is general education based on injection-technique research — not medical advice.")
             }
             .padding(Space.lg)
         }

@@ -33,7 +33,6 @@ struct ToolsView: View {
                             BiomarkersView()
                         }
                     }
-                    DisclaimerBanner(text: Disclaimer.calculator)
                 }
                 .padding(Space.lg)
             }
@@ -143,7 +142,6 @@ struct ReverseDoseView: View {
                         }
                     }
                 }
-                DisclaimerBanner(text: Disclaimer.calculator)
             }
             .padding(Space.lg)
         }
@@ -221,7 +219,6 @@ struct BlendCalculatorView: View {
                         }
                     }
                 }
-                DisclaimerBanner(text: Disclaimer.researchCompound)
             }
             .padding(Space.lg)
         }

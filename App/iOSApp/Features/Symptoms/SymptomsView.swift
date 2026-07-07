@@ -120,8 +120,6 @@ struct SymptomsView: View {
                 } else {
                     Text("No symptoms logged yet.").font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
-
-                DisclaimerBanner(text: "A personal symptom journal — not medical advice. Tell a clinician about anything concerning.")
             }
             .padding(Space.lg)
         }

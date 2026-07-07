@@ -95,10 +95,6 @@ struct NewsView: View {
                     }
 
                     content
-
-                    DisclaimerBanner(
-                        text: "PinWise summarizes public research and regulatory updates and links to the original sources. Informational only — not medical advice."
-                    )
                 }
                 .padding(Space.lg)
             }
@@ -369,8 +365,6 @@ struct NewsDetailView: View {
                         }
                     }
                 }
-
-                DisclaimerBanner(text: item.disclaimer)
             }
             .padding(Space.lg)
         }
