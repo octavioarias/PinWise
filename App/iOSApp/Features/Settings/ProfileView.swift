@@ -129,8 +129,50 @@ enum ProfileFields {
         guard ts > 0 else { return nil }
         return Calendar.current.dateComponents([.year], from: Date(timeIntervalSince1970: ts), to: Date()).year
     }
-    static func heightCm(fromDisplay v: Double, imperial: Bool) -> Double { imperial ? v * 2.54 : v }
-    static func heightDisplay(fromCm cm: Double, imperial: Bool) -> Double { imperial ? cm / 2.54 : cm }
+    /// Height text fields → centimeters. Imperial reads ft + in ("5 ft 10 in"); metric reads cm.
+    static func parseHeightCm(feetText: String, inchesText: String, cmText: String, imperial: Bool) -> Double? {
+        if imperial {
+            let total = (feetText.decimalValue ?? 0) * 12 + (inchesText.decimalValue ?? 0)
+            return total > 0 ? total * 2.54 : nil
+        }
+        guard let cm = cmText.decimalValue, cm > 0 else { return nil }
+        return cm
+    }
+
+    /// Centimeters → prefilled field strings for both unit systems.
+    static func heightFields(fromCm cm: Double) -> (feet: String, inches: String, cm: String) {
+        guard cm > 0 else { return ("", "", "") }
+        let totalInches = cm / 2.54
+        var feet = Int(totalInches / 12)
+        var inches = Int((totalInches - Double(feet) * 12).rounded())
+        if inches == 12 { feet += 1; inches = 0 }
+        let cmDisp = cm == cm.rounded() ? String(Int(cm)) : String(format: "%.1f", cm)
+        return (String(feet), String(inches), cmDisp)
+    }
+}
+
+/// Height entry matching the unit system: "5 ft 10 in" fields when imperial, cm when metric.
+struct HeightField: View {
+    @Binding var feetText: String
+    @Binding var inchesText: String
+    @Binding var cmText: String
+    let imperial: Bool
+
+    var body: some View {
+        if imperial {
+            HStack(spacing: Space.sm) {
+                TextField("5", text: $feetText).keyboardType(.numberPad).pinwiseField()
+                Text("ft").foregroundStyle(BrandColor.textSecondary)
+                TextField("10", text: $inchesText).keyboardType(.decimalPad).pinwiseField()
+                Text("in").foregroundStyle(BrandColor.textSecondary)
+            }
+        } else {
+            HStack {
+                TextField("e.g. 178", text: $cmText).keyboardType(.decimalPad).pinwiseField()
+                Text("cm").foregroundStyle(BrandColor.textSecondary)
+            }
+        }
+    }
 }
 
 /// My Profile — the account home. A hero header (photo, name, membership badge) over cards
@@ -140,6 +182,8 @@ struct ProfileView: View {
     @AppStorage("profileBirthday") private var birthdayTS: Double = 0
     @AppStorage("profileHeightCm") private var heightCm: Double = 0
     @AppStorage("weightInPounds") private var weightInPounds = true
+    @State private var heightFeetText = ""
+    @State private var heightInchesText = ""
     @State private var heightText = ""
     @State private var auth = AuthManager.shared
     @State private var photos = ProfilePhotoStore.shared
@@ -157,23 +201,23 @@ struct ProfileView: View {
             privacyCard
         }
         .onAppear {
-            if heightCm > 0 {
-                let v = ProfileFields.heightDisplay(fromCm: heightCm, imperial: weightInPounds)
-                heightText = v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
-            }
+            let f = ProfileFields.heightFields(fromCm: heightCm)
+            heightFeetText = f.feet; heightInchesText = f.inches; heightText = f.cm
         }
         .onDisappear {
             auth.updateDisplayName(name)
-            if let h = heightText.decimalValue, h > 0 {
-                heightCm = ProfileFields.heightCm(fromDisplay: h, imperial: weightInPounds)
+            if let cm = ProfileFields.parseHeightCm(feetText: heightFeetText, inchesText: heightInchesText,
+                                                    cmText: heightText, imperial: weightInPounds) {
+                heightCm = cm
             }
         }
         // Keep the typed height meaning the same measurement when the unit flips elsewhere.
         .onChange(of: weightInPounds) { old, new in
-            guard old != new, let v = heightText.decimalValue, v > 0 else { return }
-            let cm = ProfileFields.heightCm(fromDisplay: v, imperial: old)
-            let disp = ProfileFields.heightDisplay(fromCm: cm, imperial: new)
-            heightText = disp == disp.rounded() ? String(Int(disp)) : String(format: "%.1f", disp)
+            guard old != new,
+                  let cm = ProfileFields.parseHeightCm(feetText: heightFeetText, inchesText: heightInchesText,
+                                                       cmText: heightText, imperial: old) else { return }
+            let f = ProfileFields.heightFields(fromCm: cm)
+            heightFeetText = f.feet; heightInchesText = f.inches; heightText = f.cm
         }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
@@ -281,11 +325,8 @@ struct ProfileView: View {
                         .labelsHidden()
                 }
                 FieldRow("Height") {
-                    HStack {
-                        TextField(weightInPounds ? "e.g. 70" : "e.g. 178", text: $heightText)
-                            .keyboardType(.decimalPad).pinwiseField()
-                        Text(weightInPounds ? "in" : "cm").foregroundStyle(BrandColor.textSecondary)
-                    }
+                    HeightField(feetText: $heightFeetText, inchesText: $heightInchesText,
+                                cmText: $heightText, imperial: weightInPounds)
                 }
             }
         }
