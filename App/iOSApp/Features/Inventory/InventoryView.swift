@@ -99,7 +99,6 @@ struct VialRow: View {
             VStack(alignment: .leading, spacing: Space.sm) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(vial.displayName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    if vial.isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
                     Spacer()
                     if projection.needsReorder { TagChip(text: "Low", color: BrandColor.danger) }
                     if let e = vial.expiryState, (e.isWarning || e.isError) {
