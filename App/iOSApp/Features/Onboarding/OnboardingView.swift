@@ -6,7 +6,6 @@ import PeptideKit
 /// only once. On-brand: dark, hero mesh, edge glow, a success haptic on accept.
 struct OnboardingView: View {
     @Binding var acceptedVersion: Int
-    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
     @State private var page = 0
     @State private var is18 = false
     @State private var acceptTrigger = 0
@@ -82,16 +81,6 @@ struct OnboardingView: View {
             }
             .buttonStyle(.plain)
             .sheet(isPresented: $showTerms) { LegalDocumentView() }
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("Body for your injection map").font(.footnote.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
-                Picker("", selection: $bodyGenderRaw) {
-                    Text("Male").tag("male")
-                    Text("Female").tag("female")
-                }
-                .pickerStyle(.segmented)
-                Text("Used to draw your body map — change it anytime in My Profile.")
-                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
-            }
             Toggle("I'm 18 or older and I agree to the Terms of Service and Privacy Policy.", isOn: $is18)
                 .tint(BrandColor.accent)
                 .font(.footnote)

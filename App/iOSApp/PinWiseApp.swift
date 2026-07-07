@@ -25,19 +25,24 @@ struct RootView: View {
     @AppStorage("weightInPounds") private var weightInPounds = true
     @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
+    @AppStorage("completedProfileSetup") private var completedProfileSetup = false
     @State private var auth = AuthManager.shared
 
     var body: some View {
         ZStack {
             RootTabView()
-            // First-run gates, shown one at a time in order: sign-in → disclaimer → the intro
-            // tour (workflow carousel + personalization) → the app (Home).
+            // First-run gates, shown one at a time in order: sign-in → disclaimer → profile
+            // personalization (optional, skippable) → the intro tour → the app (Home).
             if !auth.isAuthenticated {
                 WelcomeView()
                     .transition(.opacity)
-                    .zIndex(3)
+                    .zIndex(4)
             } else if acceptedVersion < Disclaimer.currentVersion {
                 OnboardingView(acceptedVersion: $acceptedVersion)
+                    .transition(.opacity)
+                    .zIndex(3)
+            } else if !completedProfileSetup {
+                ProfileSetupView()
                     .transition(.opacity)
                     .zIndex(2)
             } else if !completedIntroTour {
@@ -49,6 +54,7 @@ struct RootView: View {
         // Slow, eased cross-dissolves between gates so the hand-off feels premium (not abrupt).
         .animation(.easeInOut(duration: 0.55), value: auth.isAuthenticated)
         .animation(.easeInOut(duration: 0.55), value: acceptedVersion)
+        .animation(.easeInOut(duration: 0.55), value: completedProfileSetup)
         .animation(.easeInOut(duration: 0.55), value: completedIntroTour)
         // One-time: seed the weight unit from the device region (user can override in Settings).
         .task {
@@ -56,6 +62,9 @@ struct RootView: View {
                 weightInPounds = Locale.current.measurementSystem != .metric
                 didInitWeightUnit = true
             }
+            // Existing users (tour already done) shouldn't be interrupted by the new
+            // profile-setup gate — their profile is editable from the menu anytime.
+            if completedIntroTour && !completedProfileSetup { completedProfileSetup = true }
             // If Health was connected in a past session, refresh silently — no re-prompt.
             await HealthManager.shared.refreshIfConnected()
         }
