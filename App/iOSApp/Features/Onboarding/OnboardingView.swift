@@ -71,15 +71,12 @@ struct OnboardingView: View {
             Text("Before you start")
                 .font(Typo.title).textCase(.uppercase)
                 .foregroundStyle(BrandColor.textPrimary)
-            ScrollView {
-                Text(Disclaimer.onboarding)
-                    .font(Typo.body)
-                    .foregroundStyle(BrandColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxHeight: 180)
+            Text("PinWise is a personal record-keeping tool — it isn't a medical device and doesn't give medical advice. Your records stay on your device.")
+                .font(Typo.body)
+                .foregroundStyle(BrandColor.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Button { showTerms = true } label: {
-                Text("Read the full Terms of Service & Privacy Policy")
+                Text("Read the Terms of Service & Privacy Policy")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(BrandColor.accentText)
             }

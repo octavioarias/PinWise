@@ -21,7 +21,7 @@ struct LegalSection: Identifiable {
 
 enum LegalDocuments {
     static let effectiveDate = "July 6, 2026"
-    static let entityName = "Sapho Bio LLC"   // confirm legal entity name before submission
+    static let entityName = "PinWise"   // substitute the registered legal entity name before submission
     static let entityAddress = "[registered business address — insert before submission]"
 
     // MARK: - Terms of Service
@@ -178,7 +178,7 @@ enum LegalDocuments {
 
         LegalSection(heading: "14. Dispute Resolution; Arbitration; Class Action Waiver", body: """
         PLEASE READ THIS SECTION CAREFULLY — IT AFFECTS YOUR LEGAL RIGHTS. Before filing a \
-        claim, you agree to first contact us at legal@saphobio.com describing the dispute and \
+        claim, you agree to first contact us at legal@pinwise.app describing the dispute and \
         to attempt informal resolution for thirty (30) days. Except for disputes that qualify \
         for small-claims court in your county of residence, or claims for injunctive relief \
         for intellectual-property misuse (which may be brought in the state or federal courts \
@@ -194,7 +194,7 @@ enum LegalDocuments {
         If the class action waiver is found unenforceable as to a particular claim, that claim \
         (and only that claim) shall proceed in court, and the waiver shall remain enforceable \
         as to all other claims. You may opt out of this arbitration agreement by emailing \
-        legal@saphobio.com within thirty (30) days of first accepting these Terms, stating \
+        legal@pinwise.app within thirty (30) days of first accepting these Terms, stating \
         your name and that you decline arbitration. These Terms are governed by the laws of \
         the State of Delaware, USA, without regard to conflict-of-law principles, except where \
         the mandatory consumer-protection law of your place of residence applies.
@@ -234,9 +234,9 @@ enum LegalDocuments {
         \(entityName) regarding the Service and supersede all prior agreements. Our failure \
         to enforce any right is not a waiver. You may not assign these Terms; we may assign \
         them in connection with a merger, acquisition, or sale of assets. We may provide \
-        notices to you within the app; you may provide notice to us at legal@saphobio.com or \
+        notices to you within the app; you may provide notice to us at legal@pinwise.app or \
         by mail to \(entityName), \(entityAddress). Questions and complaints: \
-        legal@saphobio.com.
+        legal@pinwise.app.
         """)
     ]
 
@@ -347,7 +347,7 @@ enum LegalDocuments {
         information as those terms are defined by the CCPA, and we honor these rights without \
         discrimination. Because your records live on your device, most rights can be \
         exercised directly in the app (view, correct, delete, export); for anything else — \
-        including requests made through an authorized agent — contact privacy@saphobio.com \
+        including requests made through an authorized agent — contact privacy@pinwise.app \
         and we will verify and respond within the period required by applicable law. Our app \
         does not respond to browser "Do Not Track" signals because it is not a website and \
         does not track you across sites or apps; if we ever engage in "sharing" under the \
@@ -371,7 +371,7 @@ enum LegalDocuments {
         We may update this Policy from time to time. Material changes will be presented in \
         the app for renewed acceptance before they take effect. The effective date above \
         reflects the latest revision. Questions, concerns, or rights requests: \
-        privacy@saphobio.com, or by mail to \(entityName), \(entityAddress).
+        privacy@pinwise.app, or by mail to \(entityName), \(entityAddress).
         """)
     ]
 }
