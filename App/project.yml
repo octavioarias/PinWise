@@ -31,7 +31,9 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        UILaunchScreen: {}
+        # Launch is a storyboard (icon tile centered, wordmark at the bottom, brand-black bg).
+        # Launch config must live HERE — xcodegen regenerates Info.plist from this block.
+        UILaunchStoryboardName: LaunchScreen
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
