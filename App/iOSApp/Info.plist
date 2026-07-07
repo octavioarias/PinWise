@@ -27,7 +27,7 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string>PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs.</string>
 	<key>UILaunchStoryboardName</key>
-	<string>LaunchScreenV7</string>
+	<string>LaunchScreenV8</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

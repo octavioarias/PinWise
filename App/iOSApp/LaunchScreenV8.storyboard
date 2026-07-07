@@ -9,7 +9,7 @@
     </dependencies>
     <scenes>
         <!-- Launch: app-icon tile centered, muted footnote wordmark at the bottom (research: one hero mark per screen).
-             V7 filename = fresh snapshot-cache key. Assets are CoreGraphics renders, scan-verified. -->
+             V8 filename = fresh snapshot-cache key; launch is ALWAYS dark by founder direction. Assets are CoreGraphics renders, scan-verified. -->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">

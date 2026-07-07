@@ -33,7 +33,7 @@ targets:
         CFBundleDisplayName: PinWise
         # Launch: gradient PinWise wordmark centered on brand black. Config must live HERE —
         # xcodegen regenerates Info.plist. V6 filename = fresh launch-snapshot cache key.
-        UILaunchStoryboardName: LaunchScreenV7
+        UILaunchStoryboardName: LaunchScreenV8
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
