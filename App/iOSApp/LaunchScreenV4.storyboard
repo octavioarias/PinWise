@@ -17,10 +17,10 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="wrd-01">
-                                <rect key="frame" x="106.5" y="397" width="180" height="58"/>
+                                <rect key="frame" x="76.5" y="399.5" width="240" height="53"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="180" id="wrd-w"/>
-                                    <constraint firstAttribute="height" constant="58" id="wrd-h"/>
+                                    <constraint firstAttribute="width" constant="240" id="wrd-w"/>
+                                    <constraint firstAttribute="height" constant="53" id="wrd-h"/>
                                 </constraints>
                             </imageView>
                         </subviews>
@@ -38,7 +38,7 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchWordmark" width="203" height="64"/>
+        <image name="LaunchWordmark" width="240" height="53"/>
         <namedColor name="LaunchBackground">
             <color red="0.0157" green="0.0196" blue="0.0431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
