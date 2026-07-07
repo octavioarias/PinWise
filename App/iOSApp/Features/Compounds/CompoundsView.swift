@@ -47,7 +47,7 @@ struct CompoundsView: View {
                             }
                         }
                     }
-                    SectionHeader(title: "Library")
+                    if !results.isEmpty { SectionHeader(title: "Library") }
                 }
 
                 if results.isEmpty && customResults.isEmpty {

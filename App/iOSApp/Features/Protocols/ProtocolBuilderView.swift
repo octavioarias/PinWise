@@ -57,7 +57,10 @@ struct ProtocolBuilderView: View {
     }
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
-    private var canSave: Bool { items.contains { (Double($0.doseText) ?? 0) > 0 } }
+    /// Every line needs a valid dose — saving must never silently drop a half-edited line.
+    private var canSave: Bool {
+        !items.isEmpty && items.allSatisfy { ($0.doseText.decimalValue ?? 0) > 0 }
+    }
 
     private func resolveCompound(_ name: String) -> Compound {
         CompoundCatalog.all.first { $0.name == name }
@@ -238,7 +241,7 @@ struct ProtocolBuilderView: View {
 
     private func save() {
         let built = items.compactMap { e -> ProtocolItem? in
-            guard let d = Double(e.doseText), d > 0 else { return nil }
+            guard let d = e.doseText.decimalValue, d > 0 else { return nil }
             return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms, vialID: e.vialID)
         }
         guard !built.isEmpty else { return }

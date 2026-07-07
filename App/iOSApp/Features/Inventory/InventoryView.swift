@@ -174,7 +174,9 @@ struct VialBuilderView: View {
         }
         let vol = v.solventVolumeMilliliters
         _label = State(initialValue: v.label)
-        _isPremixed = State(initialValue: v.isPremixed)
+        // A pre-mixed vial saved without a volume (older builds allowed it) has no derivable
+        // strength — open it in powder mode so its total mass round-trips unchanged.
+        _isPremixed = State(initialValue: v.isPremixed && vol > 0)
         _solventText = State(initialValue: vol > 0 ? Self.fmt(vol) : "")
         _entries = State(initialValue: v.apis.map { api in
             if v.isPremixed && vol > 0 {
@@ -202,11 +204,18 @@ struct VialBuilderView: View {
             .sorted { $0.name.lowercased() < $1.name.lowercased() }
     }
 
-    private var validEntries: [APIEntry] { entries.filter { ($0.amountText as NSString).doubleValue > 0 } }
+    /// Picker options always include the entry's current compound — a vial can reference a
+    /// custom compound that was later deleted, and its line must stay visible and intact.
+    private func pickerOptions(including current: Compound) -> [Compound] {
+        if allCompounds.contains(where: { $0.id == current.id }) { return allCompounds }
+        return (allCompounds + [current]).sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    private var validEntries: [APIEntry] { entries.filter { ($0.amountText.decimalValue ?? 0) > 0 } }
     private var canSave: Bool {
-        guard !validEntries.isEmpty, (Double(doseText) ?? 0) > 0 else { return false }
+        guard !validEntries.isEmpty, (doseText.decimalValue ?? 0) > 0 else { return false }
         // Pre-mixed math needs the volume: total content = strength × mL.
-        return !isPremixed || (Double(solventText) ?? 0) > 0
+        return !isPremixed || (solventText.decimalValue ?? 0) > 0
     }
     private var primaryName: String { entries.first?.compound.name ?? "" }
 
@@ -253,7 +262,7 @@ struct VialBuilderView: View {
                                 VStack(spacing: Space.sm) {
                                     HStack {
                                         Picker("", selection: $entry.compound) {
-                                            ForEach(allCompounds, id: \.id) { c in Text(c.name).tag(c) }
+                                            ForEach(pickerOptions(including: entry.compound), id: \.id) { c in Text(c.name).tag(c) }
                                         }
                                         .pickerStyle(.menu).tint(BrandColor.accentText)
                                         Spacer()
@@ -349,6 +358,22 @@ struct VialBuilderView: View {
             .navigationTitle(editing == nil ? "New vial" : "Edit vial")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            // The amount fields mean different things per mode (total mass vs mg/mL strength) —
+            // convert entered values on toggle so flipping the segment never rescales the vial.
+            .onChange(of: isPremixed) { _, premixed in
+                let vol = solventText.decimalValue ?? 0
+                entries = entries.map { e in
+                    var e = e
+                    guard let amt = e.amountText.decimalValue, amt > 0 else { return e }
+                    if premixed {
+                        e.amountText = vol > 0 ? Self.fmt(Mass(amt, e.unit).milligrams / vol) : ""
+                    } else {
+                        e.amountText = vol > 0 ? Self.fmt(amt * vol) : ""
+                    }
+                    e.unit = .milligram
+                    return e
+                }
+            }
             .onAppear {
                 if editing == nil, let first = entries.first { doseUnit = first.compound.preferredDoseUnit }
                 // Custom compounds aren't queryable in init — re-resolve names against the full
@@ -405,20 +430,20 @@ struct VialBuilderView: View {
     }
 
     private func save() {
-        let vol = Double(solventText) ?? 0
+        let vol = solventText.decimalValue ?? 0
         let apis = entries.compactMap { e -> VialAPI? in
-            guard let amt = Double(e.amountText), amt > 0 else { return nil }
+            guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
             // Pre-mixed entries are label strength (mg/mL): total content = strength × volume.
             let micrograms = isPremixed ? amt * vol * 1_000 : Mass(amt, e.unit).micrograms
             return VialAPI(name: e.compound.name, massMicrograms: micrograms)
         }
-        guard !apis.isEmpty, let pd = Double(doseText), pd > 0, !isPremixed || vol > 0 else { return }
+        guard !apis.isEmpty, let pd = doseText.decimalValue, pd > 0, !isPremixed || vol > 0 else { return }
         let target = editing ?? StoredVial()
         target.label = label
         target.apis = apis
         target.solventVolumeMilliliters = vol
         target.perDoseMicrograms = Mass(pd, doseUnit).micrograms
-        target.cost = Double(costText) ?? 0
+        target.cost = costText.decimalValue ?? 0
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
         if editing == nil { context.insert(target) }
@@ -431,7 +456,13 @@ struct VialBuilderView: View {
             ?? Compound(name: name, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
     }
 
+    /// Formats to up to 4 decimals with trailing zeros trimmed — enough that pharmacy strengths
+    /// like 0.625 mg/mL and back-computed values survive an edit round-trip unrounded.
     private static func fmt(_ v: Double) -> String {
-        v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
+        if v == v.rounded() { return String(Int(v)) }
+        var s = String(format: "%.4f", v)
+        while s.hasSuffix("0") { s.removeLast() }
+        if s.hasSuffix(".") { s.removeLast() }
+        return s
     }
 }

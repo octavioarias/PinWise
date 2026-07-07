@@ -55,7 +55,7 @@ struct BiomarkersView: View {
     private var seriesForSelected: [BiomarkerEntry] {
         entries.filter { $0.typeRaw == selected.rawValue }.sorted { $0.timestamp < $1.timestamp }
     }
-    private var canSave: Bool { (Double(valueText) ?? 0) > 0 }
+    private var canSave: Bool { (valueText.decimalValue ?? 0) > 0 }
 
     /// Y domain fitted to the data with headroom — a 170–190 lb weight series reads as its own
     /// range, not a sliver above zero. Position (not bar area) encodes the value on a line chart,
@@ -166,7 +166,7 @@ struct BiomarkersView: View {
     private func format(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
 
     private func save() {
-        guard let v = Double(valueText), v > 0 else { return }
+        guard let v = valueText.decimalValue, v > 0 else { return }
         context.insert(BiomarkerEntry(typeRaw: selected.rawValue, value: v, notes: note))
         try? context.save()
         valueText = ""

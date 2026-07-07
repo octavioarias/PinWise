@@ -264,6 +264,12 @@ struct AdherenceRing: View {
     }
 }
 
+extension String {
+    /// Parses a user-typed decimal, accepting both "." and "," — the decimal pad inserts the
+    /// locale's separator, and `Double.init` only understands the dot.
+    var decimalValue: Double? { Double(replacingOccurrences(of: ",", with: ".")) }
+}
+
 extension View {
     /// Styles a text/number field as a themed input (elevated surface, hairline border).
     func pinwiseField() -> some View {
