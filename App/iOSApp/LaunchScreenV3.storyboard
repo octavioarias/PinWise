@@ -8,7 +8,7 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!-- Launch: app-icon tile centered, gradient wordmark pinned to the bottom safe area. -->
+        <!-- Launch: the gradient PinWise wordmark alone, dead center on the brand black. -->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -16,28 +16,19 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="icn-01">
-                                <rect key="frame" x="130.5" y="360" width="132" height="132"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="132" id="icn-w"/>
-                                    <constraint firstAttribute="height" constant="132" id="icn-h"/>
-                                </constraints>
-                            </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="wrd-01">
-                                <rect key="frame" x="121.5" y="788" width="150" height="48"/>
+                                <rect key="frame" x="106.5" y="397" width="180" height="58"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="150" id="wrd-w"/>
-                                    <constraint firstAttribute="height" constant="48" id="wrd-h"/>
+                                    <constraint firstAttribute="width" constant="180" id="wrd-w"/>
+                                    <constraint firstAttribute="height" constant="58" id="wrd-h"/>
                                 </constraints>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <constraint firstItem="icn-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-1"/>
-                            <constraint firstItem="icn-01" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cst-2"/>
-                            <constraint firstItem="wrd-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-3"/>
-                            <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="wrd-01" secondAttribute="bottom" constant="16" id="cst-4"/>
+                            <constraint firstItem="wrd-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-1"/>
+                            <constraint firstItem="wrd-01" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cst-2"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -47,7 +38,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchIcon" width="132" height="132"/>
         <image name="LaunchWordmark" width="203" height="64"/>
         <namedColor name="LaunchBackground">
             <color red="0.0157" green="0.0196" blue="0.0431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

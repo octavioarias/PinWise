@@ -33,7 +33,7 @@ targets:
         CFBundleDisplayName: PinWise
         # Launch is a storyboard (icon tile centered, wordmark at the bottom, brand-black bg).
         # Launch config must live HERE — xcodegen regenerates Info.plist from this block.
-        UILaunchStoryboardName: LaunchScreenV2
+        UILaunchStoryboardName: LaunchScreenV3
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
