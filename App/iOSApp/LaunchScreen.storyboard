@@ -24,10 +24,10 @@
                                 </constraints>
                             </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="wrd-01">
-                                <rect key="frame" x="96.5" y="762" width="200" height="66"/>
+                                <rect key="frame" x="121.5" y="788" width="150" height="48"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="200" id="wrd-w"/>
-                                    <constraint firstAttribute="height" constant="66" id="wrd-h"/>
+                                    <constraint firstAttribute="width" constant="150" id="wrd-w"/>
+                                    <constraint firstAttribute="height" constant="48" id="wrd-h"/>
                                 </constraints>
                             </imageView>
                         </subviews>
@@ -48,7 +48,7 @@
     </scenes>
     <resources>
         <image name="LaunchIcon" width="132" height="132"/>
-        <image name="LaunchWordmark" width="300" height="100"/>
+        <image name="LaunchWordmark" width="203" height="64"/>
         <namedColor name="LaunchBackground">
             <color red="0.0157" green="0.0196" blue="0.0431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
