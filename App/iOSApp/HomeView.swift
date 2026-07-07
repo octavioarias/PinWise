@@ -11,6 +11,8 @@ struct HomeView: View {
     @Binding var showAssistant: Bool
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @State private var auth = AuthManager.shared
+    @State private var photos = ProfilePhotoStore.shared
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var thisWeekCount: Int {
@@ -67,12 +69,20 @@ struct HomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
             HStack {
+                // Once the user has an identity (photo or name), their avatar IS the menu
+                // button — the personalization from setup shows up immediately on Home.
                 Button { showMenu = true } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(BrandColor.textPrimary)
-                        .frame(width: 44, height: 44, alignment: .leading)
-                        .contentShape(Rectangle())
+                    if photos.image != nil || !(auth.displayName ?? "").isEmpty {
+                        ProfileAvatar(name: auth.displayName ?? "", size: 36, photo: photos.image)
+                            .frame(width: 44, height: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    } else {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(BrandColor.textPrimary)
+                            .frame(width: 44, height: 44, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Menu — profile, settings, and health connections")
@@ -90,12 +100,27 @@ struct HomeView: View {
                 .accessibilityLabel("Assistant")
             }
 
-            Text("Track your protocol.\nKnow the science.")
-                .font(Typo.screenTitle)
-                .foregroundStyle(BrandColor.textPrimary)
-                .minimumScaleFactor(0.7).lineLimit(2)
+            if let greeting {
+                Text(greeting)
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
+                    .minimumScaleFactor(0.7).lineLimit(2)
+            } else {
+                Text("Track your protocol.\nKnow the science.")
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
+                    .minimumScaleFactor(0.7).lineLimit(2)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Time-aware greeting by first name; nil (falls back to the tagline) when no name is set.
+    private var greeting: String? {
+        guard let name = auth.displayName?.split(separator: " ").first, !name.isEmpty else { return nil }
+        let hour = Calendar.current.component(.hour, from: Date())
+        let salutation = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
+        return "\(salutation),\n\(name)."
     }
 
     // MARK: Hero
@@ -138,7 +163,11 @@ struct HomeView: View {
     // MARK: Your stack (personalization)
 
     private var stackCard: some View {
-        Button { selected = .protocols } label: {
+        Button {
+            // This card lists protocols — land on the My Protocols panel, not the vials default.
+            UserDefaults.standard.set("protocols", forKey: "stackRequestedPanel")
+            selected = .protocols
+        } label: {
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     HStack {

@@ -26,6 +26,7 @@ struct RootView: View {
     @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
     @AppStorage("completedProfileSetup") private var completedProfileSetup = false
+    @AppStorage("didMigrateProfileSetup") private var didMigrateProfileSetup = false
     @State private var auth = AuthManager.shared
 
     var body: some View {
@@ -62,9 +63,13 @@ struct RootView: View {
                 weightInPounds = Locale.current.measurementSystem != .metric
                 didInitWeightUnit = true
             }
-            // Existing users (tour already done) shouldn't be interrupted by the new
-            // profile-setup gate — their profile is editable from the menu anytime.
-            if completedIntroTour && !completedProfileSetup { completedProfileSetup = true }
+            // ONE-TIME migration: existing users (tour already done) shouldn't be interrupted
+            // by the new profile-setup gate. Must not repeat — sign-out re-arms the gate on
+            // purpose, and a repeating migration would immediately disarm it again.
+            if !didMigrateProfileSetup {
+                if completedIntroTour && !completedProfileSetup { completedProfileSetup = true }
+                didMigrateProfileSetup = true
+            }
             // If Health was connected in a past session, refresh silently — no re-prompt.
             await HealthManager.shared.refreshIfConnected()
         }

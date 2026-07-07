@@ -2,11 +2,12 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The Stack tab: your protocols and your vials (a "My Protocols / My Inventory" segmented
-/// control), plus a link into the compound library.
+/// The Stack tab: your vials and your protocols (a "My Vials / My Protocols" segmented
+/// control, vials default), plus a link into the compound library under My Vials.
 struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
     @State private var panel: Panel = .inventory   // vials lead — protocols schedule from them
@@ -42,11 +43,23 @@ struct ProtocolsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
             .sheet(item: $editTarget) { ProtocolBuilderView(editing: $0.proto) }
+            // Consume a one-shot deep-link (e.g. Home's "Your protocols" card) targeting a panel.
+            .onAppear {
+                if UserDefaults.standard.string(forKey: "stackRequestedPanel") == "protocols" {
+                    panel = .protocols
+                    UserDefaults.standard.removeObject(forKey: "stackRequestedPanel")
+                }
+            }
         }
     }
 
     @ViewBuilder private var protocolsPanel: some View {
-        PrimaryButton(title: "New protocol", systemImage: "plus") { showBuilder = true }
+        if vials.isEmpty {
+            // Protocols are built from vials — route vial-less users to the right first step.
+            PrimaryButton(title: "Add a vial first", systemImage: "cross.vial") { panel = .inventory }
+        } else {
+            PrimaryButton(title: "New protocol", systemImage: "plus") { showBuilder = true }
+        }
 
         if active.isEmpty {
             emptyState
@@ -108,7 +121,9 @@ struct ProtocolsView: View {
                 Text("No protocols yet")
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
-                Text("Create one to set a compound, dose, and schedule. You can still log ad-hoc doses without a protocol.")
+                Text(vials.isEmpty
+                     ? "Protocols are built from your vials — add a vial under My Vials first, then create a protocol from it with a dose and schedule."
+                     : "Create one from a vial — pick one of your vials, set the dose per shot, and choose a schedule. You can still log ad-hoc doses without a protocol.")
                     .font(Typo.body)
                     .foregroundStyle(BrandColor.textSecondary)
             }

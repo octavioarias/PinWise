@@ -153,6 +153,9 @@ struct AssistantView: View {
         func day(_ d: Date) -> String { d.formatted(.dateTime.month().day()) }
         var lines: [String] = []
 
+        if let n = AuthManager.shared.displayName, !n.isEmpty {
+            lines.append("USER: \(n)")
+        }
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {

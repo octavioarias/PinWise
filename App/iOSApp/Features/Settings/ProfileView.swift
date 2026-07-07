@@ -110,10 +110,37 @@ struct ProfileAvatar: View {
     }
 }
 
+/// Shared profile-field definitions so onboarding setup and My Profile stay in lockstep.
+/// Sex is stored under the existing "bodyGender" key — it silently drives the body map.
+enum ProfileFields {
+    /// 18+ app: birthdays span 100 years ago through 18 years ago.
+    static var birthdayRange: ClosedRange<Date> {
+        let cal = Calendar.current
+        let now = Date()
+        let earliest = cal.date(byAdding: .year, value: -100, to: now) ?? now
+        let latest = cal.date(byAdding: .year, value: -18, to: now) ?? now
+        return earliest...latest
+    }
+    /// Neutral starting point for the picker before a birthday is set.
+    static var defaultBirthday: Date {
+        Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
+    }
+    static func age(fromTimestamp ts: Double) -> Int? {
+        guard ts > 0 else { return nil }
+        return Calendar.current.dateComponents([.year], from: Date(timeIntervalSince1970: ts), to: Date()).year
+    }
+    static func heightCm(fromDisplay v: Double, imperial: Bool) -> Double { imperial ? v * 2.54 : v }
+    static func heightDisplay(fromCm cm: Double, imperial: Bool) -> Double { imperial ? cm / 2.54 : cm }
+}
+
 /// My Profile — the account home. A hero header (photo, name, membership badge) over cards
 /// for account details, personalization, and the on-device privacy promise.
 struct ProfileView: View {
     @AppStorage("bodyGender") private var bodyGenderRaw = "male"
+    @AppStorage("profileBirthday") private var birthdayTS: Double = 0
+    @AppStorage("profileHeightCm") private var heightCm: Double = 0
+    @AppStorage("weightInPounds") private var weightInPounds = true
+    @State private var heightText = ""
     @State private var auth = AuthManager.shared
     @State private var photos = ProfilePhotoStore.shared
     @State private var pickerItem: PhotosPickerItem?
@@ -129,7 +156,25 @@ struct ProfileView: View {
             personalizationCard
             privacyCard
         }
-        .onDisappear { auth.updateDisplayName(name) }
+        .onAppear {
+            if heightCm > 0 {
+                let v = ProfileFields.heightDisplay(fromCm: heightCm, imperial: weightInPounds)
+                heightText = v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
+            }
+        }
+        .onDisappear {
+            auth.updateDisplayName(name)
+            if let h = heightText.decimalValue, h > 0 {
+                heightCm = ProfileFields.heightCm(fromDisplay: h, imperial: weightInPounds)
+            }
+        }
+        // Keep the typed height meaning the same measurement when the unit flips elsewhere.
+        .onChange(of: weightInPounds) { old, new in
+            guard old != new, let v = heightText.decimalValue, v > 0 else { return }
+            let cm = ProfileFields.heightCm(fromDisplay: v, imperial: old)
+            let disp = ProfileFields.heightDisplay(fromCm: cm, imperial: new)
+            heightText = disp == disp.rounded() ? String(Int(disp)) : String(format: "%.1f", disp)
+        }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             photoLoadTask?.cancel()
@@ -212,16 +257,35 @@ struct ProfileView: View {
         }
     }
 
+    private var birthdayBinding: Binding<Date> {
+        Binding(
+            get: { birthdayTS > 0 ? Date(timeIntervalSince1970: birthdayTS) : ProfileFields.defaultBirthday },
+            set: { birthdayTS = $0.timeIntervalSince1970 }
+        )
+    }
+
     private var personalizationCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.md) {
-                SectionHeader(title: "Personalization")
-                FieldRow("Injection map body", hint: "Which body the injection map draws.") {
+                SectionHeader(title: "About you")
+                FieldRow("Sex", hint: "Tailors the app to you — including which body the injection map draws.") {
                     Picker("", selection: $bodyGenderRaw) {
                         Text("Male").tag("male")
                         Text("Female").tag("female")
                     }
                     .pickerStyle(.segmented)
+                }
+                FieldRow("Birthday", hint: ProfileFields.age(fromTimestamp: birthdayTS).map { "Age \($0)" }) {
+                    DatePicker("", selection: birthdayBinding, in: ProfileFields.birthdayRange,
+                               displayedComponents: [.date])
+                        .labelsHidden()
+                }
+                FieldRow("Height") {
+                    HStack {
+                        TextField(weightInPounds ? "e.g. 70" : "e.g. 178", text: $heightText)
+                            .keyboardType(.decimalPad).pinwiseField()
+                        Text(weightInPounds ? "in" : "cm").foregroundStyle(BrandColor.textSecondary)
+                    }
                 }
             }
         }

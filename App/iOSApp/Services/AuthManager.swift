@@ -60,9 +60,11 @@ final class AuthManager {
         email = store.string(forKey: K.email)
         memberSince = store.object(forKey: K.since) as? Date
         // One-time migration: the profile name used to live under its own AppStorage key.
-        if displayName == nil, let legacy = store.string(forKey: "profileName"),
-           !legacy.trimmingCharacters(in: .whitespaces).isEmpty {
-            displayName = legacy
+        // The legacy value wins even over an Apple-provided name — it was the user's most
+        // recent explicit edit in the old UI. The key is always removed so it can't linger.
+        if let legacy = store.string(forKey: "profileName") {
+            let trimmed = legacy.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { displayName = trimmed }
             store.removeObject(forKey: "profileName")
         }
     }

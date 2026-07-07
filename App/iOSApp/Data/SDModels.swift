@@ -1,6 +1,19 @@
 import Foundation
+import CryptoKit
 import SwiftData
 import PeptideKit
+
+/// A stable, deterministic compound ID for names outside the verified catalog (custom or
+/// legacy compounds). Derived from the name so every DoseLog/DoseProtocol bridge agrees —
+/// a random fallback would make each log of the same compound look like a different one,
+/// silently breaking per-compound site-rotation history.
+func stableCompoundID(for name: String) -> UUID {
+    if let c = CompoundCatalog.all.first(where: { $0.name == name }) { return c.id }
+    let digest = Insecure.MD5.hash(data: Data(name.utf8))
+    let b = Array(digest)
+    return UUID(uuid: (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                       b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
+}
 
 /// A logged injection, persisted with SwiftData.
 ///
@@ -58,8 +71,8 @@ extension LoggedDose {
 
     /// Bridge to the pure-domain type so PeptideKit logic can operate on logs.
     func asDomain() -> DoseLog {
-        let compoundID = CompoundCatalog.all.first { $0.name == compoundName }?.id ?? UUID()
-        return DoseLog(id: id, compoundID: compoundID, vialID: vialID, timestamp: timestamp, dose: dose, site: site, notes: notes)
+        DoseLog(id: id, compoundID: stableCompoundID(for: compoundName), vialID: vialID,
+                timestamp: timestamp, dose: dose, site: site, notes: notes)
     }
 }
 
@@ -122,9 +135,8 @@ extension SavedProtocol {
     var schedule: DoseSchedule { DoseSchedule(kind: scheduleKind, intervalDays: intervalDays, weekdays: weekdays) }
 
     func asDomain() -> DoseProtocol {
-        let cid = CompoundCatalog.all.first { $0.name == compoundName }?.id ?? UUID()
-        return DoseProtocol(id: id, name: name, compoundID: cid, dose: dose, schedule: schedule,
-                            startDate: startDate, isActive: isActive, notes: notes)
+        DoseProtocol(id: id, name: name, compoundID: stableCompoundID(for: compoundName), dose: dose,
+                     schedule: schedule, startDate: startDate, isActive: isActive, notes: notes)
     }
 
     /// Next scheduled dose date on/after `date` (nil for as-needed / none upcoming).

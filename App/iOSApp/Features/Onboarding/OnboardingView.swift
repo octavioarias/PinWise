@@ -35,9 +35,20 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         pageScaffold {
             Spacer()
-            Text("PinWise")
-                .font(.system(size: 40, weight: .black))
-                .foregroundStyle(BrandColor.textPrimary)
+            // "Welcome to" sized so its line length roughly matches the wordmark below it.
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Welcome to")
+                    .font(.system(size: 42, weight: .semibold))
+                    .foregroundStyle(BrandColor.textPrimary)
+                    .minimumScaleFactor(0.8).lineLimit(1)
+                Text("PinWise")
+                    .font(.system(size: 58, weight: .black))
+                    .foregroundStyle(
+                        LinearGradient(colors: [BrandColor.accentText, BrandColor.success],
+                                       startPoint: .leading, endPoint: .trailing)
+                    )
+                    .minimumScaleFactor(0.8).lineLimit(1)
+            }
             Text("The source of truth for peptides and dose tracking.")
                 .font(Typo.title)
                 .foregroundStyle(BrandColor.textPrimary)

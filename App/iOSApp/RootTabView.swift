@@ -26,7 +26,7 @@ struct RootTabView: View {
             switch selected {
             case .home: HomeView(selected: $selected, showMenu: $showMenu, showAssistant: $showAssistant)
             case .tools: ToolsView()
-            case .log: LogView()
+            case .log: LogView(selected: $selected)
             case .protocols: ProtocolsView()
             case .news: NewsView()
             }

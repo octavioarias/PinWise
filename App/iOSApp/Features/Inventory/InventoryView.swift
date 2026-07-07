@@ -35,16 +35,32 @@ struct InventoryList: View {
                 }
             } else {
                 ForEach(vials, id: \.id) { vial in
-                    Button { editTarget = EditTarget(vial: vial) } label: {
-                        VialRow(vial: vial, projection: vial.projection(schedule: schedule(for: vial)))
-                    }
-                    .buttonStyle(PressableStyle())
-                    .contextMenu {
+                    let projection = vial.projection(schedule: schedule(for: vial))
+                    VStack(spacing: Space.sm) {
                         Button { editTarget = EditTarget(vial: vial) } label: {
-                            Label("Edit", systemImage: "pencil")
+                            VialRow(vial: vial, projection: projection)
                         }
-                        Button(role: .destructive) { context.delete(vial) } label: {
-                            Label("Delete", systemImage: "trash")
+                        .buttonStyle(PressableStyle())
+                        .contextMenu {
+                            Button { editTarget = EditTarget(vial: vial) } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) { context.delete(vial) } label: {
+                                Label("Depleted — remove", systemImage: "trash.slash")
+                            }
+                        }
+                        // Empty (or expired) vials get a one-tap way out of the inventory.
+                        if projection.wholeDosesRemaining == 0 || (vial.expiryState?.isError ?? false) {
+                            Button(role: .destructive) { context.delete(vial) } label: {
+                                Label(projection.wholeDosesRemaining == 0 ? "Depleted — remove from inventory"
+                                                                          : "Expired — remove from inventory",
+                                      systemImage: "trash.slash")
+                                    .font(.caption.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Space.sm)
+                            }
+                            .foregroundStyle(BrandColor.danger)
+                            .background(BrandColor.danger.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                         }
                     }
                 }
@@ -157,6 +173,7 @@ struct VialBuilderView: View {
     @State private var hasExpiration: Bool
     @State private var expiration: Date
     @State private var showScanner = false
+    @State private var resetDoseCount = false
 
     init(editing: StoredVial? = nil) {
         self.editing = editing
@@ -326,6 +343,20 @@ struct VialBuilderView: View {
                         }
                     }
 
+                    if let editing, editing.dosesTaken > 0 {
+                        Card {
+                            VStack(alignment: .leading, spacing: Space.sm) {
+                                SectionHeader(title: "Usage")
+                                Text("\(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") already logged from this vial. Changing amounts keeps that count (capped at the new total).")
+                                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                                Toggle("This is a fresh vial — reset the count", isOn: $resetDoseCount)
+                                    .tint(BrandColor.accent)
+                                    .font(.footnote)
+                                    .foregroundStyle(BrandColor.textPrimary)
+                            }
+                        }
+                    }
+
                     Card {
                         DisclosureGroup {
                             VStack(alignment: .leading, spacing: Space.lg) {
@@ -384,7 +415,9 @@ struct VialBuilderView: View {
                     return e
                 }
             }
-            .sheet(isPresented: $showScanner) { LabelScannerView { applyScan($0) } }
+            .sheet(isPresented: $showScanner) {
+                LabelScannerView(extraCompoundNames: customCompounds.map(\.name)) { applyScan($0) }
+            }
         }
     }
 
@@ -446,6 +479,9 @@ struct VialBuilderView: View {
         target.cost = costText.decimalValue ?? 0
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
+        // Keep inventory math coherent after an edit: never more doses taken than the vial
+        // now holds, and "fresh vial" resets the count entirely.
+        target.dosesTaken = resetDoseCount ? 0 : min(target.dosesTaken, target.totalDoses)
         if editing == nil { context.insert(target) }
         try? context.save()
         dismiss()

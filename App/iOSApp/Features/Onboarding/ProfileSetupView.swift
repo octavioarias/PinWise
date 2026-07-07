@@ -8,11 +8,16 @@ struct ProfileSetupView: View {
     @AppStorage("completedProfileSetup") private var completedProfileSetup = false
     @AppStorage("bodyGender") private var bodyGenderRaw = "male"
     @AppStorage("weightInPounds") private var weightInPounds = true
+    @AppStorage("profileBirthday") private var birthdayTS: Double = 0
+    @AppStorage("profileHeightCm") private var heightCm: Double = 0
     @State private var auth = AuthManager.shared
     @State private var photos = ProfilePhotoStore.shared
     @State private var pickerItem: PhotosPickerItem?
     @State private var photoLoadTask: Task<Void, Never>?
     @State private var name = AuthManager.shared.displayName ?? ""
+    @State private var birthday = ProfileFields.defaultBirthday
+    @State private var birthdayTouched = false
+    @State private var heightText = ""
     @State private var doneTrigger = 0
 
     var body: some View {
@@ -56,12 +61,27 @@ struct ProfileSetupView: View {
                             .textContentType(.name)
                     }
 
-                    FieldRow("Body for your injection map", hint: "Which body the injection map draws.") {
+                    FieldRow("Birthday") {
+                        DatePicker("", selection: $birthday, in: ProfileFields.birthdayRange,
+                                   displayedComponents: [.date])
+                            .labelsHidden()
+                            .onChange(of: birthday) { _, _ in birthdayTouched = true }
+                    }
+
+                    FieldRow("Sex", hint: "Helps tailor the app to you.") {
                         Picker("", selection: $bodyGenderRaw) {
                             Text("Male").tag("male")
                             Text("Female").tag("female")
                         }
                         .pickerStyle(.segmented)
+                    }
+
+                    FieldRow("Height") {
+                        HStack {
+                            TextField(weightInPounds ? "e.g. 70" : "e.g. 178", text: $heightText)
+                                .keyboardType(.decimalPad).pinwiseField()
+                            Text(weightInPounds ? "in" : "cm").foregroundStyle(BrandColor.textSecondary)
+                        }
                     }
 
                     FieldRow("Body weight unit") {
@@ -87,6 +107,13 @@ struct ProfileSetupView: View {
         }
         .tint(BrandColor.accent)
         .sensoryFeedback(.success, trigger: doneTrigger)
+        // Keep the typed height meaning the same measurement when the unit toggle flips.
+        .onChange(of: weightInPounds) { old, new in
+            guard old != new, let v = heightText.decimalValue, v > 0 else { return }
+            let cm = ProfileFields.heightCm(fromDisplay: v, imperial: old)
+            let disp = ProfileFields.heightDisplay(fromCm: cm, imperial: new)
+            heightText = disp == disp.rounded() ? String(Int(disp)) : String(format: "%.1f", disp)
+        }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
             photoLoadTask?.cancel()
@@ -101,6 +128,10 @@ struct ProfileSetupView: View {
 
     private func finish() {
         auth.updateDisplayName(name)   // ignores empty input
+        if birthdayTouched { birthdayTS = birthday.timeIntervalSince1970 }
+        if let h = heightText.decimalValue, h > 0 {
+            heightCm = ProfileFields.heightCm(fromDisplay: h, imperial: weightInPounds)
+        }
         doneTrigger += 1
         withAnimation(.easeInOut(duration: 0.55)) { completedProfileSetup = true }
     }

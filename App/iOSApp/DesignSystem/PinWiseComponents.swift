@@ -232,7 +232,7 @@ struct AdherenceRing: View {
     let fraction: Double
     var size: CGFloat = 88
 
-    @State private var animated = false
+    @State private var progress: Double = 0
     private var clamped: Double { max(0, min(1, fraction)) }
     private var pct: Int { Int((clamped * 100).rounded()) }
 
@@ -240,13 +240,12 @@ struct AdherenceRing: View {
         ZStack {
             Circle().stroke(BrandColor.surfaceElevated, lineWidth: 9)
             Circle()
-                .trim(from: 0, to: max(0.0001, animated ? clamped : 0))
+                .trim(from: 0, to: max(0.0001, progress))
                 .stroke(
                     AngularGradient(colors: [BrandColor.accentText, BrandColor.success, BrandColor.accentText], center: .center),
                     style: StrokeStyle(lineWidth: 9, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(.spring(response: 0.9, dampingFraction: 0.85), value: animated)
             VStack(spacing: 0) {
                 Text("\(pct)%")
                     .font(.system(size: 20, weight: .black, design: .rounded)).monospacedDigit()
@@ -257,7 +256,12 @@ struct AdherenceRing: View {
             }
         }
         .frame(width: size, height: size)
-        .onAppear { animated = true }
+        // Explicit withAnimation drives ONLY the trim — a value-scoped .animation here also
+        // animated the ring's initial layout position, making it fly in from offscreen.
+        .onAppear {
+            progress = 0
+            withAnimation(.easeOut(duration: 0.9)) { progress = clamped }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("On track")
         .accessibilityValue("\(pct) percent of scheduled doses taken over the last 14 days")

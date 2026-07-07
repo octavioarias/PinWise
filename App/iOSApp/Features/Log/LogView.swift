@@ -2,19 +2,23 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-time" }
+private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-Time Pin" }
 
-/// The Log tab — record a dose against a protocol (all its compounds at once) or a single
-/// compound. A grouped front/back picker keeps injection sites compact; a success haptic
-/// confirms the save; logging draws down matching vials.
+/// The Log tab — record a dose against a protocol (all its compounds at once) or a one-time
+/// pin. Opens on Protocol whenever protocols exist. A grouped front/back picker keeps
+/// injection sites compact; a success haptic confirms the save; logging draws down matching
+/// vials; after a save the app returns Home (with a beat to tap "Log another dose").
 struct LogView: View {
+    @Binding var selected: AppTab
     @Environment(\.modelContext) private var context
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+    @Query(sort: \CustomCompound.name) private var customCompounds: [CustomCompound]
 
-    @AppStorage("logMode") private var modeRaw: String = LogMode.protocolBased.rawValue
+    @State private var mode: LogMode = .protocolBased   // protocol-first every time the tab opens
     @State private var selectedProtocolID: UUID?
+    @State private var postSaveNav: Task<Void, Never>?
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
     @State private var doseUnit: MassUnit = .milligram
@@ -30,17 +34,38 @@ struct LogView: View {
     /// One-time mode: the vial the user chose to log from (nil = pick any compound).
     @State private var selectedVialID: UUID?
 
-    private var mode: LogMode { LogMode(rawValue: modeRaw) ?? .compound }
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
     private var doseValue: Double? {
         guard let d = Double(doseText), d > 0 else { return nil }
         return d
     }
+    /// Catalog + the user's own compounds — the same list the vial builder offers.
+    private var allCompounds: [Compound] {
+        (CompoundCatalog.allSorted + customCompounds.map(\.asCompound))
+            .sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    /// Resolve a stored compound name: catalog, then custom compounds, then a name-only
+    /// placeholder — never an unrelated compound.
+    private func resolveCompound(_ name: String) -> Compound {
+        CompoundCatalog.all.first { $0.name == name }
+            ?? customCompounds.first { $0.name == name }?.asCompound
+            ?? Compound(name: name, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
+    }
+
+    /// Picker options always include the current selection so a vial/protocol referencing a
+    /// deleted custom compound still shows its real name instead of a blank menu.
+    private func pickerOptions(including current: Compound) -> [Compound] {
+        if allCompounds.contains(where: { $0.id == current.id }) { return allCompounds }
+        return (allCompounds + [current]).sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
     /// The compound driving the site suggestion (protocol's primary, or the picked compound).
     private var activeCompound: Compound {
-        if mode == .protocolBased, let name = selectedProtocol?.compoundName,
-           let c = CompoundCatalog.all.first(where: { $0.name == name }) { return c }
+        if mode == .protocolBased, let name = selectedProtocol?.compoundName, !name.isEmpty {
+            return resolveCompound(name)
+        }
         return compound
     }
     private var suggestedSite: InjectionSite? {
@@ -69,7 +94,7 @@ struct LogView: View {
                         .minimumScaleFactor(0.7).lineLimit(1)
 
                     if !activeProtocols.isEmpty {
-                        Picker("", selection: Binding(get: { mode }, set: { modeRaw = $0.rawValue })) {
+                        Picker("", selection: $mode) {
                             ForEach(LogMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
                         .pickerStyle(.segmented)
@@ -86,8 +111,21 @@ struct LogView: View {
 
                     PrimaryButton(title: savedConfirmation ? "Logged ✓" : saveTitle,
                                   systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
-                        .disabled(!canSave)
+                        .disabled(!canSave || savedConfirmation)
                         .opacity(canSave ? 1 : 0.5)
+
+                    if savedConfirmation {
+                        Button {
+                            postSaveNav?.cancel()
+                            savedConfirmation = false
+                        } label: {
+                            Text("Log another dose")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BrandColor.accentText)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     if !recent.isEmpty {
                         SectionHeader(title: "Recent")
@@ -100,8 +138,8 @@ struct LogView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
-                // Respect the last-chosen mode; only force one-time when there are no protocols.
-                if activeProtocols.isEmpty { modeRaw = LogMode.compound.rawValue }
+                // Protocol-first: only fall back to a one-time pin when there are no protocols.
+                if activeProtocols.isEmpty { mode = .compound }
                 else if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id }
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
@@ -115,7 +153,11 @@ struct LogView: View {
                     selectedVialID = nil
                 }
             }
-            .onChange(of: doseText) { _, _ in savedConfirmation = false }
+            .onChange(of: doseText) { _, _ in
+                postSaveNav?.cancel()
+                savedConfirmation = false
+            }
+            .onDisappear { postSaveNav?.cancel() }
         }
     }
 
@@ -175,7 +217,7 @@ struct LogView: View {
     /// One-time log from a vial: pull the primary compound + its per-shot dose and link the vial
     /// so the draw-down hits the right one. (Protocols remain the way to log a full stack at once.)
     private func applyVial(_ v: StoredVial) {
-        if let c = CompoundCatalog.all.first(where: { $0.name == v.primaryAPI?.name }) { compound = c }
+        if let name = v.primaryAPI?.name, !name.isEmpty { compound = resolveCompound(name) }
         doseUnit = compound.preferredDoseUnit
         let dose = v.perDose.value(in: doseUnit)
         doseText = dose == dose.rounded() ? String(Int(dose)) : String(dose)
@@ -206,7 +248,7 @@ struct LogView: View {
                 }
                 FieldRow("What did you take?", hint: vials.isEmpty ? "The compound you're logging." : "Pick a vial above, or choose any compound.") {
                     Picker("Compound", selection: $compound) {
-                        ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
+                        ForEach(pickerOptions(including: compound), id: \.id) { c in Text(c.name).tag(c) }
                     }
                     .pickerStyle(.menu).tint(BrandColor.accentText)
                 }
@@ -421,5 +463,13 @@ struct LogView: View {
         selectedVialID = nil
         savedConfirmation = true
         savedCount += 1
+        // Return Home after a beat — long enough to read "Logged ✓" and tap "Log another dose".
+        postSaveNav?.cancel()
+        postSaveNav = Task {
+            try? await Task.sleep(for: .seconds(1.4))
+            guard !Task.isCancelled else { return }
+            selected = .home
+            savedConfirmation = false
+        }
     }
 }
