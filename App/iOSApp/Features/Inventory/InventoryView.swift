@@ -174,6 +174,10 @@ struct VialBuilderView: View {
     @State private var expiration: Date
     @State private var showScanner = false
     @State private var resetDoseCount = false
+    /// Set when a blend preset autofilled the nickname: the name it wrote + the formula it
+    /// described. If the ingredients later diverge, the autofill is cleared (a "GLOW" label
+    /// on a hand-rolled formula would be wrong) — unless the user typed their own name over it.
+    @State private var appliedPreset: (label: String, names: [String])?
 
     init(editing: StoredVial? = nil) {
         self.editing = editing
@@ -389,6 +393,14 @@ struct VialBuilderView: View {
             .navigationTitle(editing == nil ? "New vial" : "Edit vial")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            // A preset-autofilled nickname is only honest while the formula still matches the
+            // preset — drop it the moment the ingredient list diverges.
+            .onChange(of: entries.map(\.compound.name)) { _, names in
+                if let p = appliedPreset, names != p.names {
+                    if label == p.label { label = "" }
+                    appliedPreset = nil
+                }
+            }
             // The amount fields mean different things per mode (total mass vs mg/mL strength) —
             // convert entered values on toggle so flipping the segment never rescales the vial.
             .onChange(of: isPremixed) { _, premixed in
@@ -459,7 +471,12 @@ struct VialBuilderView: View {
             let c = CompoundCatalog.all.first { $0.name == comp.name || $0.name.hasPrefix(comp.name) || $0.aliases.contains(comp.name) } ?? CompoundCatalog.bpc157
             return APIEntry(compound: c, amountText: Self.fmt(comp.massPerVial.milligrams), unit: .milligram)
         }
-        if label.isEmpty { label = blend.name }
+        if label.isEmpty {
+            label = blend.name
+            appliedPreset = (blend.name, entries.map(\.compound.name))
+        } else {
+            appliedPreset = nil
+        }
     }
 
     private func save() {
