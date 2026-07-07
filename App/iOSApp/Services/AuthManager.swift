@@ -16,6 +16,7 @@ final class AuthManager {
 
     private enum K {
         static let provider = "auth.provider", uid = "auth.uid", name = "auth.name", email = "auth.email"
+        static let since = "auth.since"
     }
     private let store = UserDefaults.standard
 
@@ -23,6 +24,8 @@ final class AuthManager {
     private(set) var userID: String?      { didSet { store.set(userID, forKey: K.uid) } }
     private(set) var displayName: String? { didSet { store.set(displayName, forKey: K.name) } }
     private(set) var email: String?       { didSet { store.set(email, forKey: K.email) } }
+    /// When this session was first created — the profile's "member since" date.
+    private(set) var memberSince: Date?   { didSet { store.set(memberSince, forKey: K.since) } }
 
     /// Transient message the sign-in screen surfaces (errors or "coming soon" notices).
     var notice: String?
@@ -30,19 +33,18 @@ final class AuthManager {
     var isAuthenticated: Bool { providerRaw != nil }
     var provider: AuthProvider? { providerRaw.flatMap(AuthProvider.init) }
     var isGuest: Bool { provider == .guest }
-    /// A friendly label for menus ("Signed in with Apple", the name, or the email).
-    var accountLabel: String {
-        if isGuest { return "Guest — not signed in" }
-        if let displayName, !displayName.isEmpty { return displayName }
-        if let email, !email.isEmpty { return email }
-        return provider.map { "Signed in with \($0.rawValue.capitalized)" } ?? "Signed in"
-    }
 
     private init() {
         providerRaw = store.string(forKey: K.provider)   // note: init assignment doesn't fire didSet
         userID = store.string(forKey: K.uid)
         displayName = store.string(forKey: K.name)
         email = store.string(forKey: K.email)
+        memberSince = store.object(forKey: K.since) as? Date
+        // Sessions created before memberSince existed: backfill so the profile shows a date.
+        if providerRaw != nil && memberSince == nil {
+            memberSince = Date()
+            store.set(memberSince, forKey: K.since)
+        }
     }
 
     // MARK: Sign in with Apple (native, no backend)
@@ -81,6 +83,12 @@ final class AuthManager {
 
     func signOut() { set(provider: nil, uid: nil, name: nil, email: nil) }
 
+    /// Lets the profile screen edit the name shown across the app (drawer, greetings).
+    func updateDisplayName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        displayName = trimmed.isEmpty ? nil : trimmed
+    }
+
     // MARK: -
 
     private func set(provider: AuthProvider?, uid: String?, name: String?, email: String?) {
@@ -88,6 +96,11 @@ final class AuthManager {
         if let name { displayName = name } else if provider == nil { displayName = nil }
         if let email { self.email = email } else if provider == nil { self.email = nil }
         providerRaw = provider?.rawValue
+        if provider == nil {
+            memberSince = nil
+        } else if memberSince == nil {
+            memberSince = Date()
+        }
         notice = nil
     }
 }

@@ -7,8 +7,24 @@ struct SideMenuDrawer: View {
     @Binding var isOpen: Bool
     @State private var route: MenuRoute?
     @State private var auth = AuthManager.shared
+    @State private var photos = ProfilePhotoStore.shared
     @State private var showSignOut = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
+    @AppStorage("profileName") private var profileName = ""
+
+    /// Header name: the profile name, else the name Apple provided at sign-in.
+    private var headerName: String {
+        if !profileName.isEmpty { return profileName }
+        return auth.displayName ?? ""
+    }
+
+    /// Second line of the identity header: the account itself (email/provider), or a nudge.
+    private var accountSubtitle: String {
+        if auth.isGuest { return "Guest — not signed in" }
+        if let email = auth.email, !email.isEmpty { return email }
+        if let provider = auth.provider { return "Signed in with \(provider.rawValue.capitalized)" }
+        return "Tap to view your profile"
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -63,19 +79,35 @@ struct SideMenuDrawer: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.sm)
 
-            HStack(spacing: Space.sm) {
-                Image(systemName: auth.isGuest ? "person.crop.circle.dashed" : "person.crop.circle.fill")
-                    .foregroundStyle(BrandColor.accentText)
-                Text(auth.accountLabel)
-                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    .lineLimit(1)
+            // Identity header — avatar + name, tappable straight into My Profile (Oura-style).
+            Button {
+                isOpen = false
+                route = .profile
+            } label: {
+                HStack(spacing: Space.md) {
+                    ProfileAvatar(name: headerName, size: 44, photo: photos.image)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(headerName.isEmpty ? "Set up your profile" : headerName)
+                            .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                            .lineLimit(1)
+                        Text(accountSubtitle)
+                            .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BrandColor.textSecondary)
+                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("My Profile")
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.lg)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    row("person", "My Profile", .profile)
                     row("slider.horizontal.3", "Settings", .settings)
                     row("heart.text.square", "Connections", .health)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
@@ -167,36 +199,6 @@ private struct MenuSheet<Content: View>: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }
-    }
-}
-
-struct ProfileView: View {
-    @AppStorage("profileName") private var name = ""
-    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
-
-    var body: some View {
-        MenuSheet(title: "My Profile") {
-            Card {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    SectionHeader(title: "Profile")
-                    FieldRow("Your name", hint: "Optional — used to personalize the app.") {
-                        TextField("Name", text: $name).pinwiseField()
-                    }
-                }
-            }
-            Card {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    SectionHeader(title: "Injection map body")
-                    Picker("", selection: $bodyGenderRaw) {
-                        Text("Male").tag("male")
-                        Text("Female").tag("female")
-                    }
-                    .pickerStyle(.segmented)
-                    Text("Which body the injection map draws.")
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
-            }
         }
     }
 }
