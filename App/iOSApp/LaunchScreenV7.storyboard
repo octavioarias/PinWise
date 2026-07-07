@@ -8,8 +8,8 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!-- Launch: app-icon tile centered, gradient wordmark flush on the dark at the bottom.
-             V6 filename = fresh snapshot-cache key. Assets are CoreGraphics renders, scan-verified. -->
+        <!-- Launch: app-icon tile centered, muted footnote wordmark at the bottom (research: one hero mark per screen).
+             V7 filename = fresh snapshot-cache key. Assets are CoreGraphics renders, scan-verified. -->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -25,10 +25,10 @@
                                 </constraints>
                             </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="wrd-01">
-                                <rect key="frame" x="106.5" y="764" width="180" height="40"/>
+                                <rect key="frame" x="136.5" y="775" width="120" height="27"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="180" id="wrd-w"/>
-                                    <constraint firstAttribute="height" constant="40" id="wrd-h"/>
+                                    <constraint firstAttribute="width" constant="120" id="wrd-w"/>
+                                    <constraint firstAttribute="height" constant="27" id="wrd-h"/>
                                 </constraints>
                             </imageView>
                         </subviews>
@@ -49,7 +49,7 @@
     </scenes>
     <resources>
         <image name="LaunchIcon" width="132" height="132"/>
-        <image name="LaunchWordmark" width="240" height="53"/>
+        <image name="LaunchWordmark" width="120" height="27"/>
         <namedColor name="LaunchBackground">
             <color red="0.0157" green="0.0196" blue="0.0431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

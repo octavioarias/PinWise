@@ -21,15 +21,19 @@ struct LegalSection: Identifiable {
 
 enum LegalDocuments {
     static let effectiveDate = "July 6, 2026"
-    static let entityName = "PinWise"   // substitute the registered legal entity name before submission
-    static let entityAddress = "[registered business address — insert before submission]"
+    // No legal entity, contact email, or person is referenced yet (none exists pre-launch,
+    // per founder). Before App Store submission: substitute the registered legal entity,
+    // add a real contact channel, and have counsel review. "PinWise" stands in as the party.
+    static let entityName = "PinWise"
+    /// The only contact mechanism the documents reference until a business/email exists.
+    static let contactChannel = "the support contact listed on the app's App Store page"
 
     // MARK: - Terms of Service
 
     static let terms: [LegalSection] = [
         LegalSection(heading: "1. Acceptance of These Terms", body: """
         These Terms of Service (the "Terms") constitute a legally binding agreement between you \
-        and \(entityName), the developer and operator of the PinWise application ("PinWise," \
+        and the developer of the PinWise application ("PinWise," \
         "we," "us," or "our"), governing your access to and use of the PinWise application, \
         including all related features, content, and services (collectively, the "Service"). \
         You accept these Terms through the in-app acceptance flow presented before first use \
@@ -178,7 +182,7 @@ enum LegalDocuments {
 
         LegalSection(heading: "14. Dispute Resolution; Arbitration; Class Action Waiver", body: """
         PLEASE READ THIS SECTION CAREFULLY — IT AFFECTS YOUR LEGAL RIGHTS. Before filing a \
-        claim, you agree to first contact us at legal@pinwise.app describing the dispute and \
+        claim, you agree to first notify us through \(contactChannel), describing the dispute, and \
         to attempt informal resolution for thirty (30) days. Except for disputes that qualify \
         for small-claims court in your county of residence, or claims for injunctive relief \
         for intellectual-property misuse (which may be brought in the state or federal courts \
@@ -193,9 +197,9 @@ enum LegalDocuments {
         AND TO PARTICIPATE IN A CLASS ACTION, CLASS ARBITRATION, OR REPRESENTATIVE PROCEEDING. \
         If the class action waiver is found unenforceable as to a particular claim, that claim \
         (and only that claim) shall proceed in court, and the waiver shall remain enforceable \
-        as to all other claims. You may opt out of this arbitration agreement by emailing \
-        legal@pinwise.app within thirty (30) days of first accepting these Terms, stating \
-        your name and that you decline arbitration. These Terms are governed by the laws of \
+        as to all other claims. You may opt out of this arbitration agreement by submitting \
+        written notice through \(contactChannel) within thirty (30) days of first accepting \
+        these Terms, stating that you decline arbitration. These Terms are governed by the laws of \
         the State of Delaware, USA, without regard to conflict-of-law principles, except where \
         the mandatory consumer-protection law of your place of residence applies.
         """),
@@ -234,9 +238,8 @@ enum LegalDocuments {
         \(entityName) regarding the Service and supersede all prior agreements. Our failure \
         to enforce any right is not a waiver. You may not assign these Terms; we may assign \
         them in connection with a merger, acquisition, or sale of assets. We may provide \
-        notices to you within the app; you may provide notice to us at legal@pinwise.app or \
-        by mail to \(entityName), \(entityAddress). Questions and complaints: \
-        legal@pinwise.app.
+        notices to you within the app; you may provide notice to us, and direct questions \
+        and complaints, through \(contactChannel).
         """)
     ]
 
@@ -244,8 +247,8 @@ enum LegalDocuments {
 
     static let privacy: [LegalSection] = [
         LegalSection(heading: "1. Scope; Controller; Consent", body: """
-        This Privacy Policy describes how \(entityName), \(entityAddress) ("PinWise," "we," \
-        "us" — the data controller where that concept applies), collects, uses, discloses, \
+        This Privacy Policy describes how the developer of the PinWise application ("PinWise," \
+        "we," "us" — the data controller where that concept applies) collects, uses, discloses, \
         and safeguards information in connection with the PinWise application. It is \
         incorporated into and forms part of the Terms of Service. This Policy also serves as \
         our consumer health data privacy policy for purposes of the Washington My Health My \
@@ -347,8 +350,8 @@ enum LegalDocuments {
         information as those terms are defined by the CCPA, and we honor these rights without \
         discrimination. Because your records live on your device, most rights can be \
         exercised directly in the app (view, correct, delete, export); for anything else — \
-        including requests made through an authorized agent — contact privacy@pinwise.app \
-        and we will verify and respond within the period required by applicable law. Our app \
+        including requests made through an authorized agent — submit a request through \
+        \(contactChannel) and we will verify and respond within the period required by applicable law. Our app \
         does not respond to browser "Do Not Track" signals because it is not a website and \
         does not track you across sites or apps; if we ever engage in "sharing" under the \
         CPRA, we will honor the Global Privacy Control.
@@ -370,8 +373,8 @@ enum LegalDocuments {
         LegalSection(heading: "11. Changes to This Policy; Contact", body: """
         We may update this Policy from time to time. Material changes will be presented in \
         the app for renewed acceptance before they take effect. The effective date above \
-        reflects the latest revision. Questions, concerns, or rights requests: \
-        privacy@pinwise.app, or by mail to \(entityName), \(entityAddress).
+        reflects the latest revision. Questions, concerns, or rights requests may be \
+        submitted through \(contactChannel).
         """)
     ]
 }
