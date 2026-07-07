@@ -17,7 +17,9 @@ final class ProfilePhotoStore {
     }()
 
     private init() {
-        Task { [weak self] in
+        // @MainActor is explicit — with an explicit capture list, some toolchains don't
+        // inherit the enclosing actor context, which reads `image` off the main actor.
+        Task { @MainActor [weak self] in
             let loaded = await Task.detached(priority: .utility) {
                 (try? Data(contentsOf: Self.fileURL)).flatMap(UIImage.init(data:))
             }.value
