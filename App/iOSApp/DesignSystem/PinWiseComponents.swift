@@ -144,14 +144,18 @@ struct SectionHeader: View {
 struct TagChip: View {
     let text: String
     var color: Color = BrandColor.mint
+    var systemImage: String? = nil
     var body: some View {
-        Text(text.uppercased())
-            .font(.caption2.weight(.bold))
-            .tracking(0.5)
-            .padding(.horizontal, Space.sm)
-            .padding(.vertical, Space.xs)
-            .background(color.opacity(0.16), in: Capsule())
-            .foregroundStyle(color)
+        HStack(spacing: Space.xs) {
+            if let systemImage { Image(systemName: systemImage).font(.caption2.weight(.bold)) }
+            Text(text.uppercased())
+                .font(.caption2.weight(.bold))
+                .tracking(0.5)
+        }
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, Space.xs)
+        .background(color.opacity(0.16), in: Capsule())
+        .foregroundStyle(color)
     }
 }
 

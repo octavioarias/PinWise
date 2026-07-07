@@ -34,16 +34,36 @@ final class AuthManager {
     var provider: AuthProvider? { providerRaw.flatMap(AuthProvider.init) }
     var isGuest: Bool { provider == .guest }
 
+    /// User-facing name of the sign-in method — shared by the profile screen and menus.
+    var providerLabel: String {
+        switch provider {
+        case .apple: return "Apple ID"
+        case .google: return "Google"
+        case .email: return "Email"
+        case .guest: return "Guest — not signed in"
+        case .none: return isAuthenticated ? "Signed in" : "Not signed in"
+        }
+    }
+
+    /// Second line under the user's name in menus: the account itself.
+    var accountSubtitle: String {
+        if isGuest { return "Guest — not signed in" }
+        if let email, !email.isEmpty { return email }
+        if provider == .apple { return "Signed in with Apple" }
+        return isAuthenticated ? "Signed in" : "Tap to view your profile"
+    }
+
     private init() {
         providerRaw = store.string(forKey: K.provider)   // note: init assignment doesn't fire didSet
         userID = store.string(forKey: K.uid)
         displayName = store.string(forKey: K.name)
         email = store.string(forKey: K.email)
         memberSince = store.object(forKey: K.since) as? Date
-        // Sessions created before memberSince existed: backfill so the profile shows a date.
-        if providerRaw != nil && memberSince == nil {
-            memberSince = Date()
-            store.set(memberSince, forKey: K.since)
+        // One-time migration: the profile name used to live under its own AppStorage key.
+        if displayName == nil, let legacy = store.string(forKey: "profileName"),
+           !legacy.trimmingCharacters(in: .whitespaces).isEmpty {
+            displayName = legacy
+            store.removeObject(forKey: "profileName")
         }
     }
 
@@ -83,10 +103,20 @@ final class AuthManager {
 
     func signOut() { set(provider: nil, uid: nil, name: nil, email: nil) }
 
+    /// Guest tapped "Sign in": drop the guest session so the welcome screen shows, but keep
+    /// the typed name (and memberSince) so they survive the upgrade to a real account.
+    func beginAccountUpgrade() {
+        providerRaw = nil
+        userID = nil
+    }
+
     /// Lets the profile screen edit the name shown across the app (drawer, greetings).
+    /// Ignores empty input so an accidental field-clear can't destroy the Apple-provided
+    /// name — Apple only delivers it on the first authorization, so it's unrecoverable.
     func updateDisplayName(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        displayName = trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty, trimmed != displayName else { return }
+        displayName = trimmed
     }
 
     // MARK: -

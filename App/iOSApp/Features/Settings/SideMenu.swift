@@ -10,21 +10,8 @@ struct SideMenuDrawer: View {
     @State private var photos = ProfilePhotoStore.shared
     @State private var showSignOut = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
-    @AppStorage("profileName") private var profileName = ""
 
-    /// Header name: the profile name, else the name Apple provided at sign-in.
-    private var headerName: String {
-        if !profileName.isEmpty { return profileName }
-        return auth.displayName ?? ""
-    }
-
-    /// Second line of the identity header: the account itself (email/provider), or a nudge.
-    private var accountSubtitle: String {
-        if auth.isGuest { return "Guest — not signed in" }
-        if let email = auth.email, !email.isEmpty { return email }
-        if let provider = auth.provider { return "Signed in with \(provider.rawValue.capitalized)" }
-        return "Tap to view your profile"
-    }
+    private var headerName: String { auth.displayName ?? "" }
 
     var body: some View {
         GeometryReader { geo in
@@ -90,7 +77,7 @@ struct SideMenuDrawer: View {
                         Text(headerName.isEmpty ? "Set up your profile" : headerName)
                             .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                             .lineLimit(1)
-                        Text(accountSubtitle)
+                        Text(auth.accountSubtitle)
                             .font(.caption).foregroundStyle(BrandColor.textSecondary)
                             .lineLimit(1)
                     }
@@ -102,7 +89,8 @@ struct SideMenuDrawer: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("My Profile")
+            // Keep the account identity audible — VoiceOver users check guest vs signed-in here.
+            .accessibilityLabel("My Profile — \(headerName.isEmpty ? "not set up" : headerName), \(auth.accountSubtitle)")
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.lg)
 
@@ -116,7 +104,8 @@ struct SideMenuDrawer: View {
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
                               auth.isGuest ? "Sign in" : "Sign out") {
-                        if auth.isGuest { auth.signOut(); isOpen = false } else { showSignOut = true }
+                        // Guest upgrading to an account keeps their name/photo; real sign-out asks first.
+                        if auth.isGuest { auth.beginAccountUpgrade(); isOpen = false } else { showSignOut = true }
                     }
                 }
                 .padding(.horizontal, Space.lg)
@@ -124,10 +113,14 @@ struct SideMenuDrawer: View {
             Spacer(minLength: 0)
         }
         .confirmationDialog("Sign out?", isPresented: $showSignOut, titleVisibility: .visible) {
-            Button("Sign out", role: .destructive) { auth.signOut(); isOpen = false }
+            Button("Sign out", role: .destructive) {
+                auth.signOut()
+                ProfilePhotoStore.shared.clear()   // don't leave the previous user's face behind
+                isOpen = false
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your protocols, doses, and vials stay on this device.")
+            Text("Your protocols, doses, and vials stay on this device. Your profile name and photo are removed.")
         }
     }
 
@@ -183,8 +176,8 @@ enum MenuRoute: String, Identifiable {
     }
 }
 
-/// Small helper for a modal screen presented from the menu.
-private struct MenuSheet<Content: View>: View {
+/// Small helper for a modal screen presented from the menu (also used by ProfileView).
+struct MenuSheet<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
     @Environment(\.dismiss) private var dismiss
