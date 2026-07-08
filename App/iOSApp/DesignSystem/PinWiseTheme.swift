@@ -106,7 +106,7 @@ struct AppearanceApplier: UIViewRepresentable {
 // Measured WCAG contrast ratios (audited 2026-07, small-text target 4.5:1):
 //   white/background 20.1 · white/surface 18.7 · textSecondary/dark 7.9 · accentText/dark 7.6
 //   white-on-accent 7.6 · accent-on-white 7.6 · light success-on-white 5.0 · light
-//   warning-on-white 5.4 · danger 4.8 (chip)
+//   warning-on-white 5.4 · danger 4.8 (chip) · data-on-white 4.95 · data-on-dark-surface 10.0
 // Badge ink: every semantic fill holds ≥4.5:1 with `onBadge` in BOTH modes — dark fills +
 // near-black ink 6.2–12.1, light fills + white ink 4.8–5.4. The previous light success
 // (0x0E9E63 → 3.45) and warning (0xB26A00 → 4.24) failed 4.5:1 as small text on white;
@@ -140,6 +140,13 @@ enum BrandColor {
     static let warning = Color(light: 0x9A5B00, dark: 0xFFB020)   // amber — attention
     static let danger  = Color(light: 0xD92D2D, dark: 0xFF4D4D)   // red — urgency / destructive
     static let mint = success                                     // alias kept for call sites
+
+    // DOMAIN hue — objective health data (Labs & metrics tile + future data accents). The
+    // Oura-readiness teal family. A domain color, NOT a status color: it never means
+    // "ok/attention/stop" and never appears in badges. Audited (2026-07): light 0x0E7C86
+    // on white 4.95:1 (text-safe); dark 0x4FD1C5 on surface 10.0:1. As icon-on-own-tint
+    // (0.16 ground): 3.98:1 light / 7.40:1 dark — ≥3:1 graphics floor in both modes.
+    static let data = Color(light: 0x0E7C86, dark: 0x4FD1C5)
 
     // Text
     static let textPrimary = Color(light: 0x0B0D16, dark: 0xFFFFFF)

@@ -11,26 +11,28 @@ struct ToolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     header
+                    // Grid order groups the domains: rows 1-2 = the blue dose family,
+                    // then body (green) + feel (amber), then data (teal).
                     LazyVGrid(columns: columns, spacing: Space.md) {
-                        ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill") {
+                        ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill", hue: BrandColor.accentText) {
                             ReconstitutionCalculatorView()
                         }
-                        ToolCard(title: "Check a dose", subtitle: "What a draw equals", systemImage: "arrow.uturn.backward") {
+                        ToolCard(title: "Check a dose", subtitle: "What a draw equals", systemImage: "arrow.uturn.backward", hue: BrandColor.accentText) {
                             ReverseDoseView()
                         }
-                        ToolCard(title: "Blend", subtitle: "Doses in a mixed vial", systemImage: "circle.grid.2x2.fill") {
+                        ToolCard(title: "Blend", subtitle: "Doses in a mixed vial", systemImage: "circle.grid.2x2.fill", hue: BrandColor.accentText) {
                             BlendCalculatorView()
                         }
-                        ToolCard(title: "Ramp-up plan", subtitle: "Typical label ladder (reference)", systemImage: "chart.line.uptrend.xyaxis") {
+                        ToolCard(title: "Ramp-up plan", subtitle: "Typical label ladder (reference)", systemImage: "chart.line.uptrend.xyaxis", hue: BrandColor.accentText) {
                             TitrationPreviewView()
                         }
-                        ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand") {
+                        ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand", hue: BrandColor.success) {
                             BodyMapView()
                         }
-                        ToolCard(title: "How you feel", subtitle: "Track side effects over time", systemImage: "heart.text.square") {
+                        ToolCard(title: "How you feel", subtitle: "Track side effects over time", systemImage: "heart.text.square", hue: BrandColor.warning) {
                             SymptomsView()
                         }
-                        ToolCard(title: "Labs & metrics", subtitle: "Weight, A1c, lipids, BP trends", systemImage: "chart.xyaxis.line") {
+                        ToolCard(title: "Labs & metrics", subtitle: "Weight, A1c, lipids, BP trends", systemImage: "chart.xyaxis.line", hue: BrandColor.data) {
                             BiomarkersView()
                         }
                     }
@@ -58,19 +60,32 @@ private struct ToolCard<Destination: View>: View {
     let title: String
     let subtitle: String
     let systemImage: String
+    /// Domain hue (Oura-style color-as-information): accentText = dose, success = body,
+    /// warning = subjective tracking, data = objective health data. Tints the icon chip
+    /// and icon only — text stays neutral. No default: every tool declares its domain.
+    let hue: Color
     @ViewBuilder let destination: () -> Destination
 
     var body: some View {
         NavigationLink { destination() } label: {
             Card {
-                VStack(alignment: .leading, spacing: Space.sm) {
-                    Image(systemName: systemImage).font(.title2).foregroundStyle(BrandColor.accentText)
-                    Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text(subtitle).font(.caption).foregroundStyle(BrandColor.textSecondary).multilineTextAlignment(.leading)
-                    Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 0) {
+                    // Tinted icon chip — the Apple Health container register (an icon
+                    // GROUND, distinct from the solid badge register).
+                    Image(systemName: systemImage)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(hue)
+                        .frame(width: 44, height: 44)
+                        .background(hue.opacity(0.16), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                    Spacer(minLength: Space.md)
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        Text(subtitle).font(.caption).foregroundStyle(BrandColor.textSecondary).multilineTextAlignment(.leading)
+                    }
                 }
-                // minHeight on the INNER content keeps grid tiles equal-height (Card pads outside).
-                .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
+                // minHeight on the INNER content keeps grid tiles equal-height (Card pads
+                // outside); 140 gives the bottom-anchored text block visible air below the chip.
+                .frame(maxWidth: .infinity, minHeight: 140, alignment: .topLeading)
             }
         }
         .buttonStyle(PressableStyle())
