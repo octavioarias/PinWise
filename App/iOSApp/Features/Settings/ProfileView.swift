@@ -66,8 +66,8 @@ final class ProfilePhotoStore {
     }
 }
 
-/// Circular avatar with the brand gradient ring. Shows the profile photo when set; otherwise
-/// an initials monogram on a deep-blue gradient (or a person glyph when there's no name yet).
+/// Circular avatar with a hairline stroke ring. Shows the profile photo when set; otherwise
+/// an initials monogram on a flat accent fill (or a person glyph when there's no name yet).
 struct ProfileAvatar: View {
     var name: String
     var size: CGFloat = 96
@@ -83,8 +83,7 @@ struct ProfileAvatar: View {
             if let photo {
                 Image(uiImage: photo).resizable().scaledToFill()
             } else {
-                LinearGradient(colors: [BrandColor.accent, BrandColor.deepBlue],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                BrandColor.accent
                 if initials.isEmpty {
                     Image(systemName: "person.fill")
                         .font(.system(size: size * 0.42, weight: .semibold))
@@ -98,14 +97,7 @@ struct ProfileAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(
-            Circle().strokeBorder(
-                AngularGradient(colors: [BrandColor.accentText, BrandColor.accent, BrandColor.accentText],
-                                center: .center),
-                lineWidth: max(2, size / 34)
-            )
-        )
-        .shadow(color: BrandColor.accent.opacity(0.35), radius: size / 8, y: size / 16)
+        .overlay(Circle().strokeBorder(BrandColor.stroke, lineWidth: max(2, size / 34)))
         .accessibilityHidden(true)
     }
 }
