@@ -30,7 +30,11 @@ struct SideMenuDrawer: View {
                     panel(topInset: topInset)
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
-                        .background(BrandColor.surface)
+                        // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
+                        // the blur samples. The 0.7 tint keeps long-form drawer text legible;
+                        // raise to 0.8 if QA disagrees. Tint renders in front of the blur.
+                        .background(BrandColor.background.opacity(0.7))
+                        .background(.ultraThinMaterial)
                         .overlay(alignment: .trailing) {
                             Rectangle().fill(BrandColor.stroke).frame(width: 0.5)
                         }
@@ -39,7 +43,7 @@ struct SideMenuDrawer: View {
                         .transition(.move(edge: .leading))
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.9), value: isOpen)
+            .animation(Motion.drawer, value: isOpen)
         }
         .allowsHitTesting(isOpen)
         .sheet(item: $route) { $0.view }

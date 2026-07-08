@@ -26,14 +26,18 @@ struct AssistantDrawer: View {
                     AssistantView(topInset: topInset) { isOpen = false }
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
-                        .background(BrandColor.surface)
+                        // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
+                        // the blur samples. The 0.7 tint keeps long-form drawer text legible;
+                        // raise to 0.8 if QA disagrees. Tint renders in front of the blur.
+                        .background(BrandColor.background.opacity(0.7))
+                        .background(.ultraThinMaterial)
                         .overlay(alignment: .leading) { Rectangle().fill(BrandColor.stroke).frame(width: 0.5) }
                         .ignoresSafeArea()
                         .shadow(color: .black.opacity(0.45), radius: 24, x: -8)
                         .transition(.move(edge: .trailing))
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.9), value: isOpen)
+            .animation(Motion.drawer, value: isOpen)
         }
         .allowsHitTesting(isOpen)
     }
