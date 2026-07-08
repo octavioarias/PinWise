@@ -23,7 +23,7 @@ struct WelcomeView: View {
                 Spacer()
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("Welcome to PinWise")
-                        .font(.system(size: 32, weight: .black))
+                        .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(BrandColor.textPrimary)
                     Text("Sign in to save your protocols, doses, and progress — or continue as a guest.")
                         .font(Typo.body)

@@ -202,7 +202,7 @@ struct AssistantView: View {
         VStack(spacing: 0) {
             HStack {
                 Label("Assistant", systemImage: "sparkles")
-                    .font(.system(size: 22, weight: .black)).foregroundStyle(BrandColor.textPrimary)
+                    .font(.system(size: 22, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button { close() } label: {
                     Image(systemName: "xmark").font(.headline.weight(.semibold))

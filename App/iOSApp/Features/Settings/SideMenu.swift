@@ -49,7 +49,7 @@ struct SideMenuDrawer: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("PinWise")
-                    .font(.system(size: 26, weight: .black))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button { isOpen = false } label: {

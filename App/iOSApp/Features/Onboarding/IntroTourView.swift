@@ -80,7 +80,7 @@ struct IntroTourView: View {
                 .shadow(color: .black.opacity(0.45), radius: 24, y: 14)
             VStack(spacing: Space.sm) {
                 Text("Step \(step)").font(.caption.weight(.bold)).tracking(1).foregroundStyle(BrandColor.accentText)
-                Text(title).font(.system(size: 26, weight: .black)).foregroundStyle(BrandColor.textPrimary)
+                Text(title).font(.system(size: 26, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
                 Text(text).font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     .multilineTextAlignment(.center).frame(maxWidth: 340)
             }
@@ -118,7 +118,7 @@ struct IntroTourView: View {
             .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
             VStack(spacing: Space.sm) {
                 Text("Step \(step)").font(.caption.weight(.bold)).tracking(1).foregroundStyle(BrandColor.accentText)
-                Text(title).font(.system(size: 26, weight: .black)).foregroundStyle(BrandColor.textPrimary)
+                Text(title).font(.system(size: 26, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
                 Text(text).font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     .multilineTextAlignment(.center).frame(maxWidth: 340)
             }

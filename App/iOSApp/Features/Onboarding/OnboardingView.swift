@@ -3,7 +3,7 @@ import PeptideKit
 
 /// One-time onboarding + disclaimer acceptance. Three focused pages ending in a gated
 /// agreement (18+ confirmation required). Sets the accepted disclaimer version so it shows
-/// only once. On-brand: dark, hero mesh, edge glow, a success haptic on accept.
+/// only once. On-brand: dark, hero mesh, a success haptic on accept.
 struct OnboardingView: View {
     @Binding var acceptedVersion: Int
     @State private var page = 0
@@ -43,10 +43,7 @@ struct OnboardingView: View {
                     .minimumScaleFactor(0.8).lineLimit(1)
                 Text("PinWise")
                     .font(.system(size: 58, weight: .black))
-                    .foregroundStyle(
-                        LinearGradient(colors: [BrandColor.accentText, BrandColor.success],
-                                       startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(BrandColor.accentText)
                     .minimumScaleFactor(0.8).lineLimit(1)
             }
             Text("The source of truth for peptides and dose tracking.")
