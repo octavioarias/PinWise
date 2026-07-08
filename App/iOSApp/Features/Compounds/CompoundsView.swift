@@ -163,11 +163,16 @@ struct CompoundLegendView: View {
                 }
                 .padding(Space.lg)
             }
-            .heroScreen()
             .navigationTitle("What these mean")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        // Glass sheet — content passes beneath the presentation; the canvas is the material, cards stay opaque.
+        .presentationBackground {
+            BrandColor.background.opacity(0.5).background(.ultraThinMaterial)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private func tierRow(_ tier: EvidenceTier, _ desc: String) -> some View {

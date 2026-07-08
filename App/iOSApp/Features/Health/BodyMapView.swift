@@ -36,11 +36,16 @@ struct InjectionMapInfoView: View {
                 }
                 .padding(Space.lg)
             }
-            .heroScreen()
             .navigationTitle("Heavy vs. light use")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
+        // Glass sheet — content passes beneath the presentation; the canvas is the material, cards stay opaque.
+        .presentationBackground {
+            BrandColor.background.opacity(0.5).background(.ultraThinMaterial)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private func colorRow(_ c: Color, _ text: String) -> some View {
