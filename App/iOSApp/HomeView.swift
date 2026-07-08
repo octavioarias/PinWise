@@ -12,7 +12,6 @@ struct HomeView: View {
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var auth = AuthManager.shared
-    @State private var photos = ProfilePhotoStore.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
@@ -74,23 +73,7 @@ struct HomeView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
             HStack {
-                // Once the user has an identity (photo or name), their avatar IS the menu
-                // button — the personalization from setup shows up immediately on Home.
-                Button { showMenu = true } label: {
-                    if photos.image != nil || !(auth.displayName ?? "").isEmpty {
-                        ProfileAvatar(name: auth.displayName ?? "", size: 36, photo: photos.image)
-                            .frame(width: 44, height: 44, alignment: .leading)
-                            .contentShape(Rectangle())
-                    } else {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(BrandColor.textPrimary)
-                            .frame(width: 44, height: 44, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Menu — profile, settings, and health connections")
+                MenuAvatarButton(showMenu: $showMenu)
 
                 Spacer()
 

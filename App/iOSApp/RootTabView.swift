@@ -7,9 +7,9 @@ enum AppTab: Hashable {
     case home, tools, log, protocols, news
 }
 
-/// Root shell with a compact custom bottom bar. Four tabs share one quiet monochrome
+/// Root shell with a floating glass tab bar. Four tabs share one quiet monochrome
 /// register; the center Log tab is the deliberate exception (a Strava-style record
-/// button): larger, crested above the hairline, and the only color in the chrome.
+/// button): larger, crested above the capsule's top edge, and the only color in the chrome.
 struct RootTabView: View {
     @State private var selected: AppTab = .home
     @State private var showMenu = false
@@ -25,10 +25,10 @@ struct RootTabView: View {
         Group {
             switch selected {
             case .home: HomeView(selected: $selected, showMenu: $showMenu, showAssistant: $showAssistant)
-            case .tools: ToolsView()
+            case .tools: ToolsView(showMenu: $showMenu)
             case .log: LogView(selected: $selected)
-            case .protocols: ProtocolsView()
-            case .news: NewsView()
+            case .protocols: ProtocolsView(showMenu: $showMenu)
+            case .news: NewsView(showMenu: $showMenu)
             }
         }
         .overlay(alignment: .bottom) {
@@ -48,9 +48,11 @@ struct RootTabView: View {
     }
 }
 
-/// Compact bottom bar — brand-tinted ultra-thin glass flush to the screen's bottom edge.
-/// Five equal-width, center-aligned tabs; Log is a flat accent disc with a white glyph
-/// that crests above the hairline — visual emphasis only, the bar's metrics are unchanged.
+/// Floating glass island — a brand-tinted ultra-thin-material capsule inset from the
+/// screen edges (Space.lg gutters, Space.sm above the safe-area bottom), with scroll
+/// content passing visibly beneath it. Five equal-width, center-aligned tabs; Log is a
+/// flat accent disc with a white glyph that crests above the capsule's top edge —
+/// visual emphasis only.
 private struct PinWiseTabBar: View {
     @Binding var selected: AppTab
 
@@ -73,21 +75,30 @@ private struct PinWiseTabBar: View {
             tab(.protocols, icon: "square.stack.3d.up.fill", label: "Stack")
             tab(.news, icon: "newspaper.fill", label: "News")
         }
+        // Inner Space.md sides so the Home/News end columns clear the capsule's end radii.
+        .padding(.horizontal, Space.md)
         .padding(.top, Space.md)
-        .padding(.bottom, Space.xs)
+        .padding(.bottom, Space.sm)
         .frame(maxWidth: .infinity)
-        // Hairline drawn within the bar's frame...
-        .background(alignment: .top) {
-            Rectangle().fill(BrandColor.stroke).frame(height: 0.5)
-        }
-        // ...and the glass fill extends into the home-indicator area WITHOUT changing the bar's
-        // layout height. The bar is hosted as a bottom overlay and scroll content reserves its
-        // space via tabBarClearance(90), so content stops exactly at the bar's top edge (never
-        // underneath it). Tint is declared BEFORE the material: later .background modifiers
-        // stack BEHIND earlier ones, so the brand tint renders in front of the blur while
-        // content still shimmers through underneath.
-        .background(BrandColor.background.opacity(0.55), ignoresSafeAreaEdges: .bottom)
-        .background(.ultraThinMaterial, ignoresSafeAreaEdges: .bottom)
+        // Glass recipe, rim → tint → blur: later .background modifiers stack BEHIND earlier
+        // ones, so the 0.5pt capsule rim draws frontmost (a background, not an overlay, so
+        // the crested Log disc covers it), the brand tint sits in front of the blur, and
+        // content still shimmers through the material underneath. No clipShape anywhere —
+        // background(_:in:) shapes the fills without decapitating the crested chip. The bar
+        // is a bottom overlay floating Space.sm above the safe-area bottom inside Space.lg
+        // gutters; scrolling content passes visibly beneath the glass, and the
+        // tabBarClearance margin (derivation in Theme.swift) governs only where content
+        // rests when scrolled to the end — not a hard stop at the bar's top edge.
+        .background { Capsule().strokeBorder(BrandColor.stroke, lineWidth: 0.5) }
+        .background(BrandColor.background.opacity(0.55), in: Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
+        // Flatten to one silhouette BEFORE the shadow so it follows the capsule plus the
+        // protruding crest arc instead of haloing each icon. (compositingGroup, never
+        // drawingGroup — Metal rasterization kills the material's backdrop sampling.)
+        .compositingGroup()
+        .elevation(.chrome)
+        .padding(.horizontal, Space.lg)
+        .padding(.bottom, Space.sm)
         .sensoryFeedback(.selection, trigger: tapCount)
     }
 
@@ -115,9 +126,10 @@ private struct PinWiseTabBar: View {
                     }
                 }
                 .frame(height: iconRow)
-                // Offset AFTER the frame: the disc keeps its 30pt layout slot (bar metrics
-                // and the 90pt tabBarClearance contract untouched) but visually crests
-                // above the hairline together with its glyph.
+                // Offset AFTER the frame: the disc keeps its 30pt layout slot — so the
+                // bar's content height feeding the tabBarClearance derivation in
+                // Theme.swift is unchanged — but visually crests above the capsule's
+                // top edge together with its glyph.
                 .offset(y: prominent ? -(chipSize - iconRow) / 2 : 0)
                 Text(label)
                     .font(.system(size: 10, weight: .medium))

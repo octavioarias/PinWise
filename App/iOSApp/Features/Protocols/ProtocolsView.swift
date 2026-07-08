@@ -5,6 +5,7 @@ import PeptideKit
 /// The Stack tab: your vials and your protocols (a "My Vials / My Protocols" segmented
 /// control, vials default), plus a link into the compound library under My Vials.
 struct ProtocolsView: View {
+    @Binding var showMenu: Bool
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
@@ -127,15 +128,21 @@ struct ProtocolsView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text("Stack")
-                .font(Typo.screenTitle)
-                .foregroundStyle(BrandColor.textPrimary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-            Text("Your protocols and your vials — the plan you track against.")
-                .font(Typo.body)
-                .foregroundStyle(BrandColor.textSecondary)
+        VStack(alignment: .leading, spacing: Space.sm) {
+            HStack {
+                MenuAvatarButton(showMenu: $showMenu)
+                Spacer()
+            }
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("Stack")
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                Text("Your protocols and your vials — the plan you track against.")
+                    .font(Typo.body)
+                    .foregroundStyle(BrandColor.textSecondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

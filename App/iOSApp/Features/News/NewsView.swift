@@ -32,6 +32,7 @@ func newsDisplayDate(_ iso: String) -> String {
 }
 
 struct NewsView: View {
+    @Binding var showMenu: Bool
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
     @State private var category: NewsCategory?
@@ -107,10 +108,8 @@ struct NewsView: View {
 
     private var masthead: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(alignment: .center) {
-                Text("News")
-                    .font(Typo.screenTitle)
-                    .foregroundStyle(BrandColor.textPrimary)
+            HStack {
+                MenuAvatarButton(showMenu: $showMenu)
                 Spacer()
                 Button {
                     let willActivate = !searchActive
@@ -130,9 +129,14 @@ struct NewsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(searchActive ? "Close search" : "Search news")
             }
-            Text("Your hub for peptide and performance-medicine research — summarized clearly and linked to the source.")
-                .font(Typo.body)
-                .foregroundStyle(BrandColor.textSecondary)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("News")
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
+                Text("Your hub for peptide and performance-medicine research — summarized clearly and linked to the source.")
+                    .font(Typo.body)
+                    .foregroundStyle(BrandColor.textSecondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -330,15 +334,16 @@ struct NewsDetailView: View {
                 FeedImage(urlString: item.imageURL, tint: item.category.tint)
                     .frame(height: 180)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    // The one sanctioned on-image badge — frosted, over real photo pixels.
+                    .overlay(alignment: .topLeading) {
+                        FrostedTagChip(text: item.category.rawValue)
+                            .padding(Space.md)
+                    }
 
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    HStack {
-                        TagChip(text: item.category.rawValue, color: item.category.tint)
-                        Spacer()
-                        Text(newsDisplayDate(item.publishedAt))
-                            .font(.caption)
-                            .foregroundStyle(BrandColor.textSecondary)
-                    }
+                    Text(newsDisplayDate(item.publishedAt))
+                        .font(.caption)
+                        .foregroundStyle(BrandColor.textSecondary)
                     Text(item.headline)
                         .font(Typo.title)
                         .foregroundStyle(BrandColor.textPrimary)

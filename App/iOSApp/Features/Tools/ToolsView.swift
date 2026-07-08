@@ -4,6 +4,7 @@ import PeptideKit
 
 /// The Tools tab — a grid of plain-language calculators, each backed by verified PeptideKit.
 struct ToolsView: View {
+    @Binding var showMenu: Bool
     private let columns = [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)]
 
     var body: some View {
@@ -43,12 +44,18 @@ struct ToolsView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text("Tools")
-                .font(Typo.screenTitle)
-                .foregroundStyle(BrandColor.textPrimary)
-            Text("Simple calculators — pick one and answer a couple of questions.")
-                .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+        VStack(alignment: .leading, spacing: Space.sm) {
+            HStack {
+                MenuAvatarButton(showMenu: $showMenu)
+                Spacer()
+            }
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("Tools")
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
+                Text("Simple calculators — pick one and answer a couple of questions.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
