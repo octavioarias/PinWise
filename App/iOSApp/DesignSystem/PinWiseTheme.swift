@@ -105,7 +105,12 @@ struct AppearanceApplier: UIViewRepresentable {
 
 // Measured WCAG contrast ratios (audited 2026-07, small-text target 4.5:1):
 //   white/background 20.1 · white/surface 18.7 · textSecondary/dark 7.9 · accentText/dark 7.6
-//   white-on-accent 7.6 · accent-on-white 7.6 · success 8.1 · warning 7.6 · danger 4.8 (chip)
+//   white-on-accent 7.6 · accent-on-white 7.6 · light success-on-white 5.0 · light
+//   warning-on-white 5.4 · danger 4.8 (chip)
+// Badge ink: every semantic fill holds ≥4.5:1 with `onBadge` in BOTH modes — dark fills +
+// near-black ink 6.2–12.1, light fills + white ink 4.8–5.4. The previous light success
+// (0x0E9E63 → 3.45) and warning (0xB26A00 → 4.24) failed 4.5:1 as small text on white;
+// both are darkened (0x0C8052 / 0x9A5B00) so the light set genuinely holds ≥4.5:1 now.
 // The deep `accent` as text on dark is only 2.6:1 — so text/links on dark use `accentText`.
 // Each token adapts per interface style: dark keeps the Enhanced-style deep blue-black; light
 // is a clean blue-biased near-white. Light values are chosen to hold small-text contrast ≥4.5:1
@@ -126,10 +131,13 @@ enum BrandColor {
     static let onAccent = Color(hex: 0xFFFFFF)
     // Accent TEXT/ICONS: the deep accent reads well on light; on dark it needs the lighter blue.
     static let accentText = Color(light: 0x2536E6, dark: 0x8A97FF)
+    /// Badge ink — text on solid semantic badge fills: white on the deep light-mode fills,
+    /// near-black on the bright dark-mode fills (the Spotify black-on-green register).
+    static let onBadge = Color(light: 0xFFFFFF, dark: 0x04050B)
 
     // Semantic (separate from the accent). Light variants darkened for contrast on white.
-    static let success = Color(light: 0x0E9E63, dark: 0x18E39A)   // green — progress / health
-    static let warning = Color(light: 0xB26A00, dark: 0xFFB020)   // amber — attention
+    static let success = Color(light: 0x0C8052, dark: 0x18E39A)   // green — progress / health
+    static let warning = Color(light: 0x9A5B00, dark: 0xFFB020)   // amber — attention
     static let danger  = Color(light: 0xD92D2D, dark: 0xFF4D4D)   // red — urgency / destructive
     static let mint = success                                     // alias kept for call sites
 
@@ -191,24 +199,30 @@ enum Motion {
 // Glow rules: a colored glow means "live/active" — never gray, never decorative. The only
 // sanctioned glows are the PrimaryButton accent, the tab bar's Log chip, and StatusDot
 // (its own status color, radius 6). Nothing else glows.
+// Neutral-black STRUCTURAL shadows are not glows: the two drawer shadows (0.45/24) and
+// Elevation.chrome under the floating tab bar.
 
 /// Scheme-aware drop shadow — the design system's only shadow recipe. On dark, elevation
-/// comes from surface lightness + the hairline stroke, so only `.hero` casts a shadow
-/// (large/soft/very-dark — the Spotify rule); `.card` shadows exist in light mode only
-/// (small/faint — the Apple Music rule). `.hero` marks the one headline surface on a
-/// screen, `.card` regular content cards, `.none` flat rows.
+/// comes from surface lightness + the hairline stroke, so only `.hero` and `.chrome` cast
+/// shadows (large/soft/very-dark — the Spotify rule); `.card` shadows exist in light mode
+/// only (small/faint — the Apple Music rule). `.hero` marks the one headline surface on a
+/// screen, `.chrome` floating chrome over live content (the tab bar — one register quieter
+/// than the transient drawers), `.card` regular content cards, `.none` flat rows.
 struct Elevation: ViewModifier {
-    enum Level { case hero, card, none }
+    enum Level { case hero, chrome, card, none }
     let level: Level
     @Environment(\.colorScheme) private var scheme
 
-    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · card 0/0/0 (dark elevation is
-    // surface lightness + hairline); light: hero 0.10/20/10 · card 0.08/16/8; none draws no shadow.
+    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · chrome 0.35/18/8 · card 0/0/0
+    // (dark elevation is surface lightness + hairline); light: hero 0.10/20/10 ·
+    // chrome 0.10/14/6 · card 0.08/16/8; none draws no shadow.
     private var values: (opacity: Double, radius: CGFloat, y: CGFloat) {
         switch (level, scheme == .dark) {
         case (.hero, true): return (0.50, 28, 14)
+        case (.chrome, true): return (0.35, 18, 8)
         case (.card, true): return (0, 0, 0)
         case (.hero, false): return (0.10, 20, 10)
+        case (.chrome, false): return (0.10, 14, 6)
         case (.card, false): return (0.08, 16, 8)
         case (.none, _): return (0, 0, 0)
         }
@@ -254,7 +268,9 @@ struct HeroMesh: View {
 
 extension View {
     /// Bottom clearance so scrollable content always clears the floating tab bar (an overlay
-    /// that reserves no layout space). No-op on non-scrolling screens.
+    /// that reserves no layout space). 90 = bar content height 65 (top pad 12 + iconRow 30 +
+    /// spacing 3 + label ≈12 + bottom pad 8) + 8 bottom float + 17 breathing gap. No-op on
+    /// non-scrolling screens.
     func tabBarClearance() -> some View {
         contentMargins(.bottom, 90, for: .scrollContent)
     }
