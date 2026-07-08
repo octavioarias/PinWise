@@ -1,13 +1,15 @@
 import SwiftUI
 import PeptideKit
 
-// Reusable building blocks. Depth comes from gradient fills, soft shadows, and an accent
-// glow on the primary CTA — not from flat solid rectangles.
+// Reusable building blocks. Depth is a flat surface-step system: background → surface →
+// surfaceElevated lightness steps bounded by hairline strokes — not gradient fills. The one
+// sanctioned gradient is the hero card; the one accent glow is the primary CTA.
 
-/// A rounded surface card with a subtle gradient fill, hairline rim light, and elevation.
-/// Three registers: `.hero` for the single headline surface on a screen (deep-blue diagonal
-/// wash, brighter rim, deepest shadow), `.standard` (default) for regular content cards, and
-/// `.flat` for dense reference rows (uniform fill and hairline, no shadow).
+/// A rounded surface card: flat fill, sober hairline rim, elevation by register.
+/// `.hero` is the app's ONE gradient surface (deep-blue diagonal wash) and carries the one
+/// dark shadow; `.standard` (default) and `.flat` are flat surfaces separated from the
+/// ground by the same hairline — `.standard` for regular content cards, `.flat` for dense
+/// reference rows.
 struct Card<Content: View>: View {
     enum Style { case hero, standard, flat }
 
@@ -21,18 +23,20 @@ struct Card<Content: View>: View {
         self.content = content()
     }
 
-    // Every style resolves to the SAME LinearGradient type, so switching styles never changes
-    // the card's structural identity (flat = [surface, surface]; flat rim = 3× stroke).
+    // Every style resolves to the SAME LinearGradient type: `.standard` and `.flat` use
+    // degenerate [surface, surface] gradients that rasterize as flat fills. Keeping the fill
+    // type uniform means style values never change the card's structural identity — only
+    // `.hero` carries a real gradient.
     private var fillGradient: LinearGradient {
         switch style {
         case .hero:
             return LinearGradient(
-                colors: [BrandColor.deepBlue.opacity(0.5), BrandColor.surface],
+                colors: [BrandColor.deepBlue.opacity(0.65), BrandColor.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         case .standard:
             return LinearGradient(
-                colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.55)],
+                colors: [BrandColor.surface, BrandColor.surface],
                 startPoint: .top, endPoint: .bottom
             )
         case .flat:
@@ -43,26 +47,14 @@ struct Card<Content: View>: View {
         }
     }
 
-    // Rim light: a faint highlight on the top edge fading into the hairline — reads as a
-    // raised, glassy surface rather than a flat rectangle. Flat cards get a plain hairline.
+    // Rim: every register wears the same sober flat hairline. The degenerate 3× stroke
+    // gradient keeps the strokeBorder's LinearGradient type, so the rim never changes the
+    // card's structural identity either.
     private var rimGradient: LinearGradient {
-        switch style {
-        case .hero:
-            return LinearGradient(
-                colors: [Color.white.opacity(0.16), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
-                startPoint: .top, endPoint: .bottom
-            )
-        case .standard:
-            return LinearGradient(
-                colors: [Color.white.opacity(0.14), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
-                startPoint: .top, endPoint: .bottom
-            )
-        case .flat:
-            return LinearGradient(
-                colors: [BrandColor.stroke, BrandColor.stroke, BrandColor.stroke],
-                startPoint: .top, endPoint: .bottom
-            )
-        }
+        LinearGradient(
+            colors: [BrandColor.stroke, BrandColor.stroke, BrandColor.stroke],
+            startPoint: .top, endPoint: .bottom
+        )
     }
 
     private var elevationLevel: Elevation.Level {
@@ -86,7 +78,7 @@ struct Card<Content: View>: View {
     }
 }
 
-/// Primary call-to-action — deep-blue gradient fill, white label, accent glow.
+/// Primary call-to-action — flat accent fill, white label, the app's one accent glow.
 struct PrimaryButton: View {
     let title: String
     var systemImage: String? = nil
@@ -101,15 +93,9 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, Space.lg)
         }
-        .background(
-            LinearGradient(
-                colors: [BrandColor.accent, BrandColor.accent.opacity(0.82)],
-                startPoint: .top, endPoint: .bottom
-            ),
-            in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-        )
+        .background(BrandColor.accent, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         .foregroundStyle(BrandColor.onAccent)
-        .shadow(color: BrandColor.accent.opacity(0.45), radius: 14, y: 6)
+        .shadow(color: BrandColor.accent.opacity(0.35), radius: 12, y: 5)
     }
 }
 
