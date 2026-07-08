@@ -67,15 +67,14 @@ struct InventoryList: View {
             }
 
             NavigationLink { CompoundsView() } label: {
-                HStack {
-                    Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
-                    Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                Card(style: .flat) {
+                    HStack {
+                        Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
+                        Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                    }
                 }
-                .padding(Space.lg)
-                .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
             }
             .buttonStyle(.plain)
         }

@@ -62,20 +62,16 @@ private struct ToolCard<Destination: View>: View {
 
     var body: some View {
         NavigationLink { destination() } label: {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Image(systemName: systemImage).font(.title2).foregroundStyle(BrandColor.accentText)
-                Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                Text(subtitle).font(.caption).foregroundStyle(BrandColor.textSecondary).multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
+            Card {
+                VStack(alignment: .leading, spacing: Space.sm) {
+                    Image(systemName: systemImage).font(.title2).foregroundStyle(BrandColor.accentText)
+                    Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text(subtitle).font(.caption).foregroundStyle(BrandColor.textSecondary).multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                // minHeight on the INNER content keeps grid tiles equal-height (Card pads outside).
+                .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, minHeight: 128, alignment: .topLeading)
-            .padding(Space.lg)
-            .background(
-                LinearGradient(colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.65)],
-                               startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-            )
-            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
         }
         .buttonStyle(PressableStyle())
         .accessibilityLabel("\(title). \(subtitle)")
