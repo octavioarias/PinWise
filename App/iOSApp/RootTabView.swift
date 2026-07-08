@@ -25,10 +25,10 @@ struct RootTabView: View {
         Group {
             switch selected {
             case .home: HomeView(selected: $selected, showMenu: $showMenu, showAssistant: $showAssistant)
-            case .tools: ToolsView(showMenu: $showMenu)
+            case .tools: ToolsView()
             case .log: LogView(selected: $selected)
-            case .protocols: ProtocolsView(showMenu: $showMenu)
-            case .news: NewsView(showMenu: $showMenu)
+            case .protocols: ProtocolsView()
+            case .news: NewsView()
             }
         }
         .overlay(alignment: .bottom) {

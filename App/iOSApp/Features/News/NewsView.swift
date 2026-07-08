@@ -32,7 +32,6 @@ func newsDisplayDate(_ iso: String) -> String {
 }
 
 struct NewsView: View {
-    @Binding var showMenu: Bool
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
     @State private var category: NewsCategory?
@@ -107,9 +106,11 @@ struct NewsView: View {
     }
 
     private var masthead: some View {
-        VStack(alignment: .leading, spacing: Space.sm) {
-            HStack {
-                MenuAvatarButton(showMenu: $showMenu)
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(alignment: .center) {
+                Text("News")
+                    .font(Typo.screenTitle)
+                    .foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button {
                     let willActivate = !searchActive
@@ -129,14 +130,9 @@ struct NewsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(searchActive ? "Close search" : "Search news")
             }
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("News")
-                    .font(Typo.screenTitle)
-                    .foregroundStyle(BrandColor.textPrimary)
-                Text("Your hub for peptide and performance-medicine research — summarized clearly and linked to the source.")
-                    .font(Typo.body)
-                    .foregroundStyle(BrandColor.textSecondary)
-            }
+            Text("Your hub for peptide and performance-medicine research — summarized clearly and linked to the source.")
+                .font(Typo.body)
+                .foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

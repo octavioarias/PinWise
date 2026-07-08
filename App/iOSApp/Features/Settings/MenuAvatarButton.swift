@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// The app-wide identity anchor — every masthead's top-left corner. Shows the user's avatar
-/// once they have an identity (photo or name), otherwise a hamburger; either way it always
+/// The identity anchor of the HOME masthead — and Home only, by founder directive: the
+/// other tabs stay avatar-free so their mastheads lead with the title. Shows the user's
+/// avatar once they have an identity (photo or name), otherwise a hamburger; either way it
 /// opens the side menu, matching the drawer's leading-edge slide.
 struct MenuAvatarButton: View {
     @Binding var showMenu: Bool
