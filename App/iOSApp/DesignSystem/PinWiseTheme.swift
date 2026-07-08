@@ -111,7 +111,7 @@ struct AppearanceApplier: UIViewRepresentable {
 // is a clean blue-biased near-white. Light values are chosen to hold small-text contrast ≥4.5:1
 // (deep accent, darker semantic hues); dark values are the previously audited set.
 enum BrandColor {
-    // 60% — dominant neutral. Dark: deep blue-black so the edge glow pops. Light: blue-white.
+    // 60% — dominant neutral. Dark: deep blue-black. Light: blue-white.
     static let background = Color(light: 0xF4F6FC, dark: 0x04050B)
     // 30% — secondary surfaces / cards.
     static let surface = Color(light: 0xFFFFFF, dark: 0x0F1120)
@@ -138,12 +138,11 @@ enum BrandColor {
     static let textSecondary = Color(light: 0x5A6478, dark: 0x9AA3B8)
 }
 
-/// Type ramp — system font (SF), heavy weights, uppercase display, monospaced figures.
+/// Type ramp — system font (SF), monospaced figures. `.black` is reserved for the number
+/// ramp (the number is the headline); titles and chrome top out at `.bold`.
 enum Typo {
-    static let displayXL = Font.system(size: 44, weight: .black)
-    static let displayL = Font.system(size: 34, weight: .black)
-    /// Screen/tab titles — heavy weight (as before), but sentence case rather than all-caps.
-    static let screenTitle = Font.system(size: 34, weight: .black)
+    /// Screen/tab titles — bold, sentence case rather than all-caps.
+    static let screenTitle = Font.system(size: 34, weight: .bold)
     static let title = Font.system(size: 28, weight: .bold)
     static let headline = Font.system(size: 20, weight: .semibold)
     static let body = Font.system(size: 16, weight: .regular)
@@ -190,24 +189,25 @@ enum Motion {
 }
 
 // Glow rules: a colored glow means "live/active" — never gray, never decorative. The only
-// sanctioned glows are the PrimaryButton accent, the tab bar's Log chip, the ambient EdgeGlow,
-// and StatusDot (its own status color, radius 6). Nothing else glows.
+// sanctioned glows are the PrimaryButton accent, the tab bar's Log chip, and StatusDot
+// (its own status color, radius 6). Nothing else glows.
 
-/// Scheme-aware drop shadow — the design system's only shadow recipe. Dark mode wants
-/// large/soft/very-dark shadows (the Spotify rule); light mode wants small/faint ones (the
-/// Apple Music rule). Never a mid-gray shadow on the near-black canvas. `.hero` marks the
-/// one headline surface on a screen, `.card` regular content cards, `.none` flat rows.
+/// Scheme-aware drop shadow — the design system's only shadow recipe. On dark, elevation
+/// comes from surface lightness + the hairline stroke, so only `.hero` casts a shadow
+/// (large/soft/very-dark — the Spotify rule); `.card` shadows exist in light mode only
+/// (small/faint — the Apple Music rule). `.hero` marks the one headline surface on a
+/// screen, `.card` regular content cards, `.none` flat rows.
 struct Elevation: ViewModifier {
     enum Level { case hero, card, none }
     let level: Level
     @Environment(\.colorScheme) private var scheme
 
-    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · card 0.35/20/12;
-    // light: hero 0.10/20/10 · card 0.08/16/8; none draws no shadow.
+    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · card 0/0/0 (dark elevation is
+    // surface lightness + hairline); light: hero 0.10/20/10 · card 0.08/16/8; none draws no shadow.
     private var values: (opacity: Double, radius: CGFloat, y: CGFloat) {
         switch (level, scheme == .dark) {
         case (.hero, true): return (0.50, 28, 14)
-        case (.card, true): return (0.35, 20, 12)
+        case (.card, true): return (0, 0, 0)
         case (.hero, false): return (0.10, 20, 10)
         case (.card, false): return (0.08, 16, 8)
         case (.none, _): return (0, 0, 0)
@@ -265,89 +265,12 @@ extension View {
             .background(BrandColor.background.ignoresSafeArea())
     }
 
-    /// A soft accent glow hugging the screen edges — ambient, non-interactive. Mirrors the
-    /// glow around the device previews. Apply once at the app root.
-    // Uses the LIGHTER accent (`accentText`) — the deep accent on near-black is ~2.6:1 and
-    // reads as invisible once blurred. A dedicated bright glow tone shows on the dark edges.
-    func edgeGlow() -> some View {
-        overlay { EdgeGlowOverlay() }
-    }
-
-    /// Subtle film-grain texture across the screen — a premium, tactile cue that breaks up
-    /// flat fills. Non-interactive; applied once at the app root.
-    func grain(_ opacity: Double = 0.035) -> some View {
-        overlay {
-            Grain.image
-                .resizable(resizingMode: .tile)
-                .opacity(opacity)
-                .blendMode(.softLight)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
-    }
-
-    /// Canvas with an ambient deep-blue mesh at the top, faded into the background.
+    /// Flat brand canvas for tab-level screens (identical to `screenBackground()`; the name
+    /// is kept for its call sites). The ambient mesh survives only on the four pre-auth
+    /// covers that use `HeroMesh()` directly.
     func heroScreen() -> some View {
-        tabBarClearance()
-            .background(alignment: .top) {
-                HeroMesh()
-                    .frame(height: 340)
-                    .mask {
-                        LinearGradient(
-                            colors: [.black, .black.opacity(0.2), .clear],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    }
-                    .ignoresSafeArea(edges: .top)
-            }
-            .background(BrandColor.background.ignoresSafeArea())
+        screenBackground()
     }
-}
-
-/// The ambient accent glow hugging the screen edges. Scheme-aware: bold on the dark canvas,
-/// softened on light so the blue halo reads as a highlight rather than a heavy border.
-private struct EdgeGlowOverlay: View {
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 52, style: .continuous)
-            .strokeBorder(
-                LinearGradient(
-                    colors: [BrandColor.accentText, BrandColor.accentText.opacity(0.45), BrandColor.accentText.opacity(0.9)],
-                    startPoint: .top, endPoint: .bottom
-                ),
-                lineWidth: 4
-            )
-            .blur(radius: 11)
-            .opacity(scheme == .dark ? 0.95 : 0.5)
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-    }
-}
-
-/// A cached, deterministic monochrome noise tile for the film-grain overlay. Built once with an
-/// xorshift PRNG (no Date/random dependency, so it's stable across launches).
-enum Grain {
-    static let image: Image = {
-        let size = 128
-        let bytesPerRow = size * 4
-        var pixels = [UInt8](repeating: 0, count: bytesPerRow * size)
-        var seed: UInt64 = 88172645463325252
-        for i in 0..<(size * size) {
-            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
-            let v = UInt8(truncatingIfNeeded: seed)
-            let o = i * 4
-            pixels[o] = v; pixels[o + 1] = v; pixels[o + 2] = v; pixels[o + 3] = 255
-        }
-        let space = CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(data: &pixels, width: size, height: size, bitsPerComponent: 8,
-                                  bytesPerRow: bytesPerRow, space: space,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-              let cg = ctx.makeImage() else {
-            return Image(systemName: "circle.fill")
-        }
-        return Image(decorative: cg, scale: 1, orientation: .up)
-    }()
 }
 
 /// Plain button style that adds a springy press-scale — tactile feedback used across tappable
