@@ -38,6 +38,7 @@ struct NewsView: View {
     @State private var myStack = false
     @State private var searchActive = false
     @FocusState private var searchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query private var protocols: [SavedProtocol]
     @Query private var vials: [StoredVial]
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
@@ -138,7 +139,9 @@ struct NewsView: View {
 
     private var stackToggle: some View {
         HStack(spacing: Space.sm) {
-            filterChip("My compounds", active: myStack) { withAnimation(.snappy) { myStack.toggle() } }
+            SelectableChip(title: "My compounds", isSelected: myStack) {
+                withAnimation(.snappy) { myStack.toggle() }
+            }
             if myStack {
                 Text(userCompounds.isEmpty ? "Add a protocol or log a dose to use this"
                                            : "Filtered to what you're taking")
@@ -146,6 +149,7 @@ struct NewsView: View {
             }
             Spacer()
         }
+        .sensoryFeedback(.selection, trigger: myStack)
     }
 
     @ViewBuilder private var content: some View {
@@ -157,7 +161,7 @@ struct NewsView: View {
                 newsLink(featured) { FeaturedNewsCard(item: featured) }
             }
             SectionHeader(title: "Latest")
-            ForEach(latest) { item in newsLink(item) { NewsRow(item: item) } }
+            ForEach(latest) { item in rowLink(item) }
         }
     }
 
@@ -187,13 +191,16 @@ struct NewsView: View {
     private var categoryFilter: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Space.sm) {
-                filterChip("All", active: category == nil) { category = nil }
+                SelectableChip(title: "All", isSelected: category == nil) { category = nil }
                 ForEach(NewsCategory.allCases, id: \.self) { c in
-                    filterChip(c.rawValue, active: category == c) { category = (category == c ? nil : c) }
+                    SelectableChip(title: c.rawValue, isSelected: category == c) {
+                        category = (category == c ? nil : c)
+                    }
                 }
             }
             .padding(.vertical, 2)
         }
+        .sensoryFeedback(.selection, trigger: category)
     }
 
     @ViewBuilder private var resultsList: some View {
@@ -213,25 +220,23 @@ struct NewsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         } else {
-            ForEach(results) { item in newsLink(item) { NewsRow(item: item) } }
+            ForEach(results) { item in rowLink(item) }
         }
-    }
-
-    private func filterChip(_ title: String, active: Bool, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, Space.md)
-                .padding(.vertical, Space.sm)
-                .background(active ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                .foregroundStyle(active ? BrandColor.onAccent : BrandColor.textSecondary)
-                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: active ? 0 : 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private func newsLink<Label: View>(_ item: NewsItem, @ViewBuilder label: () -> Label) -> some View {
         NavigationLink { NewsDetailView(item: item) } label: { label() }.buttonStyle(PressableStyle())
+    }
+
+    /// A list-row link with the shared scroll-edge treatment (rows only — the featured card
+    /// stays static). Scale is ternaried out under Reduce Motion; the fade stays.
+    private func rowLink(_ item: NewsItem) -> some View {
+        newsLink(item) { NewsRow(item: item) }
+            .scrollTransition(axis: .vertical) { content, phase in
+                content
+                    .opacity(phase.isIdentity ? 1 : 0.8)
+                    .scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.98))
+            }
     }
 
     private func matches(_ item: NewsItem, _ query: String) -> Bool {

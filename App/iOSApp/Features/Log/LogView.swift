@@ -11,6 +11,7 @@ private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", co
 struct LogView: View {
     @Binding var selected: AppTab
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
@@ -113,6 +114,8 @@ struct LogView: View {
                                   systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
                         .disabled(!canSave || savedConfirmation)
                         .opacity(canSave ? 1 : 0.5)
+                        .scaleEffect(savedConfirmation ? 1.02 : 1)
+                        .animation(reduceMotion ? nil : Motion.emphasis, value: savedConfirmation)
 
                     if savedConfirmation {
                         Button {
@@ -175,18 +178,15 @@ struct LogView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Space.sm) {
                         ForEach(activeProtocols, id: \.id) { p in
-                            Button { selectedProtocolID = p.id } label: {
-                                Text(p.name)
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
-                                    .background(selectedProtocolID == p.id ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                                    .foregroundStyle(selectedProtocolID == p.id ? BrandColor.onAccent : BrandColor.textPrimary)
-                                    .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: selectedProtocolID == p.id ? 0 : 1))
+                            SelectableChip(title: p.name, isSelected: selectedProtocolID == p.id) {
+                                selectedProtocolID = p.id
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
+                // Condition form: the onAppear default-seed (nil → first id) is programmatic,
+                // not a tap — only buzz once a selection already existed.
+                .sensoryFeedback(.selection, trigger: selectedProtocolID) { old, _ in old != nil }
                 if let p = selectedProtocol {
                     Divider().overlay(BrandColor.stroke)
                     ForEach(Array(p.items.enumerated()), id: \.offset) { i, item in
@@ -304,11 +304,24 @@ struct LogView: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(region.label.uppercased()).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
                     HStack(spacing: Space.sm) {
-                        ForEach(sites(in: region)) { s in siteChip(s) }
+                        ForEach(sites(in: region)) { s in
+                            // Tapping the selected spot clears it — a log must never carry a
+                            // silently-wrong location.
+                            SelectableChip(title: s.shortName,
+                                           isSelected: site == s,
+                                           shape: .rounded(Radius.control),
+                                           fillWidth: true) {
+                                site = site == s ? nil : s
+                            }
+                            .accessibilityLabel(s.displayName)
+                        }
                     }
                 }
             }
         }
+        // Condition form: finishSave() clears the site programmatically right after the
+        // success haptic — buzz only on selections, never on clears.
+        .sensoryFeedback(.selection, trigger: site) { _, new in new != nil }
     }
 
     private var regionsOnFace: [InjectionSite.Region] {
@@ -317,24 +330,6 @@ struct LogView: View {
     }
     private func sites(in region: InjectionSite.Region) -> [InjectionSite] {
         InjectionSite.allCases.filter { $0.isBack == showBack && $0.region == region }
-    }
-
-    private func siteChip(_ s: InjectionSite) -> some View {
-        let selected = site == s
-        return Button { site = selected ? nil : s } label: {
-            Text(s.shortName)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .padding(.horizontal, Space.xs)
-                .background(selected ? BrandColor.accent : BrandColor.surfaceElevated,
-                            in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                .foregroundStyle(selected ? BrandColor.onAccent : BrandColor.textPrimary)
-                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                    .strokeBorder(BrandColor.stroke, lineWidth: selected ? 0 : 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(s.displayName)
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
     // MARK: Feel
@@ -366,7 +361,7 @@ struct LogView: View {
     }
 
     private func recentRow(_ entry: LoggedDose) -> some View {
-        Card {
+        Card(style: .flat) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)

@@ -217,21 +217,15 @@ struct ProtocolBuilderView: View {
     private var weekdayPicker: some View {
         HStack(spacing: 6) {
             ForEach(1...7, id: \.self) { d in
-                let on = weekdays.contains(d)
-                Button {
-                    if on { weekdays.remove(d) } else { weekdays.insert(d) }
-                } label: {
-                    Text(weekdaySymbol(d))
-                        .font(.caption.weight(.bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Space.sm)
-                        .background(on ? BrandColor.accent : BrandColor.surfaceElevated,
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .foregroundStyle(on ? BrandColor.onAccent : BrandColor.textSecondary)
+                SelectableChip(title: weekdaySymbol(d),
+                               isSelected: weekdays.contains(d),
+                               shape: .rounded(8),
+                               fillWidth: true) {
+                    if weekdays.contains(d) { weekdays.remove(d) } else { weekdays.insert(d) }
                 }
-                .buttonStyle(.plain)
             }
         }
+        .sensoryFeedback(.selection, trigger: weekdays)
     }
 
     private func weekdaySymbol(_ d: Int) -> String {
