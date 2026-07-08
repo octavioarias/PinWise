@@ -65,40 +65,65 @@ struct ProtocolsView: View {
             emptyState
         } else {
             SectionHeader(title: "Active protocols")
-            ForEach(active, id: \.id) { proto in
+            ForEach(Array(active.enumerated()), id: \.element.id) { i, proto in
+                let supplyInfo = supply(for: proto)
                 Button { editTarget = EditTarget(proto: proto) } label: {
-                    ProtocolRow(proto: proto)
+                    ProtocolCard(proto: proto, supply: supplyInfo)
                 }
                 .buttonStyle(PressableStyle())
                 .contextMenu {
                     Button { editTarget = EditTarget(proto: proto) } label: {
                         Label("Edit", systemImage: "pencil")
                     }
+                    Button { proto.isActive.toggle() } label: {
+                        Label(proto.isActive ? "Pause" : "Resume",
+                              systemImage: proto.isActive ? "pause.circle" : "play.circle")
+                    }
                     Button(role: .destructive) { context.delete(proto) } label: {
                         Label("Delete", systemImage: "trash")
                     }
                 }
+                .entrance(i)
             }
         }
 
         if !inactive.isEmpty {
             SectionHeader(title: "Inactive").padding(.top, Space.sm)
-            ForEach(inactive, id: \.id) { proto in
+            // Paused dimming lives INSIDE ProtocolCard — no call-site opacity here.
+            ForEach(Array(inactive.enumerated()), id: \.element.id) { i, proto in
+                let supplyInfo = supply(for: proto)
                 Button { editTarget = EditTarget(proto: proto) } label: {
-                    ProtocolRow(proto: proto)
+                    ProtocolCard(proto: proto, supply: supplyInfo)
                 }
                 .buttonStyle(PressableStyle())
-                .opacity(0.55)
                 .contextMenu {
                     Button { editTarget = EditTarget(proto: proto) } label: {
                         Label("Edit / reactivate", systemImage: "pencil")
+                    }
+                    Button { proto.isActive.toggle() } label: {
+                        Label(proto.isActive ? "Pause" : "Resume",
+                              systemImage: proto.isActive ? "pause.circle" : "play.circle")
                     }
                     Button(role: .destructive) { context.delete(proto) } label: {
                         Label("Delete", systemImage: "trash")
                     }
                 }
+                .entrance(active.count + i)
             }
         }
+    }
+
+    /// Resolve the vial backing a protocol's primary line into the card's supply readout.
+    /// Nil when the protocol isn't linked to a vial — the card then omits its supply row.
+    private func supply(for proto: SavedProtocol) -> ProtocolCard.SupplyInfo? {
+        guard let vialID = proto.primaryItem?.vialID,
+              let vial = vials.first(where: { $0.id == vialID }) else { return nil }
+        return ProtocolCard.SupplyInfo(
+            fraction: vial.fractionRemaining,
+            dosesLeft: max(0, vial.totalDoses - vial.dosesTaken),
+            total: vial.totalDoses,
+            needsReorder: vial.projection(schedule: proto.schedule).needsReorder
+        )
     }
 
     private var header: some View {
@@ -126,32 +151,6 @@ struct ProtocolsView: View {
                      : "Create one from a vial — pick one of your vials, set the dose per shot, and choose a schedule. You can still log ad-hoc doses without a protocol.")
                     .font(Typo.body)
                     .foregroundStyle(BrandColor.textSecondary)
-            }
-        }
-    }
-}
-
-struct ProtocolRow: View {
-    let proto: SavedProtocol
-
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.xs) {
-                HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
-                    Text(proto.name).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    if proto.isStack { TagChip(text: "Blend", color: BrandColor.accentText) }
-                    Spacer()
-                    Text(proto.effectiveDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
-                    Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
-                }
-                Text("\(proto.contentsSummary) · \(proto.cadenceText)")
-                    .font(.caption)
-                    .foregroundStyle(BrandColor.textSecondary)
-                if let next = proto.nextDose() {
-                    Text("Next: \(next, format: .dateTime.weekday(.abbreviated).month().day())")
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.success)
-                }
             }
         }
     }
