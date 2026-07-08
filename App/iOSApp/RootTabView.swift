@@ -50,7 +50,7 @@ struct RootTabView: View {
     }
 }
 
-/// Compact bottom bar — a solid, elevated dark surface flush to the screen's bottom edge.
+/// Compact bottom bar — brand-tinted ultra-thin glass flush to the screen's bottom edge.
 /// Five equal, center-aligned tabs; Log is a filled accent chip with a white glyph so it
 /// stays high-contrast on any background without changing size or leaving the row.
 private struct PinWiseTabBar: View {
@@ -80,11 +80,14 @@ private struct PinWiseTabBar: View {
                 Rectangle().fill(BrandColor.stroke).frame(height: 0.5)
             }
         }
-        // ...and the solid fill extends into the home-indicator area WITHOUT changing the bar's
+        // ...and the glass fill extends into the home-indicator area WITHOUT changing the bar's
         // layout height, so safeAreaInset reserves the correct space and scroll content stops
-        // exactly at the bar's top edge (never underneath it).
-        .background(BrandColor.surface, ignoresSafeAreaEdges: .bottom)
-        .shadow(color: .black.opacity(0.25), radius: 6, y: -1)
+        // exactly at the bar's top edge (never underneath it). Tint is declared BEFORE the
+        // material: later .background modifiers stack BEHIND earlier ones, so the brand tint
+        // renders in front of the blur while content still shimmers through underneath.
+        .background(BrandColor.background.opacity(0.55), ignoresSafeAreaEdges: .bottom)
+        .background(.ultraThinMaterial, ignoresSafeAreaEdges: .bottom)
+        .sensoryFeedback(.selection, trigger: selected)
     }
 
     @ViewBuilder
