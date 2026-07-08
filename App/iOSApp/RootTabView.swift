@@ -59,6 +59,10 @@ private struct PinWiseTabBar: View {
     // A fixed icon-row height keeps every tab (including the Log chip) on one baseline.
     private let iconRow: CGFloat = 30
 
+    // Haptic trigger for ACTUAL taps only. `selected` also changes programmatically
+    // (post-save auto-return Home, stackCard deep link) and those must not buzz.
+    @State private var tapCount = 0
+
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
             tab(.home, icon: "house.fill", label: "Home")
@@ -87,7 +91,7 @@ private struct PinWiseTabBar: View {
         // renders in front of the blur while content still shimmers through underneath.
         .background(BrandColor.background.opacity(0.55), ignoresSafeAreaEdges: .bottom)
         .background(.ultraThinMaterial, ignoresSafeAreaEdges: .bottom)
-        .sensoryFeedback(.selection, trigger: selected)
+        .sensoryFeedback(.selection, trigger: tapCount)
     }
 
     @ViewBuilder
@@ -95,6 +99,7 @@ private struct PinWiseTabBar: View {
         let isSelected = selected == item
         Button {
             selected = item
+            tapCount += 1
         } label: {
             VStack(spacing: 3) {
                 ZStack {
