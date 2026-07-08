@@ -13,6 +13,7 @@ struct HomeView: View {
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var auth = AuthManager.shared
     @State private var photos = ProfilePhotoStore.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var thisWeekCount: Int {
@@ -42,20 +43,24 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.xl) {
-                    header
+                    header.entrance(0)
                     // Dosing leads; the (optional) health snapshot sits below it.
                     if !activeProtocols.isEmpty {
-                        heroActive
-                        stackCard
-                        bentoGrid
+                        heroActive.entrance(1)
+                        stackCard.entrance(2)
+                        bentoGrid.entrance(3)
                     } else if !recent.isEmpty {
-                        heroActivity
-                        bentoGrid
+                        heroActivity.entrance(1)
+                        bentoGrid.entrance(3)
                     } else {
                         emptyState
                     }
+                    // Extra breathing room where "your dosing" ends and reference sections begin
+                    // (the root VStack already contributes Space.xl of the Space.xxxl gap).
                     HomeHealthCard()
-                    if !recent.isEmpty { recentSection }
+                        .padding(.top, Space.xxxl - Space.xl)
+                        .entrance(4)
+                    if !recent.isEmpty { recentSection.entrance(5) }
                 }
                 .padding(Space.lg)
             }
@@ -100,13 +105,10 @@ struct HomeView: View {
                 .accessibilityLabel("Assistant")
             }
 
-            if let greeting {
-                Text(greeting)
-                    .font(Typo.screenTitle)
-                    .foregroundStyle(BrandColor.textPrimary)
-                    .minimumScaleFactor(0.7).lineLimit(2)
-            } else {
-                Text("Track your protocol.\nKnow the science.")
+            VStack(alignment: .leading, spacing: Space.xs) {
+                // Date eyebrow — the instrument micro-register above the display greeting.
+                MicroLabel(Date.now.formatted(.dateTime.weekday(.wide).month().day()))
+                Text(greeting ?? "Track your protocol.\nKnow the science.")
                     .font(Typo.screenTitle)
                     .foregroundStyle(BrandColor.textPrimary)
                     .minimumScaleFactor(0.7).lineLimit(2)
@@ -126,37 +128,35 @@ struct HomeView: View {
     // MARK: Hero
 
     private var heroActive: some View {
-        HStack(spacing: Space.lg) {
-            AdherenceRing(fraction: adherenceFraction, size: 96)
-            VStack(alignment: .leading, spacing: Space.lg) {
-                heroStat("Next dose", nextDoseText)
-                heroStat("This week", "\(thisWeekCount) logged")
+        Card(style: .hero, padding: Space.xl) {
+            HStack(spacing: Space.lg) {
+                AdherenceRing(fraction: adherenceFraction, size: 112)
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    heroStat("Next pin", nextDoseText)
+                    heroStat("This week", "\(thisWeekCount) logged")
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
-        .padding(Space.xl)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(HeroSurface())
     }
 
     private var heroActivity: some View {
-        HStack(alignment: .center, spacing: Space.lg) {
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("\(thisWeekCount)").font(Typo.numberXL).foregroundStyle(BrandColor.textPrimary)
-                Text("Doses logged this week").font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+        Card(style: .hero, padding: Space.xl) {
+            HStack(alignment: .center, spacing: Space.lg) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text("\(thisWeekCount)").font(Typo.numberHero).foregroundStyle(BrandColor.textPrimary)
+                    MicroLabel("Doses logged this week")
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "syringe.fill").font(.system(size: 40)).foregroundStyle(BrandColor.accentText)
             }
-            Spacer(minLength: 0)
-            Image(systemName: "syringe.fill").font(.system(size: 40)).foregroundStyle(BrandColor.accentText)
         }
-        .padding(Space.xl)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(HeroSurface())
     }
 
     private func heroStat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased()).font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
-            Text(value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
+            MicroLabel(label)
+            Text(value).font(Typo.statValue).foregroundStyle(BrandColor.textPrimary)
         }
     }
 
@@ -175,15 +175,17 @@ struct HomeView: View {
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                     }
-                    ForEach(activeProtocols.prefix(4), id: \.id) { p in
-                        HStack(alignment: .firstTextBaseline) {
+                    ForEach(Array(activeProtocols.prefix(4).enumerated()), id: \.element.id) { i, p in
+                        if i > 0 { Divider().frame(height: 1).overlay(BrandColor.stroke.opacity(0.5)) }
+                        HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
+                            StatusDot(color: statusTint(p), glows: p.displayStatus == .dueToday)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(p.name).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
-                                Text("\(p.contentsSummary) · \(p.cadenceText)")
+                                (Text("\(p.cadenceText) · ") + nextPinShort(p))
                                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             }
                             Spacer()
-                            Text(p.effectiveDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                            Text(p.effectiveDose.displayString).font(Typo.statValue).foregroundStyle(BrandColor.accentText)
                         }
                     }
                     if activeProtocols.count > 4 {
@@ -193,6 +195,27 @@ struct HomeView: View {
             }
         }
         .buttonStyle(PressableStyle())
+    }
+
+    /// Status color for a protocol row — the dot's hue IS the information (success = active,
+    /// warning = due today, textSecondary = paused; per the design-system status language).
+    private func statusTint(_ p: SavedProtocol) -> Color {
+        switch p.displayStatus {
+        case .active: return BrandColor.success
+        case .dueToday: return BrandColor.warning
+        case .paused: return BrandColor.textSecondary
+        }
+    }
+
+    /// Compact next-pin fragment for stack rows: "Today" carries the warning tint (the one
+    /// urgency signal on the card), then "Tomorrow", then an abbreviated date; "—" as-needed.
+    private func nextPinShort(_ p: SavedProtocol) -> Text {
+        guard let next = p.nextDose() else { return Text("—") }
+        if Calendar.current.isDateInToday(next) {
+            return Text("Today").foregroundStyle(BrandColor.warning)
+        }
+        if Calendar.current.isDateInTomorrow(next) { return Text("Tomorrow") }
+        return Text(next, format: .dateTime.weekday(.abbreviated).month().day())
     }
 
     // MARK: Bento
@@ -213,7 +236,7 @@ struct HomeView: View {
                 Image(systemName: icon).font(.title3).foregroundStyle(BrandColor.accentText)
                 Spacer(minLength: Space.sm)
                 Text(value).font(Typo.numberLG).foregroundStyle(BrandColor.textPrimary)
-                Text(label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+                MicroLabel(label)
             }
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         }
@@ -225,7 +248,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: Space.md) {
             SectionHeader(title: "Recent")
             ForEach(Array(recent.prefix(4)), id: \.id) { entry in
-                Card {
+                Card(style: .flat) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
@@ -236,6 +259,12 @@ struct HomeView: View {
                         Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
                             .font(.caption).foregroundStyle(BrandColor.textSecondary)
                     }
+                }
+                // Rows soften as they leave the viewport; scale is dropped under Reduce Motion.
+                .scrollTransition(axis: .vertical) { content, phase in
+                    content
+                        .opacity(phase.isIdentity ? 1 : 0.8)
+                        .scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.98))
                 }
             }
         }
@@ -259,28 +288,6 @@ struct HomeView: View {
     private var nextDoseText: String {
         guard let d = nextDoseDate else { return "—" }
         return d.formatted(.dateTime.weekday(.abbreviated).month().day())
-    }
-}
-
-/// The hero surface — a deep-blue gradient wash + rim light so the focal card reads as elevated
-/// and distinct from the flat bento tiles below it.
-private struct HeroSurface: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(
-                LinearGradient(colors: [BrandColor.deepBlue.opacity(0.5), BrandColor.surface],
-                               startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(colors: [Color.white.opacity(0.16), BrandColor.stroke.opacity(0.6), BrandColor.stroke],
-                                       startPoint: .top, endPoint: .bottom),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: .black.opacity(0.25), radius: 18, y: 12)
     }
 }
 
