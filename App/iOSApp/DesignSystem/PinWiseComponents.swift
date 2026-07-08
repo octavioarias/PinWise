@@ -16,6 +16,7 @@ struct Card<Content: View>: View {
     private let style: Style
     private let padding: CGFloat
     private let content: Content
+    @Environment(\.colorScheme) private var scheme
 
     init(style: Style = .standard, padding: CGFloat = Space.lg, @ViewBuilder content: () -> Content) {
         self.style = style
@@ -30,8 +31,11 @@ struct Card<Content: View>: View {
     private var fillGradient: LinearGradient {
         switch style {
         case .hero:
+            // 0.65 only on dark, where the flat canvas would otherwise swallow the wash.
+            // Light stays at 0.5: the periwinkle ground at 0.65 drops the hero's
+            // textSecondary micro-labels below the 4.5:1 small-text floor the theme promises.
             return LinearGradient(
-                colors: [BrandColor.deepBlue.opacity(0.65), BrandColor.surface],
+                colors: [BrandColor.deepBlue.opacity(scheme == .dark ? 0.65 : 0.5), BrandColor.surface],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         case .standard:
