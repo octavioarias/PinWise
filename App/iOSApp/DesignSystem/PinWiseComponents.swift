@@ -4,35 +4,85 @@ import PeptideKit
 // Reusable building blocks. Depth comes from gradient fills, soft shadows, and an accent
 // glow on the primary CTA — not from flat solid rectangles.
 
-/// A rounded surface card with a subtle vertical gradient, hairline border, and soft shadow.
+/// A rounded surface card with a subtle gradient fill, hairline rim light, and elevation.
+/// Three registers: `.hero` for the single headline surface on a screen (deep-blue diagonal
+/// wash, brighter rim, deepest shadow), `.standard` (default) for regular content cards, and
+/// `.flat` for dense reference rows (uniform fill and hairline, no shadow).
 struct Card<Content: View>: View {
+    enum Style { case hero, standard, flat }
+
+    private let style: Style
+    private let padding: CGFloat
     private let content: Content
-    init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+    init(style: Style = .standard, padding: CGFloat = Space.lg, @ViewBuilder content: () -> Content) {
+        self.style = style
+        self.padding = padding
+        self.content = content()
+    }
+
+    // Every style resolves to the SAME LinearGradient type, so switching styles never changes
+    // the card's structural identity (flat = [surface, surface]; flat rim = 3× stroke).
+    private var fillGradient: LinearGradient {
+        switch style {
+        case .hero:
+            return LinearGradient(
+                colors: [BrandColor.deepBlue.opacity(0.5), BrandColor.surface],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        case .standard:
+            return LinearGradient(
+                colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.55)],
+                startPoint: .top, endPoint: .bottom
+            )
+        case .flat:
+            return LinearGradient(
+                colors: [BrandColor.surface, BrandColor.surface],
+                startPoint: .top, endPoint: .bottom
+            )
+        }
+    }
+
+    // Rim light: a faint highlight on the top edge fading into the hairline — reads as a
+    // raised, glassy surface rather than a flat rectangle. Flat cards get a plain hairline.
+    private var rimGradient: LinearGradient {
+        switch style {
+        case .hero:
+            return LinearGradient(
+                colors: [Color.white.opacity(0.16), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
+                startPoint: .top, endPoint: .bottom
+            )
+        case .standard:
+            return LinearGradient(
+                colors: [Color.white.opacity(0.14), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
+                startPoint: .top, endPoint: .bottom
+            )
+        case .flat:
+            return LinearGradient(
+                colors: [BrandColor.stroke, BrandColor.stroke, BrandColor.stroke],
+                startPoint: .top, endPoint: .bottom
+            )
+        }
+    }
+
+    private var elevationLevel: Elevation.Level {
+        switch style {
+        case .hero: return .hero
+        case .standard: return .card
+        case .flat: return .none
+        }
+    }
 
     var body: some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Space.lg)
-            .background(
-                LinearGradient(
-                    colors: [BrandColor.surface, BrandColor.surfaceElevated.opacity(0.55)],
-                    startPoint: .top, endPoint: .bottom
-                ),
-                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-            )
-            // Rim light: a faint highlight on the top edge fading into the hairline — reads as a
-            // raised, glassy surface rather than a flat rectangle.
+            .padding(padding)
+            .background(fillGradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.14), BrandColor.stroke.opacity(0.7), BrandColor.stroke],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
+                    .strokeBorder(rimGradient, lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.22), radius: 16, y: 10)
+            .elevation(elevationLevel)
     }
 }
 
@@ -83,6 +133,27 @@ struct SecondaryButton: View {
     }
 }
 
+/// The uppercase tracked micro-label of the instrument "data voice" (Whoop/Strava/Oura
+/// register). Use it wherever a small caps caption sits over or beside a stat value — the
+/// single `@ScaledMetric` adoption point, so the 11pt caps grow with Dynamic Type.
+struct MicroLabel: View {
+    private let text: String
+    private let color: Color
+    @ScaledMetric(relativeTo: .caption2) private var size: CGFloat = 11
+
+    init(_ text: String, color: Color = BrandColor.textSecondary) {
+        self.text = text
+        self.color = color
+    }
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: size, weight: .semibold))
+            .tracking(Typo.microTracking)
+            .foregroundStyle(color)
+    }
+}
+
 /// A labeled figure — calculator outputs and dashboard stats. Emphasis uses the lighter
 /// `accentText` blue so it stays legible on the dark ground (WCAG).
 struct StatTile: View {
@@ -92,10 +163,7 @@ struct StatTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            Text(label.uppercased())
-                .font(Typo.caption)
-                .tracking(0.8)
-                .foregroundStyle(BrandColor.textSecondary)
+            MicroLabel(label)
             Text(value)
                 .font(emphasized ? Typo.numberLG : Typo.numberMD)
                 .foregroundStyle(emphasized ? BrandColor.accentText : BrandColor.textPrimary)
@@ -156,6 +224,65 @@ struct TagChip: View {
         .padding(.vertical, Space.xs)
         .background(color.opacity(0.16), in: Capsule())
         .foregroundStyle(color)
+    }
+}
+
+/// An 8pt dot whose color IS the information (success = active, warning = due, textSecondary
+/// = paused). The same-color glow marks "live" states per the glow rules — pass
+/// `glows: false` for dormant ones.
+struct StatusDot: View {
+    let color: Color
+    var glows: Bool = true
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 8, height: 8)
+            .shadow(color: glows ? color.opacity(0.5) : .clear, radius: 6)
+    }
+}
+
+/// A selectable filter/option chip — the one recipe for chip groups (Log protocol + site
+/// pickers, builder weekdays, News filters). Compact visual box, full 44pt hit target.
+/// Haptics are deliberately NOT here: attach one `.sensoryFeedback(.selection, trigger:)`
+/// per chip GROUP at the container (per-chip would double-fire on reselection).
+struct SelectableChip: View {
+    enum ChipShape { case capsule, rounded(CGFloat) }
+
+    let title: String
+    let isSelected: Bool
+    var shape: ChipShape = .capsule
+    var fillWidth: Bool = false
+    let action: () -> Void
+
+    private var cornerRadius: CGFloat {
+        switch shape {
+        case .capsule: return Radius.pill
+        case .rounded(let radius): return radius
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? BrandColor.onAccent : BrandColor.textPrimary)
+                .padding(.horizontal, Space.md)
+                .padding(.vertical, Space.sm)
+                .frame(maxWidth: fillWidth ? .infinity : nil)
+                .background(
+                    isSelected ? BrandColor.accent : BrandColor.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .strokeBorder(isSelected ? Color.clear : BrandColor.stroke, lineWidth: 1)
+                )
+                .frame(minHeight: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -226,45 +353,91 @@ struct EvidenceBadge: View {
     }
 }
 
-/// An Apple-health-style circular adherence ring. Accessible (label + value), static (no
-/// motion) so it respects Reduce Motion by default.
+/// An Apple-health-style circular adherence ring with an Oura-style coupled reveal: one
+/// `Motion.reveal` drives the arc sweep and the rolling center count-up so they land
+/// together (~900ms). The hue IS the read — amber behind, blue on pace, green ahead — over
+/// an own-color track. Accessible (label + value); Reduce Motion skips the sweep entirely.
 struct AdherenceRing: View {
     let fraction: Double
     var size: CGFloat = 88
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var progress: Double = 0
     private var clamped: Double { max(0, min(1, fraction)) }
-    private var pct: Int { Int((clamped * 100).rounded()) }
+    private var pct: Int { Int((progress * 100).rounded()) }
+
+    // Value-driven single hue: the color carries the adherence verdict, not decoration.
+    private var ringColor: Color {
+        switch clamped {
+        case ..<0.5: return BrandColor.warning
+        case ..<0.8: return BrandColor.accentText
+        default: return BrandColor.success
+        }
+    }
 
     var body: some View {
         ZStack {
-            Circle().stroke(BrandColor.surfaceElevated, lineWidth: 9)
+            Circle().stroke(ringColor.opacity(0.22), lineWidth: 10)
             Circle()
                 .trim(from: 0, to: max(0.0001, progress))
-                .stroke(
-                    AngularGradient(colors: [BrandColor.accentText, BrandColor.success, BrandColor.accentText], center: .center),
-                    style: StrokeStyle(lineWidth: 9, lineCap: .round)
-                )
+                .stroke(ringColor, style: StrokeStyle(lineWidth: 10, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) {
                 Text("\(pct)%")
                     .font(.system(size: 20, weight: .black, design: .rounded)).monospacedDigit()
+                    .contentTransition(.numericText(value: progress))
                     .foregroundStyle(BrandColor.textPrimary)
-                Text("ON TRACK")
+                // Domain label, not a verdict — the ring hue carries the verdict (amber
+                // behind / blue on pace / green ahead), so a static "ON TRACK" would lie.
+                Text("ADHERENCE")
                     .font(.system(size: 8.5, weight: .semibold)).tracking(0.5)
                     .foregroundStyle(BrandColor.textSecondary)
             }
         }
         .frame(width: size, height: size)
-        // Explicit withAnimation drives ONLY the trim — a value-scoped .animation here also
-        // animated the ring's initial layout position, making it fly in from offscreen.
+        // Explicit withAnimation drives ONLY the trim + count-up — a value-scoped .animation
+        // here also animated the ring's initial layout position, making it fly in from
+        // offscreen. Under Reduce Motion the value is set directly, no sweep.
         .onAppear {
-            progress = 0
-            withAnimation(.easeOut(duration: 0.9)) { progress = clamped }
+            if reduceMotion {
+                progress = clamped
+            } else {
+                progress = 0
+                withAnimation(Motion.reveal) { progress = clamped }
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("On track")
+        .accessibilityLabel("Adherence")
         .accessibilityValue("\(pct) percent of scheduled doses taken over the last 14 days")
+    }
+}
+
+/// One-shot staggered entrance for list/section arrivals: fade + 12pt rise, delayed by
+/// `index` × `Motion.stagger`. Apply from a ForEach (or ordered siblings) as `.entrance(i)`.
+/// Reduce Motion collapses it to a quick opacity-only fade with no offset or stagger.
+struct Entrance: ViewModifier {
+    let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 12)
+            .onAppear {
+                guard !shown else { return }
+                let anim = reduceMotion
+                    ? Animation.easeOut(duration: 0.2)
+                    : Motion.entrance.delay(Double(index) * Motion.stagger)
+                withAnimation(anim) { shown = true }
+            }
+    }
+}
+
+extension View {
+    /// Staggered entrance reveal — `index` is the view's position in its arriving group.
+    func entrance(_ index: Int) -> some View {
+        modifier(Entrance(index: index))
     }
 }
 

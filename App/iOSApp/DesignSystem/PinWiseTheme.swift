@@ -153,6 +153,13 @@ enum Typo {
     static let numberXL = Font.system(size: 40, weight: .black, design: .rounded).monospacedDigit()
     static let numberLG = Font.system(size: 30, weight: .black, design: .rounded).monospacedDigit()
     static let numberMD = Font.system(size: 22, weight: .bold, design: .rounded).monospacedDigit()
+    // Instrument data voice — uppercase micro-labels over tabular values (Whoop/Strava/Oura).
+    static let microLabel = Font.system(size: 11, weight: .semibold)
+    static let microTracking: CGFloat = 1.1          // pair with .tracking() at call sites
+    /// 3-up stat-grid value register (Strava: 11pt caps label over 17/700 tabular value).
+    static let statValue = Font.system(size: 17, weight: .bold, design: .rounded).monospacedDigit()
+    /// "The number is the headline" hero figure (Home activity hero).
+    static let numberHero = Font.system(size: 48, weight: .black, design: .rounded).monospacedDigit()
 }
 
 enum Space {
@@ -162,12 +169,61 @@ enum Space {
     static let lg: CGFloat = 16
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 48   // hero breathing room — between Home's hero block and reference sections
 }
 
 enum Radius {
     static let card: CGFloat = 18
     static let control: CGFloat = 12
     static let pill: CGFloat = 999
+}
+
+/// Named motion — one vocabulary for the whole app. Every USE must be gated on
+/// `@Environment(\.accessibilityReduceMotion)` (fall back to opacity-only or nil).
+enum Motion {
+    static let press = Animation.spring(response: 0.3, dampingFraction: 0.7)      // existing PressableStyle value
+    static let emphasis = Animation.spring(response: 0.45, dampingFraction: 0.8)  // card/sheet arrivals
+    static let reveal = Animation.easeOut(duration: 0.9)                          // ring sweep + count-up (Oura ~900ms)
+    static let entrance = Animation.easeOut(duration: 0.35)                       // staggered list entrances
+    static let drawer = Animation.spring(response: 0.38, dampingFraction: 0.9)    // existing drawer value
+    static let stagger: Double = 0.04                                             // 40ms/row (Oura)
+}
+
+// Glow rules: a colored glow means "live/active" — never gray, never decorative. The only
+// sanctioned glows are the PrimaryButton accent, the tab bar's Log chip, the ambient EdgeGlow,
+// and StatusDot (its own status color, radius 6). Nothing else glows.
+
+/// Scheme-aware drop shadow — the design system's only shadow recipe. Dark mode wants
+/// large/soft/very-dark shadows (the Spotify rule); light mode wants small/faint ones (the
+/// Apple Music rule). Never a mid-gray shadow on the near-black canvas. `.hero` marks the
+/// one headline surface on a screen, `.card` regular content cards, `.none` flat rows.
+struct Elevation: ViewModifier {
+    enum Level { case hero, card, none }
+    let level: Level
+    @Environment(\.colorScheme) private var scheme
+
+    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · card 0.35/20/12;
+    // light: hero 0.10/20/10 · card 0.08/16/8; none draws no shadow.
+    private var values: (opacity: Double, radius: CGFloat, y: CGFloat) {
+        switch (level, scheme == .dark) {
+        case (.hero, true): return (0.50, 28, 14)
+        case (.card, true): return (0.35, 20, 12)
+        case (.hero, false): return (0.10, 20, 10)
+        case (.card, false): return (0.08, 16, 8)
+        case (.none, _): return (0, 0, 0)
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content.shadow(color: .black.opacity(values.opacity), radius: values.radius, y: values.y)
+    }
+}
+
+extension View {
+    /// Applies the design-system shadow for an elevation level (scheme-aware; `.none` is flat).
+    func elevation(_ level: Elevation.Level) -> some View {
+        modifier(Elevation(level: level))
+    }
 }
 
 /// Ambient blue mesh behind hero areas (iOS 18). Native — no image assets. Scheme-aware:
@@ -301,6 +357,6 @@ struct PressableStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(Motion.press, value: configuration.isPressed)
     }
 }
