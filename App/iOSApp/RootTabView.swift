@@ -56,6 +56,10 @@ private struct PinWiseTabBar: View {
 
     // A fixed icon-row height keeps every tab (including the Log chip) on one baseline.
     private let iconRow: CGFloat = 30
+    // The Log disc's diameter. It overflows the 30pt icon row and is offset upward by
+    // half the difference, so the disc's top sits (chipSize - iconRow) above the column —
+    // the crest offset AND the hit-region extension both derive from these two constants.
+    private let chipSize: CGFloat = 44
 
     // Haptic trigger for ACTUAL taps only. `selected` also changes programmatically
     // (post-save auto-return Home, stackCard deep link) and those must not buzz.
@@ -99,7 +103,7 @@ private struct PinWiseTabBar: View {
                     if prominent {
                         Circle()
                             .fill(BrandColor.accent)
-                            .frame(width: 44, height: 44)
+                            .frame(width: chipSize, height: chipSize)
                             .shadow(color: BrandColor.accent.opacity(0.4), radius: 12, y: 4)
                         Image(systemName: "plus")
                             .font(.system(size: 20, weight: .bold))
@@ -114,17 +118,32 @@ private struct PinWiseTabBar: View {
                 // Offset AFTER the frame: the disc keeps its 30pt layout slot (bar metrics
                 // and the 90pt tabBarClearance contract untouched) but visually crests
                 // above the hairline together with its glyph.
-                .offset(y: prominent ? -7 : 0)
+                .offset(y: prominent ? -(chipSize - iconRow) / 2 : 0)
                 Text(label)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(isSelected ? BrandColor.textPrimary : BrandColor.textSecondary)
             }
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            // The hit region must follow the drawn disc, not the layout slot: the crested
+            // chip's top (chipSize - iconRow) sits above the column rect, and a plain
+            // Rectangle would leave that upper arc of the primary CTA silently untappable.
+            .contentShape(TabHitShape(topExtension: prominent ? chipSize - iconRow : 0))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item == .log ? "Log a dose" : label)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// A tab column's hit region: the column rect, optionally extended upward so the crested
+/// Log chip's full disc is tappable. `topExtension: 0` is exactly a plain Rectangle, which
+/// keeps one shape type across all five tabs (no view branching in the Button label).
+private struct TabHitShape: Shape {
+    var topExtension: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(x: rect.minX, y: rect.minY - topExtension,
+                    width: rect.width, height: rect.height + topExtension))
     }
 }
 
