@@ -197,8 +197,10 @@ struct SectionHeader: View {
     }
 }
 
-/// Small tinted chip for tags / categories / savings. Colors passed in should be the
-/// lighter/brighter hues (mint, accentText, amber, danger) so text stays legible on dark.
+/// Small solid chip for tags / categories / savings — a premium badge, no translucency.
+/// Pass the semantic tokens (success/warning/danger/accentText/textSecondary): they are
+/// scheme-adaptive fills (bright on dark, deep on light), and the `BrandColor.onBadge` ink
+/// resolves scheme-correct against them automatically.
 struct TagChip: View {
     let text: String
     var color: Color = BrandColor.mint
@@ -212,8 +214,26 @@ struct TagChip: View {
         }
         .padding(.horizontal, Space.sm)
         .padding(.vertical, Space.xs)
-        .background(color.opacity(0.16), in: Capsule())
-        .foregroundStyle(color)
+        .background(color, in: Capsule())
+        .foregroundStyle(BrandColor.onBadge)
+    }
+}
+
+/// Frosted category badge for imagery (the Fitness+ register) — the ONE sanctioned on-image
+/// badge, for photographs only, where real pixels pass beneath the blur. The black 0.4 tint
+/// in front of the material keeps the white text legible over arbitrary photos in both
+/// schemes. Never use on flat surfaces: material over a solid fill is fake glass.
+struct FrostedTagChip: View {
+    let text: String
+    var body: some View {
+        Text(text.uppercased())
+            .font(.caption2.weight(.bold))
+            .tracking(0.5)
+            .padding(.horizontal, Space.sm)
+            .padding(.vertical, Space.xs)
+            .foregroundStyle(.white)
+            .background(Color.black.opacity(0.4), in: Capsule())
+            .background(.ultraThinMaterial, in: Capsule())
     }
 }
 
@@ -322,7 +342,7 @@ struct AdvisoryRow: View {
     }
 }
 
-/// Evidence-tier badge (A/B/C/D). Tier B uses the lighter accent blue for legibility.
+/// Evidence-tier badge (A/B/C/D) — solid semantic fill per tier, `BrandColor.onBadge` ink.
 struct EvidenceBadge: View {
     let tier: EvidenceTier
     private var color: Color {
@@ -338,8 +358,8 @@ struct EvidenceBadge: View {
             .font(.caption2.weight(.bold))
             .padding(.horizontal, Space.sm)
             .padding(.vertical, Space.xs)
-            .background(color.opacity(0.18), in: Capsule())
-            .foregroundStyle(color)
+            .background(color, in: Capsule())
+            .foregroundStyle(BrandColor.onBadge)
     }
 }
 
