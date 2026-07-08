@@ -220,9 +220,10 @@ struct TagChip: View {
 }
 
 /// Frosted category badge for imagery (the Fitness+ register) — the ONE sanctioned on-image
-/// badge, for photographs only, where real pixels pass beneath the blur. The black 0.4 tint
-/// in front of the material keeps the white text legible over arbitrary photos in both
-/// schemes. Never use on flat surfaces: material over a solid fill is fake glass.
+/// badge, for photographs only, where real pixels pass beneath the blur. The black 0.6 tint
+/// in front of the material bounds white text at >=4.5:1 even over a pure-white photo region
+/// through the LIGHT-mode material (0.4 measured ~2.9-3.2:1 there — the light plate passes
+/// white straight through). Never use on flat surfaces: material over a solid fill is fake glass.
 struct FrostedTagChip: View {
     let text: String
     var body: some View {
@@ -232,7 +233,7 @@ struct FrostedTagChip: View {
             .padding(.horizontal, Space.sm)
             .padding(.vertical, Space.xs)
             .foregroundStyle(.white)
-            .background(Color.black.opacity(0.4), in: Capsule())
+            .background(Color.black.opacity(0.6), in: Capsule())
             .background(.ultraThinMaterial, in: Capsule())
     }
 }

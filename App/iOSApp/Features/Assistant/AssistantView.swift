@@ -10,6 +10,7 @@ import FoundationModels
 /// guardrails: informational only, never dosing/medical advice, jailbreak-resistant.
 struct AssistantDrawer: View {
     @Binding var isOpen: Bool
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         GeometryReader { geo in
@@ -27,9 +28,11 @@ struct AssistantDrawer: View {
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
                         // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
-                        // the blur samples. The 0.7 tint keeps long-form drawer text legible;
-                        // raise to 0.8 if QA disagrees. Tint renders in front of the blur.
-                        .background(BrandColor.background.opacity(0.7))
+                        // the blur samples. Scheme-split tint: 0.7 on dark is bounded (scrim +
+                        // dark material cap the backdrop), but LIGHT mode needs 0.92 — there the
+                        // black scrim works AGAINST a bright panel and no ultraThin tint below
+                        // ~0.9 holds textSecondary at 4.5:1 over dark content behind the drawer.
+                        .background(BrandColor.background.opacity(scheme == .dark ? 0.7 : 0.92))
                         .background(.ultraThinMaterial)
                         .overlay(alignment: .leading) { Rectangle().fill(BrandColor.stroke).frame(width: 0.5) }
                         .ignoresSafeArea()

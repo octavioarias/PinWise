@@ -10,6 +10,7 @@ struct SideMenuDrawer: View {
     @State private var photos = ProfilePhotoStore.shared
     @State private var showSignOut = false
     @AppStorage("completedIntroTour") private var completedIntroTour = false
+    @Environment(\.colorScheme) private var scheme
 
     private var headerName: String { auth.displayName ?? "" }
 
@@ -31,9 +32,11 @@ struct SideMenuDrawer: View {
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
                         // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
-                        // the blur samples. The 0.7 tint keeps long-form drawer text legible;
-                        // raise to 0.8 if QA disagrees. Tint renders in front of the blur.
-                        .background(BrandColor.background.opacity(0.7))
+                        // the blur samples. Scheme-split tint: 0.7 on dark is bounded (scrim +
+                        // dark material cap the backdrop), but LIGHT mode needs 0.92 — there the
+                        // black scrim works AGAINST a bright panel and no ultraThin tint below
+                        // ~0.9 holds textSecondary at 4.5:1 over dark content behind the drawer.
+                        .background(BrandColor.background.opacity(scheme == .dark ? 0.7 : 0.92))
                         .background(.ultraThinMaterial)
                         .overlay(alignment: .trailing) {
                             Rectangle().fill(BrandColor.stroke).frame(width: 0.5)
