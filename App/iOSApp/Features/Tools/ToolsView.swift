@@ -202,6 +202,9 @@ struct BlendCalculatorView: View {
     @State private var solventText = "2"
     @State private var unitsText = "20"
     @State private var syringe: SyringeScale = .u100
+    /// When the blend was seeded from one of the user's vials, that vial's chosen unit — so the
+    /// per-shot amounts read in the same mg/mcg the vial does. nil for a generic preset (auto).
+    @State private var vialUnit: MassUnit?
 
     /// The user's own multi-compound vials — a real blend beats any preset.
     private var blendVials: [StoredVial] { vials.filter { $0.apis.count > 1 } }
@@ -215,6 +218,7 @@ struct BlendCalculatorView: View {
     private func applyVial(_ v: StoredVial) {
         blend = Blend(name: v.displayName,
                       components: v.apis.map { BlendComponent(name: $0.name, massPerVial: Mass(micrograms: $0.massMicrograms)) })
+        vialUnit = v.doseUnit
         if let s = v.solventVolumeMilliliters, s > 0 {
             solventText = s == s.rounded() ? String(Int(s)) : String(format: "%.2f", s)
         }
@@ -245,7 +249,7 @@ struct BlendCalculatorView: View {
                         }
                         FieldRow("Which blend?", hint: blendVials.isEmpty ? "Pick a common blend, or the closest match." : "From your vials above, or a common preset.") {
                             Menu {
-                                ForEach(blendOptions, id: \.id) { b in Button(b.name) { blend = b } }
+                                ForEach(blendOptions, id: \.id) { b in Button(b.name) { blend = b; vialUnit = nil } }
                             } label: {
                                 HStack(spacing: Space.xs) {
                                     Text(blend.name).lineLimit(1).truncationMode(.tail)
@@ -259,7 +263,7 @@ struct BlendCalculatorView: View {
                             HStack {
                                 Text(c.name).font(.caption).foregroundStyle(BrandColor.textSecondary)
                                 Spacer()
-                                Text(c.massPerVial.displayString).font(.caption).foregroundStyle(BrandColor.textSecondary)
+                                Text(vialUnit.map { c.massPerVial.displayString(in: $0) } ?? c.massPerVial.displayString).font(.caption).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
@@ -311,7 +315,7 @@ struct BlendCalculatorView: View {
                                 HStack {
                                     Text(comp.name).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                                     Spacer()
-                                    Text(comp.deliveredDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                                    Text(vialUnit.map { comp.deliveredDose.displayString(in: $0) } ?? comp.deliveredDose.displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
                                 }
                             }
                         }

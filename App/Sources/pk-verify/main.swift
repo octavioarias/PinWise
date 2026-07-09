@@ -82,6 +82,19 @@ check(Mass.mcg(250).displayString == "250 mcg", "displayString 250 mcg")
 check(Mass.mg(2.5).displayString == "2.50 mg", "displayString 2.50 mg")
 check(Mass.mcg(500) < Mass.mg(1), "500 mcg < 1 mg")
 
+// MARK: - Fixed-unit display (the user's chosen mg/mcg must hold regardless of magnitude)
+section("Fixed-unit display")
+// A dose entered in mg stays mg even below 1 mg (auto would flip it to "500 mcg").
+check(Mass.mg(0.5).displayString(in: .milligram) == "0.5 mg", "0.5 mg in mg ⇒ 0.5 mg (not 500 mcg)")
+check(Mass.mg(0.5).displayString(in: .microgram) == "500 mcg", "0.5 mg in mcg ⇒ 500 mcg")
+// A dose entered in mcg stays mcg even at/above 1000 mcg (auto would flip it to "1.5 mg").
+check(Mass.mcg(1500).displayString(in: .microgram) == "1500 mcg", "1500 mcg in mcg ⇒ 1500 mcg (not 1.5 mg)")
+check(Mass.mcg(1500).displayString(in: .milligram) == "1.5 mg", "1500 mcg in mg ⇒ 1.5 mg")
+// Trailing zeros trimmed; whole numbers show no decimal.
+check(Mass.mg(2.5).displayString(in: .milligram) == "2.5 mg", "2.5 mg in mg ⇒ 2.5 mg (trimmed)")
+check(Mass.mg(2).displayString(in: .milligram) == "2 mg", "2 mg in mg ⇒ 2 mg (no decimals)")
+check(Mass.mcg(250).displayString(in: .microgram) == "250 mcg", "250 mcg in mcg ⇒ 250 mcg")
+
 // MARK: - Inventory
 section("Inventory estimator")
 do {

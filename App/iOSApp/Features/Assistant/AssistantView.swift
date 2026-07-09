@@ -166,7 +166,9 @@ struct AssistantView: View {
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {
-                let s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
+                let s = "- \(p.name): " + p.items.enumerated().map { idx, item in
+                    "\(item.compoundName) \(Mass(micrograms: item.doseMicrograms).displayString(in: p.doseUnit(forItemAt: idx, vials: vials)))"
+                }.joined(separator: " + ") + " · \(p.cadenceText)"
                 lines.append(s)
             }
         }
@@ -179,7 +181,8 @@ struct AssistantView: View {
         if !recent.isEmpty {
             lines.append("RECENT DOSES (\(thisWeek) this week):")
             for d in recent.prefix(8) {
-                lines.append("- \(day(d.timestamp)): \(d.compoundName) \(d.dose.displayString)" + (d.site.map { " @ \($0.displayName)" } ?? ""))
+                let unit = vials.first { $0.id == d.vialID }?.doseUnit ?? MassUnit.auto(forMicrograms: d.dose.micrograms)
+                lines.append("- \(day(d.timestamp)): \(d.compoundName) \(d.dose.displayString(in: unit))" + (d.site.map { " @ \($0.displayName)" } ?? ""))
             }
             if let m = mostUsedSite { lines.append("Most-used site: \(m.displayName).") }
         }
