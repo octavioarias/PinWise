@@ -81,10 +81,10 @@ struct ProtocolCard: View {
                     StatusDot(color: statusColor, glows: status != .paused)
                     MicroLabel(statusLabel, color: statusColor)
                     Spacer()
-                    // A single blend vial (one shot, several compounds) = "Blend"; several vials
-                    // (several injections) = "Stack". Previously both read "Blend", inverting it.
-                    if isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
-                    else if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
+                    // Several vials (several injections) = "Stack" — even if one of them is itself a
+                    // blend. A single vial that is a blend (one shot, several compounds) = "Blend".
+                    if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
+                    else if isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(BrandColor.textSecondary)
@@ -121,7 +121,7 @@ struct ProtocolCard: View {
             .opacity(status == .paused ? 0.55 : 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(isBlend ? "\(proto.name), blend" : proto.isStack ? "\(proto.name), stack" : proto.name)
+        .accessibilityLabel(proto.isStack ? "\(proto.name), stack" : isBlend ? "\(proto.name), blend" : proto.name)
         .accessibilityValue(accessibilityValueText)
     }
 }

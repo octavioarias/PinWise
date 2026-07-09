@@ -166,10 +166,20 @@ struct AssistantView: View {
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {
-                let s = "- \(p.name): " + p.items.enumerated().map { idx, item in
-                    "\(item.compoundName) \(Mass(micrograms: item.doseMicrograms).displayString(in: p.doseUnit(forItemAt: idx, vials: vials)))"
-                }.joined(separator: " + ") + " · \(p.cadenceText)"
-                lines.append(s)
+                let parts = p.items.enumerated().map { idx, item -> String in
+                    let unit = p.doseUnit(forItemAt: idx, vials: vials)
+                    let dose = Mass(micrograms: item.doseMicrograms)
+                    // A blend vial is one injection delivering every compound at a fixed mass ratio —
+                    // give the assistant the full breakdown, not just the primary.
+                    if let v = vials.first(where: { $0.id == item.vialID }), v.isBlend,
+                       let primary = v.primaryAPI, primary.massMicrograms > 0 {
+                        let deliver = v.apis.map { "\($0.name) \(Mass(micrograms: $0.massMicrograms / primary.massMicrograms * dose.micrograms).displayString(in: unit))" }
+                            .joined(separator: " + ")
+                        return "\(v.displayName) (blend, one shot: \(deliver))"
+                    }
+                    return "\(item.compoundName) \(dose.displayString(in: unit))"
+                }
+                lines.append("- \(p.name): " + parts.joined(separator: " + ") + " · \(p.cadenceText)")
             }
         }
         if !vials.isEmpty {
