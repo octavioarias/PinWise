@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Observation
 import PeptideKit
 
@@ -9,7 +10,9 @@ struct DoseDisplay: Equatable {
     let units: Double
     let volumeMilliliters: Double
     let concentrationMcgPerMl: Double
-    let dosesPerVial: Int?
+    /// Exact (possibly fractional) doses the vial holds — nil in premixed mode when no
+    /// vial size was given.
+    let exactDosesPerVial: Double?
 }
 
 /// Observable state for the dose calculator. Two modes:
@@ -39,27 +42,27 @@ final class DoseCalculatorViewModel {
     func recalculate() {
         errorMessage = nil
         result = nil
-        guard let dose = Double(doseText) else { errorMessage = "Enter a dose."; return }
+        guard let dose = doseText.decimalValue else { errorMessage = "Enter a dose."; return }
         let desired = Mass(dose, doseUnit)
         do {
             switch mode {
             case .reconstitute:
-                guard let vialMass = Double(vialMassText), let solvent = Double(solventText) else {
+                guard let vialMass = vialMassText.decimalValue, let solvent = solventText.decimalValue else {
                     errorMessage = "Enter the vial amount and water volume."; return
                 }
                 let r = try ReconstitutionCalculator.calculate(
                     ReconstitutionInput(vialMass: Mass(vialMass, vialMassUnit),
                                         solventVolumeMilliliters: solvent, desiredDose: desired, syringe: syringe))
                 result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
-                                     concentrationMcgPerMl: r.concentrationMcgPerMl, dosesPerVial: r.dosesPerVial)
+                                     concentrationMcgPerMl: r.concentrationMcgPerMl, exactDosesPerVial: r.exactDosesPerVial)
             case .premixed:
-                guard let mgPerMl = Double(concentrationText) else {
+                guard let mgPerMl = concentrationText.decimalValue else {
                     errorMessage = "Enter the concentration (mg/mL)."; return
                 }
                 let r = try DosingCalculator.draw(dose: desired, concentration: .mgPerMl(mgPerMl),
-                                                  totalVolumeMilliliters: Double(totalVolumeText), syringe: syringe)
+                                                  totalVolumeMilliliters: totalVolumeText.decimalValue, syringe: syringe)
                 result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
-                                     concentrationMcgPerMl: r.concentrationMcgPerMl, dosesPerVial: r.dosesPerVial)
+                                     concentrationMcgPerMl: r.concentrationMcgPerMl, exactDosesPerVial: r.exactDosesPerVial)
             }
         } catch let e as ReconstitutionError {
             errorMessage = Self.message(for: e)
@@ -89,6 +92,11 @@ final class DoseCalculatorViewModel {
 
 struct ReconstitutionCalculatorView: View {
     @State private var model = DoseCalculatorViewModel()
+    @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+
+    /// Single-compound vials only — this calculator reasons about one peptide; multi-API
+    /// vials belong to the Blend tool.
+    private var singleCompoundVials: [StoredVial] { vials.filter { $0.apis.count == 1 } }
 
     var body: some View {
         ScrollView {
@@ -102,13 +110,29 @@ struct ReconstitutionCalculatorView: View {
                 }
                 .pickerStyle(.segmented)
 
+                // Live readout ABOVE the inputs: the calculator recomputes on every
+                // keystroke, and the top of the screen is the one region the decimal pad
+                // can never cover. Always present — an em-dash hero when there's nothing
+                // to show — so the form never bounces under the user's finger.
+                DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe)
+
                 Card {
                     VStack(alignment: .leading, spacing: Space.lg) {
+                        if !singleCompoundVials.isEmpty {
+                            Menu {
+                                ForEach(singleCompoundVials) { v in Button(v.displayName) { applyVial(v) } }
+                            } label: {
+                                Label("Use one of your vials", systemImage: "cross.vial")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(BrandColor.accentText)
+                                    .lineLimit(1)
+                            }
+                        }
                         if model.mode == .reconstitute {
                             FieldRow("How much peptide is in the vial?", hint: "The amount printed on the vial label.") {
                                 HStack {
                                     TextField("e.g. 5", text: $model.vialMassText).keyboardType(.decimalPad).pinwiseField()
-                                    unitPicker($model.vialMassUnit)
+                                    MassUnitPicker(selection: $model.vialMassUnit)
                                 }
                             }
                             FieldRow("How much water did you add?", hint: "The bacteriostatic or sterile water you mixed in.") {
@@ -134,18 +158,25 @@ struct ReconstitutionCalculatorView: View {
                         FieldRow("What dose do you want?", hint: "The dose you're aiming for this injection.") {
                             HStack {
                                 TextField("e.g. 2.5", text: $model.doseText).keyboardType(.decimalPad).pinwiseField()
-                                unitPicker($model.doseUnit)
+                                MassUnitPicker(selection: $model.doseUnit)
                             }
                         }
                     }
                 }
 
-                advancedCard
-                if let r = model.result { resultCard(r) }
-                if let error = model.errorMessage { errorCard(error) }
+                SyringeAdvancedCard(selection: $model.syringe)
+
+                // Dilution education, demoted from the old result card to a screen footnote.
+                Text("Doses depend on the peptide amount and your dose — not the water. More water just dilutes it, so you draw a larger volume for the same dose.")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
             }
             .padding(Space.lg)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .sensoryFeedback(.selection, trigger: model.mode)
+        .sensoryFeedback(.selection, trigger: model.vialMassUnit)
+        .sensoryFeedback(.selection, trigger: model.doseUnit)
+        .sensoryFeedback(.selection, trigger: model.syringe)
         .heroScreen()
         .navigationTitle("How much to draw")
         .navigationBarTitleDisplayMode(.inline)
@@ -161,65 +192,95 @@ struct ReconstitutionCalculatorView: View {
         .onChange(of: model.syringe) { _, _ in model.recalculate() }
     }
 
-    private var advancedCard: some View {
-        Card {
-            DisclosureGroup {
-                Picker("Syringe type", selection: $model.syringe) {
-                    ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+    /// Prefills the form from a stored vial. Premixed vials with a recoverable label
+    /// strength land in premixed mode; everything else (including legacy premixed rows
+    /// with no solvent volume) prefills reconstitute mode. The existing `.onChange`
+    /// wiring recalculates automatically.
+    private func applyVial(_ v: StoredVial) {
+        if v.isPremixed, let mgPerMl = v.primaryConcentrationMgPerMl {
+            model.mode = .premixed
+            model.concentrationText = Self.numberText(mgPerMl)
+            model.totalVolumeText = Self.numberText(v.solventVolumeMilliliters)
+        } else {
+            model.mode = .reconstitute
+            if let api = v.primaryAPI {
+                if api.massMicrograms >= 1_000 {
+                    model.vialMassUnit = .milligram
+                    model.vialMassText = Self.numberText(api.massMicrograms / 1_000)
+                } else {
+                    model.vialMassUnit = .microgram
+                    model.vialMassText = Self.numberText(api.massMicrograms)
                 }
-                .pickerStyle(.segmented)
-                Text("Most insulin syringes are U-100. Only change this if yours says otherwise.")
-                    .font(.caption).foregroundStyle(BrandColor.textSecondary).padding(.top, Space.xs)
-            } label: {
-                Text("Advanced — syringe type").font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
-            .tint(BrandColor.accentText)
+            if v.solventVolumeMilliliters > 0 {
+                model.solventText = Self.numberText(v.solventVolumeMilliliters)
+            }
         }
     }
 
-    private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
-        Picker("", selection: binding) {
-            ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+    /// Int-if-whole else two decimals — mirrors Blend's `applyVial` formatting.
+    private static func numberText(_ v: Double) -> String {
+        v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
+    }
+}
+
+/// The always-present live readout: eyebrow → hero units figure → syringe gauge → a 3-up
+/// stat strip (or the error message in the strip's slot, so the card never changes shape
+/// per keystroke). Renders an em-dash hero and a 0-fill gauge when there's no result yet.
+private struct DoseHeroCard: View {
+    let result: DoseDisplay?
+    let errorMessage: String?
+    let syringe: SyringeScale
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.sm) {
+                MicroLabel("Draw to")
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                    Text(result.map { fmt($0.units) } ?? "—")
+                        .font(Typo.numberXL)
+                        .foregroundStyle(BrandColor.accentText)
+                        .contentTransition(.numericText(value: result?.units ?? 0))
+                        // Short per-keystroke roll — an appearance reveal would lag live edits.
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: result?.units)
+                    Text("units")
+                        .font(Typo.caption)
+                        .foregroundStyle(BrandColor.textSecondary)
+                }
+
+                SyringeGauge(units: result?.units ?? 0, syringe: syringe)
+
+                if let errorMessage {
+                    HStack(alignment: .top, spacing: Space.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text(errorMessage)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(BrandColor.warning)
+                } else {
+                    HStack(alignment: .top, spacing: Space.md) {
+                        StatTile(label: "Volume",
+                                 value: result.map { String(format: "%.2f mL", $0.volumeMilliliters) } ?? "—",
+                                 compact: true)
+                        StatTile(label: "Strength",
+                                 value: result.map { "\(fmtConc($0.concentrationMcgPerMl)) mg/mL" } ?? "—",
+                                 compact: true)
+                        StatTile(label: "Doses/vial",
+                                 value: (result?.exactDosesPerVial).map(fmt) ?? "—",
+                                 compact: true)
+                    }
+                }
+            }
         }
-        .pickerStyle(.segmented).frame(width: 120)
     }
 
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
     private func fmtConc(_ mcgPerMl: Double) -> String {
         let mgPerMl = mcgPerMl / 1_000
-        return mgPerMl == mgPerMl.rounded() ? String(Int(mgPerMl)) : String(format: "%.2f", mgPerMl)
-    }
-
-    private func resultCard(_ r: DoseDisplay) -> some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Text("DRAW TO").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
-                Text("\(fmt(r.units)) units")
-                    .font(Typo.numberXL).foregroundStyle(BrandColor.accentText)
-                Text("= \(String(format: "%.2f", r.volumeMilliliters)) mL on the syringe")
-                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                // Concentration changes with the water you add — surfacing it makes the water's
-                // effect visible (the draw volume above shifts with it too).
-                Text("Concentration: \(fmtConc(r.concentrationMcgPerMl)) mg/mL")
-                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
-                if let doses = r.dosesPerVial {
-                    Divider().overlay(BrandColor.stroke).padding(.vertical, Space.xs)
-                    Text("About \(doses) doses in this vial.")
-                        .font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                    Text("Doses depend on the peptide amount and your dose — not the water. More water just dilutes it, so you draw a larger volume for the same dose.")
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
-            }
-        }
-    }
-
-    private func errorCard(_ message: String) -> some View {
-        HStack(alignment: .top, spacing: Space.sm) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(BrandColor.warning)
-            Text(message).font(.footnote).foregroundStyle(BrandColor.textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Space.md)
-        .background(BrandColor.warning.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        if mgPerMl == mgPerMl.rounded() { return String(Int(mgPerMl)) }
+        let s = String(format: "%.2f", mgPerMl)
+        return s.hasSuffix("0") ? String(s.dropLast()) : s   // 2.50 → "2.5", 2.55 stays
     }
 }
