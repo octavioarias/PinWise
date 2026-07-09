@@ -29,6 +29,15 @@ struct RootView: View {
     @AppStorage("didMigrateProfileSetup") private var didMigrateProfileSetup = false
     @State private var auth = AuthManager.shared
 
+    /// The app starts the week on MONDAY — so every calendar/date-picker grid lays out
+    /// Mon-first. Display only: stored weekday numbers stay absolute (1 = Sun … 7 = Sat) and
+    /// all scheduling math uses `Calendar.current`, unaffected by this environment override.
+    private static var mondayFirstCalendar: Calendar {
+        var c = Calendar.current
+        c.firstWeekday = 2
+        return c
+    }
+
     var body: some View {
         ZStack {
             RootTabView()
@@ -77,5 +86,7 @@ struct RootView: View {
         // Also force the window's UIKit style so dynamic BrandColor tokens resolve to the same
         // appearance as SwiftUI-native views (prevents invisible native text on mismatch).
         .background(AppearanceApplier(mode: AppearanceMode.from(appearanceRaw)))
+        // Week starts on Monday everywhere the app renders a calendar grid.
+        .environment(\.calendar, Self.mondayFirstCalendar)
     }
 }

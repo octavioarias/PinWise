@@ -23,7 +23,7 @@ struct ProtocolBuilderView: View {
     @State private var items: [ItemEntry] = []
     @State private var kind: DoseSchedule.Kind = .specificWeekdays
     @State private var intervalDays: Int = 2
-    @State private var weekdays: Set<Int> = [1]
+    @State private var weekdays: Set<Int> = [2]   // default Monday (week starts Monday)
     @State private var startDate: Date = Date()
     @State private var isActive: Bool = true
     @State private var notes: String = ""
@@ -265,8 +265,9 @@ struct ProtocolBuilderView: View {
 
     private var weekdayPicker: some View {
         HStack(spacing: 6) {
-            ForEach(1...7, id: \.self) { d in
-                SelectableChip(title: weekdaySymbol(d),
+            // Monday-first order; labels match the cadence display (Su M T W Th F S).
+            ForEach(SavedProtocol.mondayFirst([1, 2, 3, 4, 5, 6, 7]), id: \.self) { d in
+                SelectableChip(title: SavedProtocol.shortWeekdayLabel(d),
                                isSelected: weekdays.contains(d),
                                shape: .rounded(8),
                                fillWidth: true) {
@@ -275,11 +276,6 @@ struct ProtocolBuilderView: View {
             }
         }
         .sensoryFeedback(.selection, trigger: weekdays)
-    }
-
-    private func weekdaySymbol(_ d: Int) -> String {
-        let s = Calendar.current.shortWeekdaySymbols
-        return (1...7).contains(d) ? String(s[d - 1].prefix(1)) : "?"
     }
 
     private func save() {

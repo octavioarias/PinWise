@@ -180,15 +180,31 @@ extension SavedProtocol {
         return AdherenceCalculator.expectedDates(schedule: schedule, start: from, end: end, calendar: calendar).first
     }
 
-    /// Human cadence label for display.
+    /// Weekday numbers (1 = Sun … 7 = Sat) reordered so the week starts on MONDAY.
+    static func mondayFirst(_ days: [Int]) -> [Int] {
+        let order = [2, 3, 4, 5, 6, 7, 1]        // Mon Tue Wed Thu Fri Sat Sun
+        return order.filter { days.contains($0) }
+    }
+
+    /// Minimal, position-independent weekday label (1 = Sun … 7 = Sat): Su M T W Th F S.
+    /// Two letters only where a single one would be ambiguous (Thu vs Tue, Sun vs Sat), so a
+    /// subset of days stays legible without relying on order — and all of them fit a stat cell.
+    static func shortWeekdayLabel(_ d: Int) -> String {
+        switch d {
+        case 1: return "Su"; case 2: return "M"; case 3: return "T"; case 4: return "W"
+        case 5: return "Th"; case 6: return "F"; case 7: return "S"; default: return "?"
+        }
+    }
+
+    /// Human cadence label for display — weekdays as compact Monday-first letters so every
+    /// selected day is visible (e.g. "M W F"), not truncated.
     var cadenceText: String {
         switch scheduleKind {
         case .daily: return "Daily"
         case .everyNDays: return "Every \(intervalDays) days"
         case .weekly, .specificWeekdays:
-            let symbols = Calendar.current.shortWeekdaySymbols
-            let days = weekdays.sorted().compactMap { (1...7).contains($0) ? symbols[$0 - 1] : nil }
-            return days.isEmpty ? "Weekly" : days.joined(separator: ", ")
+            let labels = SavedProtocol.mondayFirst(weekdays).map(SavedProtocol.shortWeekdayLabel)
+            return labels.isEmpty ? "Weekly" : labels.joined(separator: " ")
         case .asNeeded: return "As needed"
         }
     }
