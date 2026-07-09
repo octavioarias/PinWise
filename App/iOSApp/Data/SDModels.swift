@@ -411,6 +411,18 @@ extension StoredVial {
         }
     }
 
+    /// Volume + U-100 syringe units to draw for `dose`, from this vial's primary concentration.
+    /// nil until reconstituted (no solvent volume ⇒ no draw to compute). For a blend the primary's
+    /// dose fixes the single shared draw, so this is the whole-shot volume.
+    func draw(forDose dose: Mass, syringe: SyringeScale = .u100) -> (milliliters: Double, units: Double)? {
+        guard let p = primaryAPI, p.massMicrograms > 0,
+              let vol = solventVolumeMilliliters, vol > 0, dose.micrograms > 0 else { return nil }
+        let concMcgPerMl = p.massMicrograms / vol
+        guard concMcgPerMl > 0 else { return nil }
+        let ml = dose.micrograms / concMcgPerMl
+        return (ml, ml * syringe.unitsPerMilliliter)
+    }
+
     var expiryState: (label: String, isWarning: Bool, isError: Bool)? {
         guard let exp = expirationDate else { return nil }
         let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()),

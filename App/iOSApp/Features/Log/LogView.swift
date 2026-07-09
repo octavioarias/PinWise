@@ -218,17 +218,49 @@ struct LogView: View {
                 if let p = selectedProtocol {
                     Divider().overlay(BrandColor.stroke)
                     ForEach(Array(p.items.enumerated()), id: \.offset) { i, item in
-                        HStack {
-                            Text(item.compoundName).font(.body).foregroundStyle(BrandColor.textPrimary)
-                            Spacer()
-                            Text(doseFor(i, in: p).displayString).font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                        let dose = doseFor(i, in: p)
+                        let draw = vials.first { $0.id == item.vialID }?.draw(forDose: dose)
+                        VStack(alignment: .leading, spacing: Space.xs) {
+                            Text(item.compoundName).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
+                            // Two distinct values: the DOSE (how much drug) and the DRAW (how far
+                            // to pull the plunger) — labeled + colored apart so they never blur.
+                            HStack(alignment: .top, spacing: Space.xl) {
+                                doseMetric("DOSE", dose.displayString, BrandColor.accentText)
+                                if let d = draw {
+                                    doseMetric("DRAW TO", drawText(d), BrandColor.success)
+                                }
+                                Spacer(minLength: 0)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    Text(p.items.count > 1 ? "Logs all \(p.items.count) compounds at once." : "\(p.cadenceText).")
+                    Text(drawHint(for: p))
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }
+    }
+
+    private func doseMetric(_ label: String, _ value: String, _ color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+            Text(value).font(Typo.numberMD).foregroundStyle(color)
+        }
+    }
+
+    /// "0.1 mL · 10 units" — the syringe draw for a dose, trimmed of trailing zeros.
+    private func drawText(_ d: (milliliters: Double, units: Double)) -> String {
+        func trim(_ v: Double, places: Double) -> String {
+            let r = (v * places).rounded() / places
+            return r == r.rounded() ? String(Int(r)) : String(format: "%g", r)
+        }
+        return "\(trim(d.milliliters, places: 100)) mL · \(trim(d.units, places: 10)) units"
+    }
+
+    private func drawHint(for p: SavedProtocol) -> String {
+        let haveDraw = p.items.contains { item in vials.first { $0.id == item.vialID }?.draw(forDose: Mass(micrograms: 1)) != nil }
+        let base = p.items.count > 1 ? "Logs all \(p.items.count) compounds at once." : "\(p.cadenceText)."
+        return haveDraw ? base + " Draw is for a U-100 insulin syringe." : base
     }
 
     private func doseFor(_ index: Int, in p: SavedProtocol) -> Mass {
