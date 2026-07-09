@@ -38,10 +38,6 @@ extension SymptomType {
 
     var chartColor: Color { ChartPalette.categorical[caseIndex % ChartPalette.categorical.count] }
     var chartSymbol: BasicChartSymbolShape { caseIndex < ChartPalette.categorical.count ? .circle : .square }
-
-    /// Scale ranges in `allCases` order, for `.chartForegroundStyleScale`/`.chartSymbolScale`.
-    static let chartColorRange: [Color] = allCases.map(\.chartColor)
-    static let chartSymbolRange: [BasicChartSymbolShape] = allCases.map(\.chartSymbol)
 }
 
 /// Log side effects with a severity and see how they trend over the last month — the most-
@@ -80,6 +76,14 @@ struct SymptomsView: View {
     private var cutoff: Date { Calendar.current.date(byAdding: .day, value: -range.days, to: Date()) ?? .distantPast }
     private var recentWindow: [SymptomEntry] { entries.filter { $0.timestamp >= cutoff } }
     private var distinctSymptomCount: Int { Set(recentWindow.map(\.symptomRaw)).count }
+    /// Only the symptoms actually plotted in the window — an explicit scale domain fixes
+    /// the LEGEND to the whole domain, so passing allCases would render nine legend
+    /// entries (seven of them dead) for a two-symptom chart. Filtering allCases (not the
+    /// window's order of appearance) keeps each symptom's fixed color/shape identity.
+    private var plottedSymptoms: [SymptomType] {
+        let present = Set(recentWindow.map(\.symptomRaw))
+        return SymptomType.allCases.filter { present.contains($0.rawValue) }
+    }
 
     var body: some View {
         ScrollView {
@@ -131,10 +135,11 @@ struct SymptomsView: View {
                             }
                             .chartYScale(domain: 0...10)
                             // Both scales share the "Symptom" plottable value and the same
-                            // fixed domain, so Swift Charts merges color + shape into one
-                            // legend entry per symptom.
-                            .chartForegroundStyleScale(domain: SymptomType.allCases.map(\.rawValue), range: SymptomType.chartColorRange)
-                            .chartSymbolScale(domain: SymptomType.allCases.map(\.rawValue), range: SymptomType.chartSymbolRange)
+                            // domain (plotted symptoms only), so Swift Charts merges color +
+                            // shape into one legend entry per PLOTTED symptom — while each
+                            // symptom's color/shape stays fixed by its allCases index.
+                            .chartForegroundStyleScale(domain: plottedSymptoms.map(\.rawValue), range: plottedSymptoms.map(\.chartColor))
+                            .chartSymbolScale(domain: plottedSymptoms.map(\.rawValue), range: plottedSymptoms.map(\.chartSymbol))
                             .chartLegend(position: .bottom)
                             .chartLegend(distinctSymptomCount > 1 ? .visible : .hidden)
                             .chartXAxis {
