@@ -124,6 +124,43 @@ do {
     check(weekly == [start, day(2026, 1, 12)], "weekly ⇒ 2 hits in 14 days")
 }
 
+// MARK: - Streak
+section("Streak calculator")
+do {
+    typealias E = StreakCalculator.DoseEvent
+    func e(_ d: Int, _ taken: Bool) -> E { E(date: day(2026, 1, d), taken: taken) }
+
+    check(StreakCalculator.compute(events: []) == .zero, "no events ⇒ zero")
+    check(StreakCalculator.compute(events: [e(1, true), e(2, true), e(3, true)]) == .init(current: 3, longest: 3),
+          "all taken ⇒ current 3, longest 3")
+    check(StreakCalculator.compute(events: [e(1, true), e(2, false), e(3, true), e(4, true)]) == .init(current: 2, longest: 2),
+          "miss in middle ⇒ current 2, longest 2")
+    check(StreakCalculator.compute(events: [e(1, true), e(2, true), e(3, false)]) == .init(current: 0, longest: 2),
+          "trailing miss ⇒ current 0, longest 2")
+    // Unsorted input is sorted first; longest run is 1,2,3 (=3), current trailing from day 5 = 1.
+    check(StreakCalculator.compute(events: [e(5, true), e(2, true), e(1, true), e(4, false), e(3, true)]) == .init(current: 1, longest: 3),
+          "unsorted events sort chronologically")
+
+    // events(from:) — a not-yet-taken dose scheduled TODAY is pending, never a miss.
+    let logs = [1, 2, 3, 5, 6].map { day(2026, 1, $0) }        // Jan 4 & 7 not logged
+    let r = AdherenceCalculator.evaluate(schedule: .daily, start: day(2026, 1, 1), end: day(2026, 1, 7), logDates: logs, calendar: cal)
+    let pendingToday = StreakCalculator.events(from: r, asOf: day(2026, 1, 7), calendar: cal)
+    check(pendingToday.count == 6, "today's un-taken dose excluded (6 past events, not 7)")
+    check(StreakCalculator.compute(events: pendingToday) == .init(current: 2, longest: 3),
+          "pending today ⇒ current 2 (Jan 5,6), longest 3 (Jan 1-3)")
+
+    // Same schedule but today IS taken ⇒ today counts and extends the streak.
+    let logs2 = [1, 2, 3, 5, 6, 7].map { day(2026, 1, $0) }
+    let r2 = AdherenceCalculator.evaluate(schedule: .daily, start: day(2026, 1, 1), end: day(2026, 1, 7), logDates: logs2, calendar: cal)
+    let takenToday = StreakCalculator.events(from: r2, asOf: day(2026, 1, 7), calendar: cal)
+    check(takenToday.count == 7 && StreakCalculator.compute(events: takenToday) == .init(current: 3, longest: 3),
+          "today taken ⇒ current 3 (Jan 5,6,7)")
+
+    check(StreakCalculator.earnedMilestone(for: 6) == 0 && StreakCalculator.earnedMilestone(for: 7) == 7
+          && StreakCalculator.earnedMilestone(for: 29) == 7 && StreakCalculator.earnedMilestone(for: 30) == 30
+          && StreakCalculator.earnedMilestone(for: 100) == 90, "milestones 7/30/90")
+}
+
 // MARK: - Titration
 section("Titration planner")
 do {
