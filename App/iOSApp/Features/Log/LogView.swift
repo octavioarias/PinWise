@@ -36,6 +36,17 @@ struct LogView: View {
     @State private var selectedVialID: UUID?
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
+    /// Protocols still worth logging right now: active, minus any that are due TODAY and have
+    /// ALREADY been logged today — you've done them, so they shouldn't clutter the picker.
+    /// (A protocol due another day, or as-needed, always stays available for an off-schedule log.)
+    private var loggableProtocols: [SavedProtocol] {
+        let cal = Calendar.current
+        return activeProtocols.filter { p in
+            let dueToday = cal.isDateInToday(p.nextDose() ?? .distantPast)
+            let loggedToday = recent.contains { cal.isDateInToday($0.timestamp) && p.compoundNames.contains($0.compoundName) }
+            return !(dueToday && loggedToday)
+        }
+    }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
     private var doseValue: Double? {
         guard let d = Double(doseText), d > 0 else { return nil }
@@ -94,14 +105,20 @@ struct LogView: View {
                         .foregroundStyle(BrandColor.textPrimary)
                         .minimumScaleFactor(0.7).lineLimit(1)
 
-                    if !activeProtocols.isEmpty {
+                    if !loggableProtocols.isEmpty {
                         Picker("", selection: $mode) {
                             ForEach(LogMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
                         .pickerStyle(.segmented)
+                    } else if !activeProtocols.isEmpty {
+                        // Every due protocol is already logged for today — say so, and point to
+                        // a one-time pin for anything extra (rather than an empty protocol picker).
+                        Label("Today's protocol doses are all logged. Use a one-time pin below for anything extra.",
+                              systemImage: "checkmark.circle.fill")
+                            .font(.caption).foregroundStyle(BrandColor.success)
                     }
 
-                    if mode == .protocolBased && !activeProtocols.isEmpty {
+                    if mode == .protocolBased && !loggableProtocols.isEmpty {
                         protocolCard
                     } else {
                         compoundCard
@@ -141,9 +158,13 @@ struct LogView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
-                // Protocol-first: only fall back to a one-time pin when there are no protocols.
-                if activeProtocols.isEmpty { mode = .compound }
-                else if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id }
+                // Protocol-first: fall back to a one-time pin when nothing is left to log today.
+                // Keep the selection on a protocol that's actually offered (not one filtered out
+                // for being done today).
+                if loggableProtocols.isEmpty { mode = .compound }
+                else if selectedProtocolID == nil || !loggableProtocols.contains(where: { $0.id == selectedProtocolID }) {
+                    selectedProtocolID = loggableProtocols.first?.id
+                }
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
                 // rotation suggestion. The "Suggested" hint below applies the pick on tap.
@@ -177,7 +198,7 @@ struct LogView: View {
                 Text("Which protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Space.sm) {
-                        ForEach(activeProtocols, id: \.id) { p in
+                        ForEach(loggableProtocols, id: \.id) { p in
                             SelectableChip(title: p.name, isSelected: selectedProtocolID == p.id) {
                                 selectedProtocolID = p.id
                             }
