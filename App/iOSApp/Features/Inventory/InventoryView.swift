@@ -113,6 +113,10 @@ struct VialRow: View {
                 Text("\(projection.wholeDosesRemaining) of \(vial.totalDoses) doses left · log a dose to draw down")
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
+                if let conc = vial.concentrationSummary {
+                    Text(conc).font(.caption2.weight(.medium)).foregroundStyle(BrandColor.textPrimary)
+                }
+
                 if let breakdown = vial.doseBreakdown() {
                     Text("Per shot: " + breakdown.map { "\($0.name) \($0.deliveredDose.displayString)" }.joined(separator: " · "))
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
@@ -125,9 +129,6 @@ struct VialRow: View {
 
     private var metaLine: some View {
         HStack(spacing: Space.md) {
-            if let mgml = vial.primaryConcentrationMgPerMl {
-                Label(String(format: "%.2f mg/mL", mgml), systemImage: "drop")
-            }
             if let days = projection.daysOfSupply, let out = projection.projectedRunOutDate {
                 Label("~\(Int(days.rounded()))d · out \(out.formatted(.dateTime.month().day()))", systemImage: "calendar")
             }

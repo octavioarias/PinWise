@@ -350,6 +350,22 @@ extension StoredVial {
         return (p.massMicrograms / vol) / 1_000
     }
 
+    /// Per-compound strength for the vial row. Single compound → "BPC-157 5 mg/mL"; a blend lists
+    /// each API's mg-per-mL sharing one denominator → "BPC-157 5 mg / TB-500 3 mg / mL". nil until
+    /// a solvent volume is known (no volume ⇒ no concentration).
+    var concentrationSummary: String? {
+        guard let vol = solventVolumeMilliliters, vol > 0, !apis.isEmpty else { return nil }
+        func fmt(_ mgPerMl: Double) -> String {
+            let rounded = (mgPerMl * 100).rounded() / 100        // 2 dp, trailing zeros trimmed
+            return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%g", rounded)
+        }
+        if apis.count == 1, let a = apis.first {
+            return "\(a.name) \(fmt((a.massMicrograms / 1_000) / vol)) mg/mL"
+        }
+        let parts = apis.map { "\($0.name) \(fmt(($0.massMicrograms / 1_000) / vol)) mg" }
+        return parts.joined(separator: " / ") + " / mL"
+    }
+
     var totalDoses: Int {
         guard let p = primaryAPI, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
         return Int((p.massMicrograms / perDose).rounded(.down))
