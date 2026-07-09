@@ -230,9 +230,9 @@ private struct DoseHeroCard: View {
     let result: (any DoseDrawResult)?
     let errorMessage: String?
     let syringe: SyringeScale
-    /// Unit for the Strength readout — follows the working dose unit (which is seeded from a
-    /// vial's chosen unit when the form was opened from one), so concentration reads mg/mL or
-    /// mcg/mL consistently with that vial's Stack row.
+    /// Unit for the Strength readout — the model's concentration unit (seeded from a vial's chosen
+    /// concentration unit when the form was opened from one), so it reads mg/mL or mcg/mL
+    /// consistently with that vial's Stack row.
     var concentrationUnit: MassUnit = .milligram
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
