@@ -188,7 +188,7 @@ struct ReconstitutionCalculatorView: View {
         if v.isPremixed, let mgPerMl = v.primaryConcentrationMgPerMl {
             model.mode = .premixed
             model.concentrationText = Self.numberText(mgPerMl)
-            model.totalVolumeText = Self.numberText(v.solventVolumeMilliliters)
+            model.totalVolumeText = v.solventVolumeMilliliters.map(Self.numberText) ?? ""
         } else {
             model.mode = .reconstitute
             if let api = v.primaryAPI {
@@ -200,8 +200,8 @@ struct ReconstitutionCalculatorView: View {
                     model.vialMassText = Self.numberText(api.massMicrograms)
                 }
             }
-            if v.solventVolumeMilliliters > 0 {
-                model.solventText = Self.numberText(v.solventVolumeMilliliters)
+            if let vol = v.solventVolumeMilliliters, vol > 0 {
+                model.solventText = Self.numberText(vol)
             }
         }
     }

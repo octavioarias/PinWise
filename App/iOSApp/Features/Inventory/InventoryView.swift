@@ -193,7 +193,7 @@ struct VialBuilderView: View {
             _expiration = State(initialValue: Date())
             return
         }
-        let vol = v.solventVolumeMilliliters
+        let vol = v.solventVolumeMilliliters ?? 0
         _label = State(initialValue: v.label)
         // A pre-mixed vial saved without a volume (older builds allowed it) has no derivable
         // strength — open it in powder mode so its total mass round-trips unchanged.
@@ -211,10 +211,12 @@ struct VialBuilderView: View {
                             amountText: Self.fmt(Mass(micrograms: api.massMicrograms).value(in: unit)),
                             unit: unit)
         })
-        let du: MassUnit = v.perDoseMicrograms >= 1_000 ? .milligram : .microgram
+        let perDoseMcg = v.perDoseMicrograms ?? 0
+        let du: MassUnit = perDoseMcg >= 1_000 ? .milligram : .microgram
         _doseUnit = State(initialValue: du)
-        _doseText = State(initialValue: v.perDoseMicrograms > 0 ? Self.fmt(v.perDose.value(in: du)) : "")
-        _costText = State(initialValue: v.cost > 0 ? Self.fmt(v.cost) : "")
+        _doseText = State(initialValue: perDoseMcg > 0 ? Self.fmt(v.perDose.value(in: du)) : "")
+        // nil cost = unknown → empty field; a stored 0 = a genuine free/comped vial → shows "0".
+        _costText = State(initialValue: v.cost.map { Self.fmt(NSDecimalNumber(decimal: $0).doubleValue) } ?? "")
         _hasExpiration = State(initialValue: v.expirationDate != nil)
         _expiration = State(initialValue: v.expirationDate ?? Date())
     }
@@ -489,9 +491,9 @@ struct VialBuilderView: View {
         let target = editing ?? StoredVial()
         target.label = label
         target.apis = apis
-        target.solventVolumeMilliliters = vol
+        target.solventVolumeMilliliters = vol > 0 ? vol : nil
         target.perDoseMicrograms = Mass(pd, doseUnit).micrograms
-        target.cost = costText.decimalValue ?? 0
+        target.cost = costText.decimalValue.map { Decimal($0) }
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
         // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing

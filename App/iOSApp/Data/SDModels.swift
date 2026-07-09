@@ -218,10 +218,14 @@ final class StoredVial {
     var id: UUID = UUID()
     var label: String = ""
     var apis: [VialAPI] = []                    // 1 = single-compound vial; 2+ = a blend
-    var solventVolumeMilliliters: Double = 0    // 0 = not yet reconstituted / no volume set
-    var perDoseMicrograms: Double = 0           // target dose of the PRIMARY API (apis.first)
+    /// Reconstitution volume; nil = not yet reconstituted / no volume set. (Was a `0` sentinel.)
+    var solventVolumeMilliliters: Double? = nil
+    /// Target dose of the PRIMARY API (apis.first); nil = no target set. (Was a `0` sentinel.)
+    var perDoseMicrograms: Double? = nil
     var dosesTaken: Int = 0
-    var cost: Double = 0                         // 0 = unknown
+    /// Acquisition cost as a real `Decimal` (money is never a `Double`); nil = unknown, which is
+    /// now distinct from a genuine 0 / comped vial. Mirrors the domain `Vial.cost: Decimal?`.
+    var cost: Decimal? = nil
     var expirationDate: Date?
     var dateAcquired: Date = Date()
     var notes: String = ""
@@ -232,8 +236,8 @@ final class StoredVial {
     var dateReconstituted: Date? = nil
 
     init(
-        id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double = 0,
-        perDoseMicrograms: Double = 0, dosesTaken: Int = 0, cost: Double = 0, expirationDate: Date? = nil,
+        id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double? = nil,
+        perDoseMicrograms: Double? = nil, dosesTaken: Int = 0, cost: Decimal? = nil, expirationDate: Date? = nil,
         dateAcquired: Date = Date(), notes: String = "", isPremixed: Bool = false,
         dateReconstituted: Date? = nil
     ) {
@@ -272,8 +276,8 @@ extension StoredVial {
     var isBlend: Bool { apis.count > 1 }
     var primaryAPI: VialAPI? { apis.first }
     var primaryMass: Mass { Mass(micrograms: primaryAPI?.massMicrograms ?? 0) }
-    var perDose: Mass { Mass(micrograms: perDoseMicrograms) }
-    var isReconstituted: Bool { solventVolumeMilliliters > 0 }
+    var perDose: Mass { Mass(micrograms: perDoseMicrograms ?? 0) }
+    var isReconstituted: Bool { (solventVolumeMilliliters ?? 0) > 0 }
     /// Names of every API — used to match logged doses to this vial.
     var apiNames: [String] { apis.map(\.name) }
 
@@ -283,18 +287,18 @@ extension StoredVial {
     }
 
     var primaryConcentrationMgPerMl: Double? {
-        guard let p = primaryAPI, solventVolumeMilliliters > 0 else { return nil }
-        return (p.massMicrograms / solventVolumeMilliliters) / 1_000
+        guard let p = primaryAPI, let vol = solventVolumeMilliliters, vol > 0 else { return nil }
+        return (p.massMicrograms / vol) / 1_000
     }
 
     var totalDoses: Int {
-        guard let p = primaryAPI, perDoseMicrograms > 0 else { return 0 }
-        return Int((p.massMicrograms / perDoseMicrograms).rounded(.down))
+        guard let p = primaryAPI, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
+        return Int((p.massMicrograms / perDose).rounded(.down))
     }
 
     var fractionRemaining: Double {
-        guard let p = primaryAPI, p.massMicrograms > 0, perDoseMicrograms > 0 else { return 0 }
-        let remaining = max(0, p.massMicrograms - Double(dosesTaken) * perDoseMicrograms)
+        guard let p = primaryAPI, p.massMicrograms > 0, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
+        let remaining = max(0, p.massMicrograms - Double(dosesTaken) * perDose)
         return remaining / p.massMicrograms
     }
 
@@ -304,7 +308,7 @@ extension StoredVial {
             compoundID: UUID(),
             mass: primaryMass,
             solventVolumeMilliliters: isReconstituted ? solventVolumeMilliliters : nil,
-            cost: cost > 0 ? Decimal(cost) : nil
+            cost: cost
         )
         return InventoryEstimator.project(
             vial: vial, dose: perDose, dosesTaken: dosesTaken,
@@ -315,12 +319,13 @@ extension StoredVial {
     /// For a blend, the amount of each API delivered per dose — the primary's dose fixes the
     /// draw volume and the rest scale with it. Requires a reconstituted/known volume.
     func doseBreakdown() -> [BlendComponentDose]? {
-        guard isBlend, isReconstituted, let p = primaryAPI, p.massMicrograms > 0, perDoseMicrograms > 0 else { return nil }
-        let concPrimary = p.massMicrograms / solventVolumeMilliliters
-        let drawVolume = perDoseMicrograms / concPrimary
+        guard isBlend, let vol = solventVolumeMilliliters, vol > 0, let p = primaryAPI,
+              p.massMicrograms > 0, let perDose = perDoseMicrograms, perDose > 0 else { return nil }
+        let concPrimary = p.massMicrograms / vol
+        let drawVolume = perDose / concPrimary
         let blend = Blend(name: displayName,
                           components: apis.map { BlendComponent(name: $0.name, massPerVial: Mass(micrograms: $0.massMicrograms)) })
-        return try? BlendCalculator.dose(blend: blend, solventVolumeMilliliters: solventVolumeMilliliters,
+        return try? BlendCalculator.dose(blend: blend, solventVolumeMilliliters: vol,
                                          drawVolumeMilliliters: drawVolume).components
     }
 

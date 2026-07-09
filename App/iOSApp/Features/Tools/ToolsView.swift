@@ -209,8 +209,7 @@ struct BlendCalculatorView: View {
     private func applyVial(_ v: StoredVial) {
         blend = Blend(name: v.displayName,
                       components: v.apis.map { BlendComponent(name: $0.name, massPerVial: Mass(micrograms: $0.massMicrograms)) })
-        if v.solventVolumeMilliliters > 0 {
-            let s = v.solventVolumeMilliliters
+        if let s = v.solventVolumeMilliliters, s > 0 {
             solventText = s == s.rounded() ? String(Int(s)) : String(format: "%.2f", s)
         }
     }
