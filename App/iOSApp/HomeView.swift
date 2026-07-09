@@ -32,8 +32,8 @@ struct HomeView: View {
     /// small, predictable dip (~1/N) that recovers as new on-time doses push it out of the
     /// window. A dose logged up to `graceDays` late still counts (people don't dose to the
     /// minute). Both constants are the single tuning point.
-    private static let adherenceWindow = 12
-    private static let graceDays = 1
+    private static let adherenceWindow = 22
+    private static let graceDays = 2
 
     /// Every past-due scheduled dose across all active protocols, tagged taken/missed with the
     /// grace rule, sorted chronologically. The one basis both the streak and the adherence %
