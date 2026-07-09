@@ -212,12 +212,24 @@ struct MenuSheet<Content: View>: View {
 
 struct HealthConnectionsView: View {
     @State private var health = HealthManager.shared
+    // Mirror of HomeView's gate — the source of truth is the "hideHomeHealthCard" default.
+    @AppStorage("hideHomeHealthCard") private var hideHomeHealthCard = false
 
     var body: some View {
         MenuSheet(title: "Connections") {
             Text("PinWise reads from Apple Health. Connect once and it shows your weight, resting heart rate, HRV, sleep, and steps — including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write into Apple Health. No separate logins.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
+            Card {
+                Toggle(isOn: Binding(get: { !hideHomeHealthCard }, set: { hideHomeHealthCard = !$0 })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show on Home").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        Text("Keep the health card at the top of your Home tab.")
+                            .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                    }
+                }
+                .tint(BrandColor.accent)
+            }
             Card {
                 VStack(alignment: .leading, spacing: Space.md) {
                     SectionHeader(title: "Sources")

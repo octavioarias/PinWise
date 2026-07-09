@@ -11,7 +11,11 @@ struct HomeView: View {
     @Binding var showAssistant: Bool
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    @Query private var vials: [StoredVial]
     @State private var auth = AuthManager.shared
+    // The "Your health" card can be dismissed from Home and re-shown from menu → Connections.
+    // Shared key: this gate and the card's own hide action read/write the same default.
+    @AppStorage("hideHomeHealthCard") private var hideHealthCard = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     // Reward layer: highest streak milestone already celebrated (so each one fires once per
     // run), a one-time silent seed so the update doesn't retroactively celebrate a streak the
@@ -83,9 +87,11 @@ struct HomeView: View {
                     }
                     // Extra breathing room where "your dosing" ends and reference sections begin
                     // (the root VStack already contributes Space.xl of the Space.xxxl gap).
-                    HomeHealthCard()
-                        .padding(.top, Space.xxxl - Space.xl)
-                        .entrance(4)
+                    if !hideHealthCard {
+                        HomeHealthCard()
+                            .padding(.top, Space.xxxl - Space.xl)
+                            .entrance(4)
+                    }
                 }
                 .padding(Space.lg)
             }
@@ -325,12 +331,20 @@ struct HomeView: View {
     // MARK: Empty
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: Space.md) {
+        // Reflect how far the user actually is: no vials yet → add one; a vial exists but no
+        // protocol → build one. (This branch only shows when there's no active protocol and no
+        // logged dose, so a vial-but-no-protocol state must invite the protocol, not re-ask for
+        // a vial the user already added.)
+        let hasVial = !vials.isEmpty
+        return VStack(alignment: .leading, spacing: Space.md) {
             SectionHeader(title: "Get started")
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("Add your first vial").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text("Head to Stack ▸ My Vials — add a compound or blend, build a protocol from it, then log. Home fills in with your adherence and health as you go.")
+                    Text(hasVial ? "Build your first protocol" : "Add your first vial")
+                        .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text(hasVial
+                         ? "Nice — you've got a vial in your Stack. Build a protocol from it to set your cadence, then log your doses. Home fills in with your adherence and health as you go."
+                         : "Head to Stack ▸ My Vials — add a compound or blend, build a protocol from it, then log. Home fills in with your adherence and health as you go.")
                         .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     PrimaryButton(title: "Go to Stack", systemImage: "square.stack.3d.up.fill") { selected = .protocols }
                         .padding(.top, Space.sm)
@@ -352,7 +366,11 @@ struct HomeView: View {
 /// lives in the menu.
 struct HomeHealthCard: View {
     @AppStorage("weightInPounds") private var pounds = true
+    // Same key HomeView gates on — setting it here removes the card from Home; menu → Connections
+    // flips it back on.
+    @AppStorage("hideHomeHealthCard") private var hidden = false
     @State private var health = HealthManager.shared
+    @State private var requesting = false
     @Query(sort: \BiomarkerEntry.timestamp, order: .reverse) private var biomarkers: [BiomarkerEntry]
 
     private struct Metric: Identifiable { let id = UUID(); let label: String; let value: String }
@@ -382,33 +400,73 @@ struct HomeHealthCard: View {
     }
 
     var body: some View {
-        NavigationLink { BiomarkersView() } label: {
-            Card {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    HStack {
-                        SectionHeader(title: "Your health")
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
+                // Header: title + an options menu (dismiss). Kept OUTSIDE any NavigationLink so the
+                // menu and connect button get their own taps.
+                HStack {
+                    SectionHeader(title: "Your health")
+                    Spacer()
+                    Menu {
+                        Button(role: .destructive) {
+                            withAnimation { hidden = true }
+                        } label: { Label("Hide from Home", systemImage: "eye.slash") }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(BrandColor.textSecondary)
+                            .frame(width: 32, height: 32, alignment: .trailing)
+                            .contentShape(Rectangle())
                     }
-                    if metrics.isEmpty {
-                        Text("Connect a wearable (menu → Connections) or log a lab, and your weight, HRV, sleep, and more show up here.")
-                            .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
-                            ForEach(metrics) { m in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(m.label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
-                                    Text(m.value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel("Health card options")
+                }
+
+                if metrics.isEmpty {
+                    Text("Connect Apple Health to see your weight, resting heart rate, HRV, sleep, and steps here — including anything Oura, Whoop, or Apple Fitness write to Health.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    HStack(spacing: Space.md) {
+                        if health.isAvailable && !health.authorized {
+                            Button {
+                                Task { requesting = true; await health.requestAuthorization(); requesting = false }
+                            } label: {
+                                Label(requesting ? "Connecting…" : "Connect Apple Health", systemImage: "heart.text.square")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(BrandColor.onAccent)
+                                    .padding(.vertical, Space.sm).padding(.horizontal, Space.md)
+                                    .background(BrandColor.accent, in: Capsule())
                             }
+                            .buttonStyle(.plain).disabled(requesting)
+                        }
+                        NavigationLink { BiomarkersView() } label: {
+                            HStack(spacing: 4) {
+                                Text("Log a lab")
+                                Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BrandColor.accentText)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    NavigationLink { BiomarkersView() } label: {
+                        HStack(alignment: .top) {
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
+                                ForEach(metrics) { m in
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(m.label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+                                        Text(m.value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                         }
                     }
+                    .buttonStyle(PressableStyle())
                 }
             }
         }
-        .buttonStyle(PressableStyle())
         .task { if health.authorized { await health.refresh() } }
     }
 }

@@ -375,17 +375,24 @@ extension StoredVial {
         )
     }
 
-    /// For a blend, the amount of each API delivered per dose — the primary's dose fixes the
-    /// draw volume and the rest scale with it. Requires a reconstituted/known volume.
+    /// For a blend, the amount of EACH API delivered per shot. A blend is drawn as one shared
+    /// solution, so every component's per-shot mass is simply its share of the vial's total mass
+    /// scaled by the primary's per-shot dose — the draw volume cancels out. This means the
+    /// breakdown resolves even for a powder blend that hasn't been reconstituted yet (no solvent
+    /// volume), not only reconstituted ones. Concentration is filled only when a volume is known.
     func doseBreakdown() -> [BlendComponentDose]? {
-        guard isBlend, let vol = solventVolumeMilliliters, vol > 0, let p = primaryAPI,
-              p.massMicrograms > 0, let perDose = perDoseMicrograms, perDose > 0 else { return nil }
-        let concPrimary = p.massMicrograms / vol
-        let drawVolume = perDose / concPrimary
-        let blend = Blend(name: displayName,
-                          components: apis.map { BlendComponent(name: $0.name, massPerVial: Mass(micrograms: $0.massMicrograms)) })
-        return try? BlendCalculator.dose(blend: blend, solventVolumeMilliliters: vol,
-                                         drawVolumeMilliliters: drawVolume).components
+        guard isBlend, let p = primaryAPI, p.massMicrograms > 0,
+              let perDose = perDoseMicrograms, perDose > 0 else { return nil }
+        let ratio = perDose / p.massMicrograms          // primary dose as a fraction of primary mass
+        let vol = solventVolumeMilliliters ?? 0
+        return apis.map { api in
+            BlendComponentDose(
+                id: api.id,
+                name: api.name,
+                concentrationMcgPerMl: vol > 0 ? api.massMicrograms / vol : 0,
+                deliveredDose: Mass(micrograms: api.massMicrograms * ratio)
+            )
+        }
     }
 
     var expiryState: (label: String, isWarning: Bool, isError: Bool)? {

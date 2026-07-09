@@ -152,6 +152,10 @@ struct VialBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \CustomCompound.name) private var customCompounds: [CustomCompound]
+    // Needed to detach any logs/protocols that reference this vial before deleting it.
+    @Query private var logs: [LoggedDose]
+    @Query private var protocols: [SavedProtocol]
+    @State private var showDeleteConfirm = false
 
     private struct APIEntry: Identifiable {
         let id = UUID()
@@ -386,6 +390,16 @@ struct VialBuilderView: View {
 
                     PrimaryButton(title: editing == nil ? "Add vial" : "Save changes", systemImage: "checkmark") { save() }
                         .disabled(!canSave).opacity(canSave ? 1 : 0.5)
+
+                    if editing != nil {
+                        Button(role: .destructive) { showDeleteConfirm = true } label: {
+                            Label("Delete vial", systemImage: "trash")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity).padding(.vertical, Space.sm)
+                                .foregroundStyle(BrandColor.danger)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(Space.lg)
             }
@@ -393,6 +407,18 @@ struct VialBuilderView: View {
             .navigationTitle(editing == nil ? "New vial" : "Edit vial")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .confirmationDialog("Delete this vial?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete vial", role: .destructive) {
+                    if let editing {
+                        editing.reconcileDelete(in: context, doses: logs, protocols: protocols)
+                        try? context.save()
+                    }
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the vial from your Stack. Doses you've already logged are kept, and any protocol using it keeps its schedule but loses the vial link.")
+            }
             // A preset-autofilled nickname is only honest while the formula still matches the
             // preset — drop it the moment the ingredient list diverges.
             .onChange(of: entries.map(\.compound.name)) { _, names in

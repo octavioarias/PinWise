@@ -12,6 +12,13 @@ public struct BlendComponentDose: Codable, Hashable, Sendable, Identifiable {
     public let name: String
     public let concentrationMcgPerMl: Double
     public let deliveredDose: Mass
+
+    public init(id: UUID, name: String, concentrationMcgPerMl: Double, deliveredDose: Mass) {
+        self.id = id
+        self.name = name
+        self.concentrationMcgPerMl = concentrationMcgPerMl
+        self.deliveredDose = deliveredDose
+    }
 }
 
 public struct BlendDoseResult: Codable, Hashable, Sendable {
