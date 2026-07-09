@@ -119,7 +119,9 @@ private struct ProtocolStat: View {
     let label: String
     let value: String
     var tint: Color = BrandColor.textPrimary
-    /// Cadence strings ("Mon, Wed, Fri") can run long — let them shrink instead of wrap.
+    /// Cadence can run long (a run of weekday letters, or "Every 3 days"). Let it wrap to a
+    /// second line at full size — fitting the days — and only shrink as a last resort, rather
+    /// than truncating on one line. The grid's `.top` alignment absorbs the taller column.
     var compresses: Bool = false
 
     var body: some View {
@@ -128,8 +130,9 @@ private struct ProtocolStat: View {
             Text(value)
                 .font(Typo.statValue)
                 .foregroundStyle(tint)
-                .lineLimit(compresses ? 1 : nil)
+                .lineLimit(compresses ? 2 : nil)
                 .minimumScaleFactor(compresses ? 0.8 : 1)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

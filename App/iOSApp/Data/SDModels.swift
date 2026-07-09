@@ -197,12 +197,15 @@ extension SavedProtocol {
     }
 
     /// Human cadence label for display — weekdays as compact Monday-first letters so every
-    /// selected day is visible (e.g. "M W F"), not truncated.
+    /// selected day is visible (e.g. "M W F"), not truncated. Every day (all 7 selected, or a
+    /// 1-day interval) collapses to "Daily".
     var cadenceText: String {
         switch scheduleKind {
         case .daily: return "Daily"
-        case .everyNDays: return "Every \(intervalDays) days"
+        case .everyNDays: return intervalDays <= 1 ? "Daily" : "Every \(intervalDays) days"
         case .weekly, .specificWeekdays:
+            let selected = weekdays.filter { (1...7).contains($0) }
+            if Set(selected).count == 7 { return "Daily" }        // every day selected
             let labels = SavedProtocol.mondayFirst(weekdays).map(SavedProtocol.shortWeekdayLabel)
             return labels.isEmpty ? "Weekly" : labels.joined(separator: " ")
         case .asNeeded: return "As needed"
