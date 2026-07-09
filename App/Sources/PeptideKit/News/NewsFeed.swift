@@ -52,17 +52,23 @@ public struct NewsItem: Codable, Hashable, Sendable, Identifiable {
     /// Optional lead-image URL the pipeline attaches (e.g. an Open Graph image). Rendered as
     /// an Apple-News-style thumbnail; the card falls back to a branded gradient when nil.
     public var imageURL: String?
+    /// Short scannable teaser (≤~100 chars) for list cards; falls back to `summary` when nil.
+    public var teaser: String?
 
     public init(
         id: String, headline: String, summary: String, category: NewsCategory,
         compounds: [String], sources: [NewsSource], publishedAt: String,
-        popularity: Int, isMajorUpdate: Bool, disclaimer: String, imageURL: String? = nil
+        popularity: Int, isMajorUpdate: Bool, disclaimer: String,
+        imageURL: String? = nil, teaser: String? = nil
     ) {
         self.id = id; self.headline = headline; self.summary = summary; self.category = category
         self.compounds = compounds; self.sources = sources; self.publishedAt = publishedAt
         self.popularity = popularity; self.isMajorUpdate = isMajorUpdate; self.disclaimer = disclaimer
-        self.imageURL = imageURL
+        self.imageURL = imageURL; self.teaser = teaser
     }
+
+    /// Text for list/summary contexts: the teaser when present, else the full summary.
+    public var listText: String { teaser ?? summary }
 }
 
 /// The published feed document the app fetches.
@@ -107,6 +113,7 @@ public extension NewsFeed {
           ],
           "publishedAt": "2026-05-21T00:00:00Z",
           "imageURL": "https://example.com/retatrutide.jpg",
+          "teaser": "Eli Lilly's retatrutide hit its Phase 3 obesity endpoints (TRIUMPH-1). Still investigational.",
           "popularity": 95,
           "isMajorUpdate": true,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."

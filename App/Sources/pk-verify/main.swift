@@ -263,6 +263,25 @@ do {
     check(feed.items.allSatisfy { !$0.disclaimer.isEmpty }, "EVERY item carries a disclaimer")
     check(feed.items.allSatisfy { $0.sources.allSatisfy { !$0.url.isEmpty } }, "every source has a URL")
     check(feed.items.filter { $0.imageURL != nil }.count == 1, "optional imageURL decodes both when present and absent")
+
+    // teaser / listText — additive optional; teaser-less items fall back to summary via listText.
+    let withTeaser = NewsItem(
+        id: "t1", headline: "H", summary: "Full summary body.", category: .general,
+        compounds: [], sources: [], publishedAt: "2026-07-08T00:00:00Z",
+        popularity: 0, isMajorUpdate: false, disclaimer: "d", teaser: "Short teaser.")
+    check(withTeaser.listText == (withTeaser.teaser ?? withTeaser.summary) && withTeaser.listText == "Short teaser.",
+          "listText == teaser when teaser present")
+    let noTeaser = NewsItem(
+        id: "t2", headline: "H", summary: "Full summary body.", category: .general,
+        compounds: [], sources: [], publishedAt: "2026-07-08T00:00:00Z",
+        popularity: 0, isMajorUpdate: false, disclaimer: "d")
+    check(noTeaser.teaser == nil && noTeaser.listText == noTeaser.summary,
+          "listText == summary when teaser nil (backward-compatible fallback)")
+    // Exactly one sample item carries a teaser (parallels the imageURL == 1 check).
+    check(feed.items.filter { $0.teaser != nil }.count == 1, "optional teaser decodes both when present and absent")
+    let lead = feed.items.first { $0.imageURL != nil }
+    check(lead?.teaser != nil, "the lead item (with imageURL) has a non-nil teaser")
+    check((lead?.teaser?.count ?? 999) <= 100, "lead item teaser is ≤100 chars")
 } catch {
     check(false, "news feed failed to decode: \(error)")
 }
