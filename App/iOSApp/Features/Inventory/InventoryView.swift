@@ -286,6 +286,15 @@ struct VialBuilderView: View {
         return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
     }
 
+    /// The escape hatch for a blend, in the app's own vocabulary (Stack ▸ My Vials / My Protocols).
+    /// A pre-mixed vial can't be separated — its compounds arrive combined from the pharmacy — so
+    /// the advice differs from a powder you mix yourself.
+    private var separateVialsSuggestion: String {
+        isPremixed
+        ? "A pre-mixed vial can't be split — these compounds come combined from the pharmacy. To dose each on its own, you'd need a separate pre-mixed vial for each one."
+        : "Want to dose each compound on its own? Add them as separate vials (Stack ▸ My Vials), then run them together as a protocol (Stack ▸ My Protocols)."
+    }
+
     /// The blend "hero": what one shot actually delivers of every compound (live), the anchor
     /// highlighted, plus the ratio explanation and the separate-vials escape hatch.
     private var blendHero: some View {
@@ -316,9 +325,9 @@ struct VialBuilderView: View {
             Text("Everything is mixed in one vial, so a shot always pulls this exact ratio. Choose which compound to dose by above — the rest follow.")
                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
             Label {
-                Text("Want a different amount of each? Add them as separate vials, then combine them in a protocol — a stack lets you dose every compound on its own.")
+                Text(separateVialsSuggestion)
             } icon: {
-                Image(systemName: "square.stack.3d.up")
+                Image(systemName: isPremixed ? "info.circle" : "square.stack.3d.up")
             }
             .font(.caption).foregroundStyle(BrandColor.accentText)
         }
