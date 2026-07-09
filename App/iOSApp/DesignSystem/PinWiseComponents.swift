@@ -145,17 +145,20 @@ struct MicroLabel: View {
 }
 
 /// A labeled figure — calculator outputs and dashboard stats. Emphasis uses the lighter
-/// `accentText` blue so it stays legible on the dark ground (WCAG).
+/// `accentText` blue so it stays legible on the dark ground (WCAG). `compact` drops the
+/// value to the 17pt stat-grid register (`Typo.statValue`) for 3-up stat strips (Strava);
+/// `emphasized` still overrides the value color to `accentText` in either size.
 struct StatTile: View {
     let label: String
     let value: String
     var emphasized: Bool = false
+    var compact: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             MicroLabel(label)
             Text(value)
-                .font(emphasized ? Typo.numberLG : Typo.numberMD)
+                .font(compact ? Typo.statValue : (emphasized ? Typo.numberLG : Typo.numberMD))
                 .foregroundStyle(emphasized ? BrandColor.accentText : BrandColor.textPrimary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

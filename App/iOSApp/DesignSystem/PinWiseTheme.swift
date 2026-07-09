@@ -153,6 +153,24 @@ enum BrandColor {
     static let textSecondary = Color(light: 0x5A6478, dark: 0x9AA3B8)
 }
 
+/// Chart-series palette — the one source of categorical color for Swift Charts surfaces.
+enum ChartPalette {
+    /// Categorical series colors — FIXED order, never cycled. CVD-validated per mode
+    /// (dark minimum pairwise CVD distance 26.8, light 27.1, and every color holds ≥3:1
+    /// contrast against its mode's chart ground). Dark set intentionally aligns 1–3 with
+    /// the accentText/success/warning hues but is declared separately: series color ≠
+    /// status color. No cycling helper is provided — cycling is banned; when a domain
+    /// exceeds five series, repeat colors WITH a distinct symbol shape as the secondary
+    /// encoding (see the Symptoms chart).
+    static let categorical: [Color] = [
+        Color(light: 0x2536E6, dark: 0x8A97FF),
+        Color(light: 0x0C8052, dark: 0x18E39A),
+        Color(light: 0x9A5B00, dark: 0xFFB020),
+        Color(light: 0xB12D63, dark: 0xFF7AB0),
+        Color(light: 0x0E5FA8, dark: 0x7FB4FF),
+    ]
+}
+
 /// Type ramp — system font (SF), monospaced figures. `.black` is reserved for the number
 /// ramp (the number is the headline); titles and chrome top out at `.bold`.
 enum Typo {
@@ -208,6 +226,12 @@ enum Motion {
 // (its own status color, radius 6). Nothing else glows.
 // Neutral-black STRUCTURAL shadows are not glows: the two drawer shadows (0.45/24) and
 // Elevation.chrome under the floating tab bar.
+//
+// Haptic vocabulary — one meaning per feedback kind, app-wide: `.selection` for segmented
+// controls, menus, slider detents, and range controls, attached ONCE per control GROUP at
+// the container (per-element duplicates double-fire); `.success` is RESERVED for saves;
+// chart scrubbing gets NO haptic (the Strava rule — scrubbing is continuous visual
+// feedback, and a tick per data point reads as noise, not information).
 
 /// Scheme-aware drop shadow — the design system's only shadow recipe. On dark, elevation
 /// comes from surface lightness + the hairline stroke, so only `.hero` and `.chrome` cast
