@@ -1,67 +1,103 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-09T03:38:11.620Z",
+  "generatedAt": "2026-07-09T19:08:42.266Z",
   "items": [
     {
-      "id": "ct-NCT06935838",
-      "headline": "Effects of Tirzepatide on Weight Loss and Chronic Inflammation in People With HIV",
-      "summary": "This is a prospective cohort study of 12 overweight (with one or more weight-related condition) or obese adults with well controlled HIV-1 on antiretroviral therapy (ART). 5mg. Primary outcome: Change in Baseline Body Weight.",
-      "teaser": "This is a prospective cohort study of 12 overweight (with one or more weight-related condition) or…",
-      "category": "Trial results",
+      "id": "pm-42394981",
+      "headline": "Efficacy and safety of incretin-based therapies in patients with type 2 diabetes mellitus…",
+      "summary": "Published in Front Pharmacol (2026). See the source for details.",
+      "category": "General",
       "compounds": [
-        "Tirzepatide"
+        "Retatrutide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT06935838)",
-          "url": "https://clinicaltrials.gov/study/NCT06935838",
-          "kind": "trial"
+          "name": "PubMed (42394981)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42394981/",
+          "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09T19:08:41.365Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 100,
       "isMajorUpdate": true
     },
     {
-      "id": "ct-NCT04255433",
-      "headline": "A Study of Tirzepatide (LY3298176) Compared With Dulaglutide on Major Cardiovascular Events in Participants With Type 2 Diabetes",
-      "summary": "The purpose of the trial is to assess the efficacy and safety of tirzepatide to dulaglutide in participants with type 2 diabetes and increased cardiovascular risk. Primary outcome: Number of Participants From Randomization to First Occurrence of Death From MACE-3 [Composite Endpoint of Major Adverse….",
-      "teaser": "The purpose of the trial is to assess the efficacy and safety of tirzepatide to dulaglutide in…",
-      "category": "Trial results",
+      "id": "pm-42419792",
+      "headline": "Comparative effects of drugs for adults with overweight or obesity: systematic review and…",
+      "summary": "Published in BMJ (2026 Jul 8). See the source for details.",
+      "category": "General",
       "compounds": [
-        "Tirzepatide",
-        "Dulaglutide"
+        "Retatrutide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT04255433)",
-          "url": "https://clinicaltrials.gov/study/NCT04255433",
-          "kind": "trial"
+          "name": "PubMed (42419792)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42419792/",
+          "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09T19:08:41.365Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 95,
       "isMajorUpdate": true
     },
     {
-      "id": "ct-NCT07574723",
-      "headline": "Tirzepatide Titration to Reduce Side Effects in Individuals With Obesity",
-      "summary": "The goal of this clinical trial is to determine whether a flexible, symptom-guided titration strategy for tirzepatide can reduce gastrointestinal side effects while maintaining weight-loss effectiveness in adults with obesity without diabetes. The main questions it aims to answer are: 1. Primary outcome: Vomiting episodes per patient assessed using the Modified Index of Nausea, Vomiting, and Retching (M-INVR).",
-      "teaser": "The goal of this clinical trial is to determine whether a flexible, symptom-guided titration…",
+      "id": "pm-42423951",
+      "headline": "Special Considerations When Using GLP-1 Receptor Agonists in the Treatment of Obesity and…",
+      "summary": "Published in Adv Ther (2026 Jul 9). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42423951)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42423951/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-09T19:08:40.125Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 100,
+      "isMajorUpdate": true
+    },
+    {
+      "id": "pm-42424036",
+      "headline": "Effect of glucagon-like peptide-1 receptor agonists on body weight and urinary albumin-to…",
+      "summary": "Published in J Int Med Res (2026 Jul). See the source for details.",
+      "category": "General",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "PubMed (42424036)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42424036/",
+          "kind": "journal"
+        }
+      ],
+      "publishedAt": "2026-07-09T19:08:40.125Z",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 95,
+      "isMajorUpdate": true
+    },
+    {
+      "id": "ct-NCT06727331",
+      "headline": "Study of Tirzepatide for Recovery and Alcohol Use Management",
+      "summary": "PHASE2 trial for Alcohol Use Disorder (AUD). According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-07-09.",
       "category": "Trial results",
       "compounds": [
         "Tirzepatide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT07574723)",
-          "url": "https://clinicaltrials.gov/study/NCT07574723",
+          "name": "ClinicalTrials.gov (NCT06727331)",
+          "url": "https://clinicaltrials.gov/study/NCT06727331",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 90,
       "isMajorUpdate": false
@@ -90,31 +126,29 @@
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT03884075",
-      "headline": "Non-Alcoholic Fatty Liver Disease, the HEpatic Response to Oral Glucose, and the Effect of Semaglutide (NAFLD HEROES)",
-      "summary": "Background: In non-alcoholic fatty liver disease (NAFLD), fat accumulates in the liver and can cause damage. Researchers want to learn what causes the damage NAFLD, and to see if a medication can help. Primary outcome: Histological Improvement; Clinical Improvement; Change in hepatic gene expression.",
-      "teaser": "Background: In non-alcoholic fatty liver disease (NAFLD), fat accumulates in the liver and can…",
+      "id": "ct-NCT07693608",
+      "headline": "An Open-Label Tirzepatide Trial for Comorbid Obesity and Stimulant Use Disorder",
+      "summary": "PHASE2 trial for Obesity, Methamphetamine Use Disorder. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-09.",
       "category": "Trial results",
       "compounds": [
-        "Semaglutide"
+        "Tirzepatide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT03884075)",
-          "url": "https://clinicaltrials.gov/study/NCT03884075",
+          "name": "ClinicalTrials.gov (NCT07693608)",
+          "url": "https://clinicaltrials.gov/study/NCT07693608",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 80,
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT05616013",
-      "headline": "Safety and Efficacy of Bimagrumab and Semaglutide in Adults Who Are Overweight or Obese",
-      "summary": "A phase 2 study to assess the efficacy of bimagrumab alone or in addition to semaglutide to assess efficacy and safety in overweight or obese men and women Primary outcome: Change From Baseline in Body Weight at Week 48.",
-      "teaser": "A phase 2 study to assess the efficacy of bimagrumab alone or in addition to semaglutide to assess…",
+      "id": "ct-NCT07417618",
+      "headline": "INcreTin-based thERapies for Cardiovascular Event PrevenTion in Patients With and Without…",
+      "summary": "trial for Type 2 Diabetes, Overweight. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-07-09.",
       "category": "Trial results",
       "compounds": [
         "Semaglutide",
@@ -122,35 +156,54 @@
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT05616013)",
-          "url": "https://clinicaltrials.gov/study/NCT05616013",
+          "name": "ClinicalTrials.gov (NCT07417618)",
+          "url": "https://clinicaltrials.gov/study/NCT07417618",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 75,
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT05574439",
-      "headline": "Young Adults With Early-onset Obesity Treated With Semaglutide",
-      "summary": "Introduction: The increasing prevalence of obesity is particularly pronounced among adolescents. Currently available treatment options consist of structured lifestyle interventions. Primary outcome: Change in BMI (weight in kg/height in m^2).",
-      "teaser": "Introduction: The increasing prevalence of obesity is particularly pronounced among adolescents.",
-      "category": "Guidance",
+      "id": "ct-NCT07055607",
+      "headline": "A Two-year Prospective, Observational Study of Wegovy in Real-world Clinical Practice",
+      "summary": "trial for Obesity. According to ClinicalTrials.gov, its status is ENROLLING_BY_INVITATION, last updated 2026-07-09.",
+      "category": "Trial results",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT05574439)",
-          "url": "https://clinicaltrials.gov/study/NCT05574439",
+          "name": "ClinicalTrials.gov (NCT07055607)",
+          "url": "https://clinicaltrials.gov/study/NCT07055607",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-08T00:00:00Z",
+      "publishedAt": "2026-07-09",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 70,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07619495",
+      "headline": "Injectable Semaglutide vs Dulaglutide in Individuals at Cardiovascular Risk",
+      "summary": "trial for Type 2 Diabetes Mellitus, Obesity. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-07-09.",
+      "category": "Trial results",
+      "compounds": [
+        "Semaglutide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07619495)",
+          "url": "https://clinicaltrials.gov/study/NCT07619495",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-09",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 60,
       "isMajorUpdate": false
     },
     {
@@ -193,7 +246,7 @@
       ],
       "publishedAt": "2026-07-07T00:00:00Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
-      "popularity": 60,
+      "popularity": 55,
       "isMajorUpdate": false
     },
     {
@@ -214,7 +267,7 @@
       ],
       "publishedAt": "2026-07-01T00:00:00Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
-      "popularity": 55,
+      "popularity": 50,
       "isMajorUpdate": false
     },
     {
@@ -235,27 +288,6 @@
         }
       ],
       "publishedAt": "2026-07-01T00:00:00Z",
-      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
-      "popularity": 50,
-      "isMajorUpdate": false
-    },
-    {
-      "id": "pm-42328738",
-      "headline": "Rapid and harmonized analytical workflow for the determination of peptidic and non-peptidic doping agents in dried and liquid blood matrices",
-      "summary": "Recently, methods for detecting small peptides in dried blood spots have been published. These procedures typically involve multiple sample preparation steps, resulting in labor-intensive and costly workflows.",
-      "teaser": "Recently, methods for detecting small peptides in dried blood spots have been published.",
-      "category": "General",
-      "compounds": [
-        "BPC-157"
-      ],
-      "sources": [
-        {
-          "name": "PubMed (42328738)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42328738/",
-          "kind": "journal"
-        }
-      ],
-      "publishedAt": "2026-06-22T00:00:00Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 45,
       "isMajorUpdate": false
@@ -282,11 +314,10 @@
       "isMajorUpdate": false
     },
     {
-      "id": "pm-42394981",
-      "headline": "Efficacy and safety of incretin-based therapies in patients with type 2 diabetes mellitus: a network meta-analysis based on clinical trials",
-      "summary": "This study systematically assessed the efficacy and safety of 15 incretin-based therapies (IBTs) for type 2 diabetes mellitus (T2DM), including mono- (GLP-1RA), dual- (GIP/GLP-1RA or GLP-1/GCGR), and triple- (GIP/GLP-1/GCGR) receptor agonists, and explored how dosage and treatment duration affect clinical outcomes to support individualized treatment decisions.",
-      "teaser": "This study systematically assessed the efficacy and safety of 15 incretin-based therapies (IBTs)…",
-      "category": "Guidance",
+      "id": "ct-NCT06554717",
+      "headline": "Tesamorelin as an Adjunct to Exercise for Improving Physical Function in HIV",
+      "summary": "PHASE2 trial for HIV-1-infection, Frailty. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-05-19.",
+      "category": "Trial results",
       "compounds": [
         "Semaglutide",
         "Tirzepatide",
@@ -295,12 +326,12 @@
       ],
       "sources": [
         {
-          "name": "PubMed (42394981)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42394981/",
-          "kind": "journal"
+          "name": "ClinicalTrials.gov (NCT06554717)",
+          "url": "https://clinicaltrials.gov/study/NCT06554717",
+          "kind": "trial"
         }
       ],
-      "publishedAt": "2026-06-18T00:00:00Z",
+      "publishedAt": "2026-05-19",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 35,
       "isMajorUpdate": false
