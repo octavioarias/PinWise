@@ -41,7 +41,8 @@ struct ProtocolBuilderView: View {
             // and custom-compound protocols editable (the name is all that's persisted).
             let comp = CompoundCatalog.all.first { $0.name == item.compoundName }
                 ?? Compound(name: item.compoundName, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
-            let unit = comp.preferredDoseUnit
+            // Reopen the line in the unit the user saved it in (falls back to the compound default).
+            let unit = item.doseUnit ?? comp.preferredDoseUnit
             let val = Mass(micrograms: item.doseMicrograms).value(in: unit)
             return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit, vialID: item.vialID)
         }
@@ -74,7 +75,8 @@ struct ProtocolBuilderView: View {
     /// vial rides along at a fixed mass ratio (see `blendBreakdown`) and is shown in the row.
     private func addVial(_ vial: StoredVial) {
         let comp = resolveCompound(vial.primaryAPI?.name ?? "")
-        let unit = comp.preferredDoseUnit
+        // Default the line to the vial's own unit so the protocol inherits it (user can change it).
+        let unit = vial.doseUnit
         let v = vial.perDose.value(in: unit)
         let entry = ItemEntry(compound: comp,
                               doseText: v > 0 ? (v == v.rounded() ? String(Int(v)) : String(v)) : "",
@@ -281,7 +283,8 @@ struct ProtocolBuilderView: View {
     private func save() {
         let built = items.compactMap { e -> ProtocolItem? in
             guard let d = e.doseText.decimalValue, d > 0 else { return nil }
-            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms, vialID: e.vialID)
+            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms,
+                                vialID: e.vialID, doseUnitRaw: e.doseUnit.rawValue)
         }
         guard !built.isEmpty else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)

@@ -93,6 +93,12 @@ struct ProtocolItem: Codable, Hashable, Identifiable {
     var doseMicrograms: Double = 0
     /// The inventory vial this line draws from (nil = not linked to a specific vial).
     var vialID: UUID? = nil
+    /// The unit the user entered this dose in (mg or mcg). Persisted so the protocol's widgets
+    /// (Stack + Home) show the dose in the chosen unit. Additive optional (CloudKit-safe); nil =
+    /// legacy line → resolve via the linked vial, then the magnitude heuristic.
+    var doseUnitRaw: String? = nil
+
+    var doseUnit: MassUnit? { doseUnitRaw.flatMap(MassUnit.init(rawValue:)) }
 }
 
 /// A saved dosing protocol — one shared schedule covering one or more compounds (a stack).
@@ -328,11 +334,12 @@ extension MassUnit {
 }
 
 extension SavedProtocol {
-    /// A protocol shows doses in the unit of the vial it draws from — the vial is the source of
-    /// truth for the unit choice. `forItemAt` resolves per-line (for a stack); with no index it
-    /// resolves the primary. Falls back to the magnitude heuristic when no vial is linked.
+    /// The unit a protocol shows doses in, resolved in priority order: the unit the user entered
+    /// for that line → the linked vial's chosen unit → the magnitude heuristic. `forItemAt`
+    /// resolves per-line (for a stack); with no index it resolves the primary.
     func doseUnit(forItemAt index: Int? = nil, vials: [StoredVial]) -> MassUnit {
         let item = index.flatMap { items.indices.contains($0) ? items[$0] : nil } ?? primaryItem
+        if let u = item?.doseUnit { return u }
         if let vid = item?.vialID, let v = vials.first(where: { $0.id == vid }) { return v.doseUnit }
         return MassUnit.auto(forMicrograms: item?.doseMicrograms ?? 0)
     }
@@ -381,19 +388,21 @@ extension StoredVial {
         return (p.massMicrograms / vol) / 1_000
     }
 
-    /// Per-compound strength for the vial row. Single compound → "BPC-157 5 mg/mL"; a blend lists
-    /// each API's mg-per-mL sharing one denominator → "BPC-157 5 mg / TB-500 3 mg / mL". nil until
-    /// a solvent volume is known (no volume ⇒ no concentration).
+    /// Per-compound strength for the vial row, in the vial's CHOSEN unit (mg or mcg). Single
+    /// compound → "BPC-157 5 mg/mL"; a blend lists each API's strength sharing one denominator →
+    /// "BPC-157 5 mg / TB-500 3 mg / mL" (or the mcg forms). nil until a solvent volume is known.
     var concentrationSummary: String? {
         guard let vol = solventVolumeMilliliters, vol > 0, !apis.isEmpty else { return nil }
-        func fmt(_ mgPerMl: Double) -> String {
-            let rounded = (mgPerMl * 100).rounded() / 100        // 2 dp, trailing zeros trimmed
+        let unit = doseUnit
+        let perUnit = unit.microgramsPerUnit
+        func fmt(_ perMl: Double) -> String {
+            let rounded = (perMl * 100).rounded() / 100          // 2 dp, trailing zeros trimmed
             return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%g", rounded)
         }
         if apis.count == 1, let a = apis.first {
-            return "\(a.name) \(fmt((a.massMicrograms / 1_000) / vol)) mg/mL"
+            return "\(a.name) \(fmt((a.massMicrograms / perUnit) / vol)) \(unit.rawValue)/mL"
         }
-        let parts = apis.map { "\($0.name) \(fmt(($0.massMicrograms / 1_000) / vol)) mg" }
+        let parts = apis.map { "\($0.name) \(fmt(($0.massMicrograms / perUnit) / vol)) \(unit.rawValue)" }
         return parts.joined(separator: " / ") + " / mL"
     }
 
