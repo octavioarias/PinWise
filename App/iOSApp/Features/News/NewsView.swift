@@ -269,7 +269,7 @@ struct FeaturedNewsCard: View {
                     .foregroundStyle(BrandColor.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(item.summary)
+                Text(item.listText)
                     .font(Typo.body)
                     .foregroundStyle(BrandColor.textSecondary)
                     .lineLimit(3)
@@ -311,6 +311,10 @@ struct NewsRow: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
+                    Text(item.listText)
+                        .font(.caption)
+                        .foregroundStyle(BrandColor.textSecondary)
+                        .lineLimit(2)
                     Text("\(item.sources.count) source\(item.sources.count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(BrandColor.success)
@@ -370,6 +374,12 @@ struct NewsDetailView: View {
                             }
                         }
                     }
+                }
+
+                if !item.disclaimer.isEmpty {
+                    Text(item.disclaimer)
+                        .font(.caption2)
+                        .foregroundStyle(BrandColor.textSecondary)
                 }
             }
             .padding(Space.lg)
