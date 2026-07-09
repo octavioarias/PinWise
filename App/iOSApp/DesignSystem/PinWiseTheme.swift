@@ -105,13 +105,18 @@ struct AppearanceApplier: UIViewRepresentable {
 
 // Measured WCAG contrast ratios (audited 2026-07, small-text target 4.5:1):
 //   white/background 20.1 · white/surface 18.7 · textSecondary/dark 7.9 · accentText/dark 7.6
-//   white-on-accent 7.6 · accent-on-white 7.6 · success 8.1 · warning 7.6 · danger 4.8 (chip)
+//   white-on-accent 7.6 · accent-on-white 7.6 · light success-on-white 5.0 · light
+//   warning-on-white 5.4 · danger 4.8 (chip) · data-on-white 4.95 · data-on-dark-surface 10.0
+// Badge ink: every semantic fill holds ≥4.5:1 with `onBadge` in BOTH modes — dark fills +
+// near-black ink 6.2–12.1, light fills + white ink 4.8–5.4. The previous light success
+// (0x0E9E63 → 3.45) and warning (0xB26A00 → 4.24) failed 4.5:1 as small text on white;
+// both are darkened (0x0C8052 / 0x9A5B00) so the light set genuinely holds ≥4.5:1 now.
 // The deep `accent` as text on dark is only 2.6:1 — so text/links on dark use `accentText`.
 // Each token adapts per interface style: dark keeps the Enhanced-style deep blue-black; light
 // is a clean blue-biased near-white. Light values are chosen to hold small-text contrast ≥4.5:1
 // (deep accent, darker semantic hues); dark values are the previously audited set.
 enum BrandColor {
-    // 60% — dominant neutral. Dark: deep blue-black so the edge glow pops. Light: blue-white.
+    // 60% — dominant neutral. Dark: deep blue-black. Light: blue-white.
     static let background = Color(light: 0xF4F6FC, dark: 0x04050B)
     // 30% — secondary surfaces / cards.
     static let surface = Color(light: 0xFFFFFF, dark: 0x0F1120)
@@ -126,24 +131,51 @@ enum BrandColor {
     static let onAccent = Color(hex: 0xFFFFFF)
     // Accent TEXT/ICONS: the deep accent reads well on light; on dark it needs the lighter blue.
     static let accentText = Color(light: 0x2536E6, dark: 0x8A97FF)
+    /// Badge ink — text on solid semantic badge fills: white on the deep light-mode fills,
+    /// near-black on the bright dark-mode fills (the Spotify black-on-green register).
+    static let onBadge = Color(light: 0xFFFFFF, dark: 0x04050B)
 
     // Semantic (separate from the accent). Light variants darkened for contrast on white.
-    static let success = Color(light: 0x0E9E63, dark: 0x18E39A)   // green — progress / health
-    static let warning = Color(light: 0xB26A00, dark: 0xFFB020)   // amber — attention
+    static let success = Color(light: 0x0C8052, dark: 0x18E39A)   // green — progress / health
+    static let warning = Color(light: 0x9A5B00, dark: 0xFFB020)   // amber — attention
     static let danger  = Color(light: 0xD92D2D, dark: 0xFF4D4D)   // red — urgency / destructive
     static let mint = success                                     // alias kept for call sites
+
+    // DOMAIN hue — objective health data (Labs & metrics tile + future data accents). The
+    // Oura-readiness teal family. A domain color, NOT a status color: it never means
+    // "ok/attention/stop" and never appears in badges. Audited (2026-07): light 0x0E7C86
+    // on white 4.95:1 (text-safe); dark 0x4FD1C5 on surface 10.0:1. As icon-on-own-tint
+    // (0.16 ground): 3.98:1 light / 7.40:1 dark — ≥3:1 graphics floor in both modes.
+    static let data = Color(light: 0x0E7C86, dark: 0x4FD1C5)
 
     // Text
     static let textPrimary = Color(light: 0x0B0D16, dark: 0xFFFFFF)
     static let textSecondary = Color(light: 0x5A6478, dark: 0x9AA3B8)
 }
 
-/// Type ramp — system font (SF), heavy weights, uppercase display, monospaced figures.
+/// Chart-series palette — the one source of categorical color for Swift Charts surfaces.
+enum ChartPalette {
+    /// Categorical series colors — FIXED order, never cycled. CVD-validated per mode
+    /// (dark minimum pairwise CVD distance 26.8, light 27.1, and every color holds ≥3:1
+    /// contrast against its mode's chart ground). Dark set intentionally aligns 1–3 with
+    /// the accentText/success/warning hues but is declared separately: series color ≠
+    /// status color. No cycling helper is provided — cycling is banned; when a domain
+    /// exceeds five series, repeat colors WITH a distinct symbol shape as the secondary
+    /// encoding (see the Symptoms chart).
+    static let categorical: [Color] = [
+        Color(light: 0x2536E6, dark: 0x8A97FF),
+        Color(light: 0x0C8052, dark: 0x18E39A),
+        Color(light: 0x9A5B00, dark: 0xFFB020),
+        Color(light: 0xB12D63, dark: 0xFF7AB0),
+        Color(light: 0x0E5FA8, dark: 0x7FB4FF),
+    ]
+}
+
+/// Type ramp — system font (SF), monospaced figures. `.black` is reserved for the number
+/// ramp (the number is the headline); titles and chrome top out at `.bold`.
 enum Typo {
-    static let displayXL = Font.system(size: 44, weight: .black)
-    static let displayL = Font.system(size: 34, weight: .black)
-    /// Screen/tab titles — heavy weight (as before), but sentence case rather than all-caps.
-    static let screenTitle = Font.system(size: 34, weight: .black)
+    /// Screen/tab titles — bold, sentence case rather than all-caps.
+    static let screenTitle = Font.system(size: 34, weight: .bold)
     static let title = Font.system(size: 28, weight: .bold)
     static let headline = Font.system(size: 20, weight: .semibold)
     static let body = Font.system(size: 16, weight: .regular)
@@ -153,6 +185,13 @@ enum Typo {
     static let numberXL = Font.system(size: 40, weight: .black, design: .rounded).monospacedDigit()
     static let numberLG = Font.system(size: 30, weight: .black, design: .rounded).monospacedDigit()
     static let numberMD = Font.system(size: 22, weight: .bold, design: .rounded).monospacedDigit()
+    // Instrument data voice — uppercase micro-labels over tabular values (Whoop/Strava/Oura).
+    static let microLabel = Font.system(size: 11, weight: .semibold)
+    static let microTracking: CGFloat = 1.1          // pair with .tracking() at call sites
+    /// 3-up stat-grid value register (Strava: 11pt caps label over 17/700 tabular value).
+    static let statValue = Font.system(size: 17, weight: .bold, design: .rounded).monospacedDigit()
+    /// "The number is the headline" hero figure (Home activity hero).
+    static let numberHero = Font.system(size: 48, weight: .black, design: .rounded).monospacedDigit()
 }
 
 enum Space {
@@ -162,12 +201,74 @@ enum Space {
     static let lg: CGFloat = 16
     static let xl: CGFloat = 24
     static let xxl: CGFloat = 32
+    static let xxxl: CGFloat = 48   // hero breathing room — between Home's hero block and reference sections
 }
 
 enum Radius {
     static let card: CGFloat = 18
     static let control: CGFloat = 12
     static let pill: CGFloat = 999
+}
+
+/// Named motion — one vocabulary for the whole app. Every USE must be gated on
+/// `@Environment(\.accessibilityReduceMotion)` (fall back to opacity-only or nil).
+enum Motion {
+    static let press = Animation.spring(response: 0.3, dampingFraction: 0.7)      // existing PressableStyle value
+    static let emphasis = Animation.spring(response: 0.45, dampingFraction: 0.8)  // card/sheet arrivals
+    static let reveal = Animation.easeOut(duration: 0.9)                          // ring sweep + count-up (Oura ~900ms)
+    static let entrance = Animation.easeOut(duration: 0.35)                       // staggered list entrances
+    static let drawer = Animation.spring(response: 0.38, dampingFraction: 0.9)    // existing drawer value
+    static let stagger: Double = 0.04                                             // 40ms/row (Oura)
+}
+
+// Glow rules: a colored glow means "live/active" — never gray, never decorative. The only
+// sanctioned glows are the PrimaryButton accent, the tab bar's Log chip, and StatusDot
+// (its own status color, radius 6). Nothing else glows.
+// Neutral-black STRUCTURAL shadows are not glows: the two drawer shadows (0.45/24) and
+// Elevation.chrome under the floating tab bar.
+//
+// Haptic vocabulary — one meaning per feedback kind, app-wide: `.selection` for segmented
+// controls, menus, slider detents, and range controls, attached ONCE per control GROUP at
+// the container (per-element duplicates double-fire); `.success` is RESERVED for saves;
+// chart scrubbing gets NO haptic (the Strava rule — scrubbing is continuous visual
+// feedback, and a tick per data point reads as noise, not information).
+
+/// Scheme-aware drop shadow — the design system's only shadow recipe. On dark, elevation
+/// comes from surface lightness + the hairline stroke, so only `.hero` and `.chrome` cast
+/// shadows (large/soft/very-dark — the Spotify rule); `.card` shadows exist in light mode
+/// only (small/faint — the Apple Music rule). `.hero` marks the one headline surface on a
+/// screen, `.chrome` floating chrome over live content (the tab bar — one register quieter
+/// than the transient drawers), `.card` regular content cards, `.none` flat rows.
+struct Elevation: ViewModifier {
+    enum Level { case hero, chrome, card, none }
+    let level: Level
+    @Environment(\.colorScheme) private var scheme
+
+    // (opacity, radius, y) per level — dark: hero 0.50/28/14 · chrome 0.35/18/8 · card 0/0/0
+    // (dark elevation is surface lightness + hairline); light: hero 0.10/20/10 ·
+    // chrome 0.10/14/6 · card 0.08/16/8; none draws no shadow.
+    private var values: (opacity: Double, radius: CGFloat, y: CGFloat) {
+        switch (level, scheme == .dark) {
+        case (.hero, true): return (0.50, 28, 14)
+        case (.chrome, true): return (0.35, 18, 8)
+        case (.card, true): return (0, 0, 0)
+        case (.hero, false): return (0.10, 20, 10)
+        case (.chrome, false): return (0.10, 14, 6)
+        case (.card, false): return (0.08, 16, 8)
+        case (.none, _): return (0, 0, 0)
+        }
+    }
+
+    func body(content: Content) -> some View {
+        content.shadow(color: .black.opacity(values.opacity), radius: values.radius, y: values.y)
+    }
+}
+
+extension View {
+    /// Applies the design-system shadow for an elevation level (scheme-aware; `.none` is flat).
+    func elevation(_ level: Elevation.Level) -> some View {
+        modifier(Elevation(level: level))
+    }
 }
 
 /// Ambient blue mesh behind hero areas (iOS 18). Native — no image assets. Scheme-aware:
@@ -198,7 +299,9 @@ struct HeroMesh: View {
 
 extension View {
     /// Bottom clearance so scrollable content always clears the floating tab bar (an overlay
-    /// that reserves no layout space). No-op on non-scrolling screens.
+    /// that reserves no layout space). 90 = bar content height 65 (top pad 12 + iconRow 30 +
+    /// spacing 3 + label ≈12 + bottom pad 8) + 8 bottom float + 17 breathing gap. No-op on
+    /// non-scrolling screens.
     func tabBarClearance() -> some View {
         contentMargins(.bottom, 90, for: .scrollContent)
     }
@@ -209,89 +312,12 @@ extension View {
             .background(BrandColor.background.ignoresSafeArea())
     }
 
-    /// A soft accent glow hugging the screen edges — ambient, non-interactive. Mirrors the
-    /// glow around the device previews. Apply once at the app root.
-    // Uses the LIGHTER accent (`accentText`) — the deep accent on near-black is ~2.6:1 and
-    // reads as invisible once blurred. A dedicated bright glow tone shows on the dark edges.
-    func edgeGlow() -> some View {
-        overlay { EdgeGlowOverlay() }
-    }
-
-    /// Subtle film-grain texture across the screen — a premium, tactile cue that breaks up
-    /// flat fills. Non-interactive; applied once at the app root.
-    func grain(_ opacity: Double = 0.035) -> some View {
-        overlay {
-            Grain.image
-                .resizable(resizingMode: .tile)
-                .opacity(opacity)
-                .blendMode(.softLight)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
-    }
-
-    /// Canvas with an ambient deep-blue mesh at the top, faded into the background.
+    /// Flat brand canvas for tab-level screens (identical to `screenBackground()`; the name
+    /// is kept for its call sites). The ambient mesh survives only on the four pre-auth
+    /// covers that use `HeroMesh()` directly.
     func heroScreen() -> some View {
-        tabBarClearance()
-            .background(alignment: .top) {
-                HeroMesh()
-                    .frame(height: 340)
-                    .mask {
-                        LinearGradient(
-                            colors: [.black, .black.opacity(0.2), .clear],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    }
-                    .ignoresSafeArea(edges: .top)
-            }
-            .background(BrandColor.background.ignoresSafeArea())
+        screenBackground()
     }
-}
-
-/// The ambient accent glow hugging the screen edges. Scheme-aware: bold on the dark canvas,
-/// softened on light so the blue halo reads as a highlight rather than a heavy border.
-private struct EdgeGlowOverlay: View {
-    @Environment(\.colorScheme) private var scheme
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 52, style: .continuous)
-            .strokeBorder(
-                LinearGradient(
-                    colors: [BrandColor.accentText, BrandColor.accentText.opacity(0.45), BrandColor.accentText.opacity(0.9)],
-                    startPoint: .top, endPoint: .bottom
-                ),
-                lineWidth: 4
-            )
-            .blur(radius: 11)
-            .opacity(scheme == .dark ? 0.95 : 0.5)
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-    }
-}
-
-/// A cached, deterministic monochrome noise tile for the film-grain overlay. Built once with an
-/// xorshift PRNG (no Date/random dependency, so it's stable across launches).
-enum Grain {
-    static let image: Image = {
-        let size = 128
-        let bytesPerRow = size * 4
-        var pixels = [UInt8](repeating: 0, count: bytesPerRow * size)
-        var seed: UInt64 = 88172645463325252
-        for i in 0..<(size * size) {
-            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
-            let v = UInt8(truncatingIfNeeded: seed)
-            let o = i * 4
-            pixels[o] = v; pixels[o + 1] = v; pixels[o + 2] = v; pixels[o + 3] = 255
-        }
-        let space = CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(data: &pixels, width: size, height: size, bitsPerComponent: 8,
-                                  bytesPerRow: bytesPerRow, space: space,
-                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
-              let cg = ctx.makeImage() else {
-            return Image(systemName: "circle.fill")
-        }
-        return Image(decorative: cg, scale: 1, orientation: .up)
-    }()
 }
 
 /// Plain button style that adds a springy press-scale — tactile feedback used across tappable
@@ -301,6 +327,6 @@ struct PressableStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(Motion.press, value: configuration.isPressed)
     }
 }

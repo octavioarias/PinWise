@@ -146,7 +146,7 @@ public extension NewsFeed {
           "category": "General",
           "compounds": ["BPC-157"],
           "sources": [
-            {"name": "Pharmaceutics 2026 (PMID 42198317)", "url": "https://pubmed.ncbi.nlm.nih.gov/42198317/", "kind": "journal"}
+            {"name": "Pharmaceutics 2026 (MDPI 18(5):625)", "url": "https://www.mdpi.com/1999-4923/18/5/625", "kind": "journal"}
           ],
           "publishedAt": "2026-03-10T00:00:00Z",
           "popularity": 60,
@@ -169,8 +169,23 @@ public extension NewsFeed {
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         },
         {
+          "id": "reta-prediabetes-reversion-2026",
+          "headline": "Retatrutide reversed prediabetes for most in Phase 2",
+          "summary": "In the Phase 2 obesity trial (NEJM 2023), most participants who had prediabetes at baseline returned to normal blood sugar by 48 weeks on retatrutide — a large absolute improvement over placebo, where far fewer normalized. Retatrutide is investigational and not FDA-approved; these are secondary glycemic findings, and formal diabetes-prevention outcomes await the Phase 3 (TRIUMPH) program.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "NEJM 2023 (Phase 2)", "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2301972", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT04881760", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"}
+          ],
+          "publishedAt": "2026-06-25T00:00:00Z",
+          "popularity": 90,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
           "id": "reta-liver-fat-2024",
-          "headline": "Retatrutide sharply cut liver fat, early data show",
+          "headline": "Retatrutide cut liver fat in early data",
           "summary": "A Phase 2 sub-study reported large reductions in liver fat in people with metabolic dysfunction-associated steatotic liver disease (MASLD). Findings are early and investigational; retatrutide is not approved for any use.",
           "category": "Trial results",
           "compounds": ["Retatrutide"],
@@ -226,8 +241,53 @@ public extension NewsFeed {
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         },
         {
+          "id": "tesamorelin-visceral-fat",
+          "headline": "Tesamorelin, an approved GHRH analog, cut visceral fat",
+          "summary": "Tesamorelin (Egrifta) is FDA-approved for excess visceral abdominal fat in people with HIV. Phase 3 trials showed meaningful reductions in visceral fat over about six months (NEJM 2007), and later research reported reduced liver fat (JAMA 2014). It works by raising the body's own growth hormone; uses outside HIV-associated lipodystrophy are off-label or investigational.",
+          "category": "Trial results",
+          "compounds": ["Tesamorelin"],
+          "sources": [
+            {"name": "NEJM 2007 (Falutz, tesamorelin)", "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa072375", "kind": "journal"},
+            {"name": "JAMA 2014 (Stanley, liver fat)", "url": "https://pubmed.ncbi.nlm.nih.gov/25038357/", "kind": "journal"},
+            {"name": "U.S. FDA — Egrifta", "url": "https://www.fda.gov/", "kind": "regulatory"}
+          ],
+          "publishedAt": "2026-06-12T00:00:00Z",
+          "popularity": 68,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "cjc1295-ipamorelin-evidence",
+          "headline": "CJC-1295 raised IGF-1 in an early trial; data stay thin",
+          "summary": "CJC-1295, a long-acting GHRH analog, increased growth hormone and IGF-1 for several days in a small early human study (JCEM 2006). Ipamorelin, the selective GH secretagogue it is often paired with, has limited published human data and was investigated for other uses without approval. Neither is FDA-approved, and evidence for body-composition or anti-aging claims remains sparse.",
+          "category": "General",
+          "compounds": ["CJC-1295 (no DAC)", "CJC-1295 (DAC)", "Ipamorelin", "Sermorelin"],
+          "sources": [
+            {"name": "JCEM 2006 (Teichman, CJC-1295)", "url": "https://academic.oup.com/jcem/article-abstract/91/3/799/2843281", "kind": "journal"}
+          ],
+          "publishedAt": "2026-05-30T00:00:00Z",
+          "popularity": 58,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "healing-blends-evidence",
+          "headline": "Healing blends (Wolverine, GLOW) lack human trials",
+          "summary": "Popular recovery blends — Wolverine (BPC-157 + TB-500) and GLOW (which adds GHK-Cu) — have no clinical trials of the combinations themselves. The individual components are mostly preclinical: BPC-157's human data are minimal, TB-500 (thymosin beta-4) is largely animal-stage, and GHK-Cu is best studied as a topical cosmetic ingredient. None are FDA-approved, and the benefits and risks of injecting these blends are not established.",
+          "category": "General",
+          "compounds": ["BPC-157", "TB-500", "GHK-Cu (injectable)", "KPV", "Thymosin Beta-4"],
+          "sources": [
+            {"name": "Pharmaceutics 2026 (MDPI 18(5):625)", "url": "https://www.mdpi.com/1999-4923/18/5/625", "kind": "journal"},
+            {"name": "GHK-Cu review (Pickart, Int. J. Mol. Sci.)", "url": "https://pubmed.ncbi.nlm.nih.gov/29986520/", "kind": "journal"}
+          ],
+          "publishedAt": "2026-05-18T00:00:00Z",
+          "popularity": 62,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
           "id": "cagrisema-phase3",
-          "headline": "CagriSema posts strong Phase 3 results",
+          "headline": "CagriSema posts Phase 3 weight-loss results",
           "summary": "The amylin analog cagrilintide combined with semaglutide (CagriSema) reported Phase 3 weight-loss results. Both are dosed weekly; cagrilintide is investigational and CagriSema is not FDA-approved.",
           "category": "Trial results",
           "compounds": ["Cagrilintide", "Semaglutide"],

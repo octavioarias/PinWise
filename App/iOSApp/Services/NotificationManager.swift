@@ -54,7 +54,9 @@ enum NotificationManager {
 
                 let content = UNMutableNotificationContent()
                 content.title = "Dose reminder"
-                content.body = "\(p.name): \(p.dose.displayString) \(p.compoundName)"
+                // Name every compound in the stack — a reminder for "Recovery stack" that only
+                // mentions BPC-157 invites logging half the injection.
+                content.body = "\(p.name): \(p.effectiveDose.displayString) — \(p.contentsSummary)"
                 content.sound = .default
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)

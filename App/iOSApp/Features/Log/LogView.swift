@@ -2,19 +2,24 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "Single compound" }
+private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-Time Pin" }
 
-/// The Log tab — record a dose against a protocol (all its compounds at once) or a single
-/// compound. A grouped front/back picker keeps injection sites compact; a success haptic
-/// confirms the save; logging draws down matching vials.
+/// The Log tab — record a dose against a protocol (all its compounds at once) or a one-time
+/// pin. Opens on Protocol whenever protocols exist. A grouped front/back picker keeps
+/// injection sites compact; a success haptic confirms the save; logging draws down matching
+/// vials; after a save the app returns Home (with a beat to tap "Log another dose").
 struct LogView: View {
+    @Binding var selected: AppTab
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+    @Query(sort: \CustomCompound.name) private var customCompounds: [CustomCompound]
 
-    @State private var mode: LogMode = .compound
+    @State private var mode: LogMode = .protocolBased   // protocol-first every time the tab opens
     @State private var selectedProtocolID: UUID?
+    @State private var postSaveNav: Task<Void, Never>?
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
     @State private var doseUnit: MassUnit = .milligram
@@ -27,6 +32,8 @@ struct LogView: View {
     @State private var sideEffect: Double = 0
     @State private var savedConfirmation = false
     @State private var savedCount = 0
+    /// One-time mode: the vial the user chose to log from (nil = pick any compound).
+    @State private var selectedVialID: UUID?
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var selectedProtocol: SavedProtocol? { activeProtocols.first { $0.id == selectedProtocolID } }
@@ -34,10 +41,32 @@ struct LogView: View {
         guard let d = Double(doseText), d > 0 else { return nil }
         return d
     }
+    /// Catalog + the user's own compounds — the same list the vial builder offers.
+    private var allCompounds: [Compound] {
+        (CompoundCatalog.allSorted + customCompounds.map(\.asCompound))
+            .sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
+    /// Resolve a stored compound name: catalog, then custom compounds, then a name-only
+    /// placeholder — never an unrelated compound.
+    private func resolveCompound(_ name: String) -> Compound {
+        CompoundCatalog.all.first { $0.name == name }
+            ?? customCompounds.first { $0.name == name }?.asCompound
+            ?? Compound(name: name, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
+    }
+
+    /// Picker options always include the current selection so a vial/protocol referencing a
+    /// deleted custom compound still shows its real name instead of a blank menu.
+    private func pickerOptions(including current: Compound) -> [Compound] {
+        if allCompounds.contains(where: { $0.id == current.id }) { return allCompounds }
+        return (allCompounds + [current]).sorted { $0.name.lowercased() < $1.name.lowercased() }
+    }
+
     /// The compound driving the site suggestion (protocol's primary, or the picked compound).
     private var activeCompound: Compound {
-        if mode == .protocolBased, let name = selectedProtocol?.compoundName,
-           let c = CompoundCatalog.all.first(where: { $0.name == name }) { return c }
+        if mode == .protocolBased, let name = selectedProtocol?.compoundName, !name.isEmpty {
+            return resolveCompound(name)
+        }
         return compound
     }
     private var suggestedSite: InjectionSite? {
@@ -83,8 +112,23 @@ struct LogView: View {
 
                     PrimaryButton(title: savedConfirmation ? "Logged ✓" : saveTitle,
                                   systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
-                        .disabled(!canSave)
+                        .disabled(!canSave || savedConfirmation)
                         .opacity(canSave ? 1 : 0.5)
+                        .scaleEffect(savedConfirmation ? 1.02 : 1)
+                        .animation(reduceMotion ? nil : Motion.emphasis, value: savedConfirmation)
+
+                    if savedConfirmation {
+                        Button {
+                            postSaveNav?.cancel()
+                            savedConfirmation = false
+                        } label: {
+                            Text("Log another dose")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BrandColor.accentText)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     if !recent.isEmpty {
                         SectionHeader(title: "Recent")
@@ -97,14 +141,26 @@ struct LogView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
+                // Protocol-first: only fall back to a one-time pin when there are no protocols.
                 if activeProtocols.isEmpty { mode = .compound }
-                else { mode = .protocolBased; if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id } }
+                else if selectedProtocolID == nil { selectedProtocolID = activeProtocols.first?.id }
                 doseUnit = compound.preferredDoseUnit
-                if site == nil { site = suggestedSite }
-                showBack = site?.isBack ?? false
+                // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
+                // rotation suggestion. The "Suggested" hint below applies the pick on tap.
             }
-            .onChange(of: compound) { _, newValue in doseUnit = newValue.preferredDoseUnit }
-            .onChange(of: doseText) { _, _ in savedConfirmation = false }
+            .onChange(of: compound) { _, newValue in
+                doseUnit = newValue.preferredDoseUnit
+                // Drop the vial link if the user switches to a compound that vial doesn't hold,
+                // so the "From <vial>" label and prefilled dose don't go stale.
+                if let id = selectedVialID, let v = vials.first(where: { $0.id == id }), v.primaryAPI?.name != newValue.name {
+                    selectedVialID = nil
+                }
+            }
+            .onChange(of: doseText) { _, _ in
+                postSaveNav?.cancel()
+                savedConfirmation = false
+            }
+            .onDisappear { postSaveNav?.cancel() }
         }
     }
 
@@ -122,18 +178,15 @@ struct LogView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Space.sm) {
                         ForEach(activeProtocols, id: \.id) { p in
-                            Button { selectedProtocolID = p.id } label: {
-                                Text(p.name)
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
-                                    .background(selectedProtocolID == p.id ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                                    .foregroundStyle(selectedProtocolID == p.id ? BrandColor.onAccent : BrandColor.textPrimary)
-                                    .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: selectedProtocolID == p.id ? 0 : 1))
+                            SelectableChip(title: p.name, isSelected: selectedProtocolID == p.id) {
+                                selectedProtocolID = p.id
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
+                // Condition form: the onAppear default-seed (nil → first id) is programmatic,
+                // not a tap — only buzz once a selection already existed.
+                .sensoryFeedback(.selection, trigger: selectedProtocolID) { old, _ in old != nil }
                 if let p = selectedProtocol {
                     Divider().overlay(BrandColor.stroke)
                     ForEach(Array(p.items.enumerated()), id: \.offset) { i, item in
@@ -156,22 +209,50 @@ struct LogView: View {
 
     // MARK: Compound mode
 
+    private var selectedVialName: String? {
+        guard let id = selectedVialID, let v = vials.first(where: { $0.id == id }) else { return nil }
+        return "From \(v.displayName)"
+    }
+
+    /// One-time log from a vial: pull the primary compound + its per-shot dose and link the vial
+    /// so the draw-down hits the right one. (Protocols remain the way to log a full stack at once.)
+    private func applyVial(_ v: StoredVial) {
+        if let name = v.primaryAPI?.name, !name.isEmpty { compound = resolveCompound(name) }
+        doseUnit = compound.preferredDoseUnit
+        let dose = v.perDose.value(in: doseUnit)
+        doseText = dose == dose.rounded() ? String(Int(dose)) : String(dose)
+        selectedVialID = v.id
+    }
+
     private var compoundCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.lg) {
-                FieldRow("What did you take?", hint: "The compound you're logging.") {
-                    Picker("Compound", selection: $compound) {
-                        ForEach(CompoundCatalog.allSorted, id: \.id) { c in Text(c.name).tag(c) }
+                if !vials.isEmpty {
+                    // Log straight from a vial you own (by nickname) — or pick any compound below.
+                    Menu {
+                        Button("Any compound (no vial)") { selectedVialID = nil }
+                        Divider()
+                        ForEach(vials) { v in Button(v.displayName) { applyVial(v) } }
+                    } label: {
+                        HStack(spacing: Space.sm) {
+                            Image(systemName: "cross.vial.fill")
+                            Text(selectedVialName ?? "Log from one of your vials").fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down").font(.caption)
+                        }
+                        .foregroundStyle(BrandColor.accentText)
+                        .padding(.vertical, Space.sm).padding(.horizontal, Space.md)
+                        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
                     }
-                    .pickerStyle(.menu).tint(BrandColor.accentText)
+                }
+                FieldRow("What did you take?", hint: vials.isEmpty ? "The compound you're logging." : "Pick a vial above, or choose any compound.") {
+                    CompoundMenu(selection: $compound, options: pickerOptions(including: compound))
                 }
                 HStack(spacing: Space.sm) {
                     EvidenceBadge(tier: compound.evidenceTier)
                     if compound.wadaProhibited { TagChip(text: "WADA", color: BrandColor.warning) }
                     Spacer()
-                }
-                if compound.requiresResearchDisclaimer {
-                    Text(Disclaimer.researchCompound).font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 FieldRow("How much?", hint: "The dose you took this time.") {
                     HStack {
@@ -223,11 +304,24 @@ struct LogView: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(region.label.uppercased()).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
                     HStack(spacing: Space.sm) {
-                        ForEach(sites(in: region)) { s in siteChip(s) }
+                        ForEach(sites(in: region)) { s in
+                            // Tapping the selected spot clears it — a log must never carry a
+                            // silently-wrong location.
+                            SelectableChip(title: s.shortName,
+                                           isSelected: site == s,
+                                           shape: .rounded(Radius.control),
+                                           fillWidth: true) {
+                                site = site == s ? nil : s
+                            }
+                            .accessibilityLabel(s.displayName)
+                        }
                     }
                 }
             }
         }
+        // Condition form: finishSave() clears the site programmatically right after the
+        // success haptic — buzz only on selections, never on clears.
+        .sensoryFeedback(.selection, trigger: site) { _, new in new != nil }
     }
 
     private var regionsOnFace: [InjectionSite.Region] {
@@ -236,24 +330,6 @@ struct LogView: View {
     }
     private func sites(in region: InjectionSite.Region) -> [InjectionSite] {
         InjectionSite.allCases.filter { $0.isBack == showBack && $0.region == region }
-    }
-
-    private func siteChip(_ s: InjectionSite) -> some View {
-        let selected = site == s
-        return Button { site = selected ? nil : s } label: {
-            Text(s.shortName)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .padding(.horizontal, Space.xs)
-                .background(selected ? BrandColor.accent : BrandColor.surfaceElevated,
-                            in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                .foregroundStyle(selected ? BrandColor.onAccent : BrandColor.textPrimary)
-                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                    .strokeBorder(BrandColor.stroke, lineWidth: selected ? 0 : 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(s.displayName)
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
     // MARK: Feel
@@ -285,7 +361,7 @@ struct LogView: View {
     }
 
     private func recentRow(_ entry: LoggedDose) -> some View {
-        Card {
+        Card(style: .flat) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
@@ -298,7 +374,15 @@ struct LogView: View {
             }
         }
         .contextMenu {
-            Button(role: .destructive) { context.delete(entry) } label: { Label("Delete", systemImage: "trash") }
+            Button(role: .destructive) {
+                // Restore the vial only for the record that actually decremented it (so a blend
+                // stack — one decrement, several records — gives back exactly one dose).
+                if entry.didDecrement, let vid = entry.vialID,
+                   let vial = vials.first(where: { $0.id == vid }), vial.dosesTaken > 0 {
+                    vial.dosesTaken -= 1
+                }
+                context.delete(entry)
+            } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
@@ -313,7 +397,11 @@ struct LogView: View {
 
     private func saveCompound() {
         guard let d = doseValue else { return }
-        insertDose(compoundName: compound.name, doseMicrograms: Mass(d, doseUnit).micrograms)
+        // Draw down the vial the user picked (if it still contains this compound), else name-match.
+        let vial = selectedVialID.flatMap { id in vials.first { $0.id == id && $0.apiNames.contains(compound.name) } }
+            ?? resolveVial(for: compound.name)
+        insertDose(compoundName: compound.name, doseMicrograms: Mass(d, doseUnit).micrograms,
+                   vial: vial, decrement: vial != nil)
         try? context.save()
         doseText = ""
         finishSave()
@@ -321,25 +409,40 @@ struct LogView: View {
 
     private func saveProtocol() {
         guard let p = selectedProtocol, !p.items.isEmpty else { return }
+        // Draw down each DISTINCT vial once per session, even when several stack items resolve
+        // to the same blend vial (one physical injection) — prevents double-counting.
+        var decremented = Set<UUID>()
         for (i, item) in p.items.enumerated() {
-            insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms)
+            // Prefer the vial the protocol is explicitly linked to; fall back to a name match.
+            let vial = item.vialID.flatMap { id in vials.first { $0.id == id } } ?? resolveVial(for: item.compoundName)
+            let firstForThisVial = vial.map { decremented.insert($0.id).inserted } ?? false
+            insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms,
+                       vial: vial, decrement: firstForThisVial)
         }
         try? context.save()
         finishSave()
     }
 
-    private func insertDose(compoundName: String, doseMicrograms: Double) {
+    /// The vial a logged compound draws from: the newest non-depleted vial containing that API.
+    private func resolveVial(for compoundName: String) -> StoredVial? {
+        vials.first { $0.apiNames.contains(compoundName) && $0.dosesTaken < $0.totalDoses }
+    }
+
+    private func insertDose(compoundName: String, doseMicrograms: Double, vial: StoredVial?, decrement: Bool) {
+        let willDecrement = decrement && (vial.map { $0.dosesTaken < $0.totalDoses } ?? false)
         let entry = LoggedDose(
             timestamp: timestamp,
             compoundName: compoundName,
             doseMicrograms: doseMicrograms,
             siteRaw: site?.rawValue,
             notes: notes,
+            vialID: vial?.id,
+            didDecrement: willDecrement,
             energy: showMetrics ? energy : nil,
             sideEffectSeverity: showMetrics ? sideEffect : nil
         )
         context.insert(entry)
-        if let vial = vials.first(where: { $0.apiNames.contains(compoundName) && $0.dosesTaken < $0.totalDoses }) {
+        if decrement, let vial, vial.dosesTaken < vial.totalDoses {
             vial.dosesTaken += 1
         }
     }
@@ -347,9 +450,18 @@ struct LogView: View {
     private func finishSave() {
         notes = ""
         timestamp = Date()
-        site = suggestedSite
-        showBack = site?.isBack ?? false
+        site = nil          // clear so the next log starts unselected (no silently-wrong location)
+        showBack = false
+        selectedVialID = nil
         savedConfirmation = true
         savedCount += 1
+        // Return Home after a beat — long enough to read "Logged ✓" and tap "Log another dose".
+        postSaveNav?.cancel()
+        postSaveNav = Task {
+            try? await Task.sleep(for: .seconds(1.4))
+            guard !Task.isCancelled else { return }
+            selected = .home
+            savedConfirmation = false
+        }
     }
 }

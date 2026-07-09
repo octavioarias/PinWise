@@ -1,6 +1,19 @@
 import Foundation
+import CryptoKit
 import SwiftData
 import PeptideKit
+
+/// A stable, deterministic compound ID for names outside the verified catalog (custom or
+/// legacy compounds). Derived from the name so every DoseLog/DoseProtocol bridge agrees —
+/// a random fallback would make each log of the same compound look like a different one,
+/// silently breaking per-compound site-rotation history.
+func stableCompoundID(for name: String) -> UUID {
+    if let c = CompoundCatalog.all.first(where: { $0.name == name }) { return c.id }
+    let digest = Insecure.MD5.hash(data: Data(name.utf8))
+    let b = Array(digest)
+    return UUID(uuid: (b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                       b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
+}
 
 /// A logged injection, persisted with SwiftData.
 ///
@@ -16,6 +29,13 @@ final class LoggedDose {
     var doseMicrograms: Double = 0
     var siteRaw: String?
     var notes: String = ""
+    /// The vial this dose drew from — enables inventory attribution, restore-on-delete, and
+    /// cost-per-dose. Optional/default nil to stay CloudKit-safe.
+    var vialID: UUID?
+    /// Whether THIS record actually decremented its vial's dosesTaken. For a stack that resolves
+    /// to one blend vial we decrement once but stamp vialID on every line, so only the record that
+    /// decremented may restore it on delete — keeps decrement and restore symmetric.
+    var didDecrement: Bool = false
     /// Optional 0–10 quick self-reports (nil = not recorded).
     var energy: Double?
     var sideEffectSeverity: Double?
@@ -27,6 +47,8 @@ final class LoggedDose {
         doseMicrograms: Double = 0,
         siteRaw: String? = nil,
         notes: String = "",
+        vialID: UUID? = nil,
+        didDecrement: Bool = false,
         energy: Double? = nil,
         sideEffectSeverity: Double? = nil
     ) {
@@ -36,6 +58,8 @@ final class LoggedDose {
         self.doseMicrograms = doseMicrograms
         self.siteRaw = siteRaw
         self.notes = notes
+        self.vialID = vialID
+        self.didDecrement = didDecrement
         self.energy = energy
         self.sideEffectSeverity = sideEffectSeverity
     }
@@ -47,8 +71,8 @@ extension LoggedDose {
 
     /// Bridge to the pure-domain type so PeptideKit logic can operate on logs.
     func asDomain() -> DoseLog {
-        let compoundID = CompoundCatalog.all.first { $0.name == compoundName }?.id ?? UUID()
-        return DoseLog(id: id, compoundID: compoundID, timestamp: timestamp, dose: dose, site: site, notes: notes)
+        DoseLog(id: id, compoundID: stableCompoundID(for: compoundName), vialID: vialID,
+                timestamp: timestamp, dose: dose, site: site, notes: notes)
     }
 }
 
@@ -57,6 +81,8 @@ struct ProtocolItem: Codable, Hashable, Identifiable {
     var id: UUID = UUID()
     var compoundName: String = ""
     var doseMicrograms: Double = 0
+    /// The inventory vial this line draws from (nil = not linked to a specific vial).
+    var vialID: UUID? = nil
 }
 
 /// A saved dosing protocol — one shared schedule covering one or more compounds (a stack).
@@ -75,21 +101,17 @@ final class SavedProtocol {
     var remindersOn: Bool = false
     var reminderHour: Int = 9
     var reminderMinute: Int = 0
-    /// Optional ramp-up plan (TitrationTemplate.id); empty = fixed dose.
-    var titrationTemplateID: String = ""
 
     init(
         id: UUID = UUID(), name: String = "", items: [ProtocolItem] = [],
         scheduleKindRaw: String = "daily", intervalDays: Int = 1, weekdays: [Int] = [],
         startDate: Date = Date(), isActive: Bool = true, notes: String = "",
-        remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0,
-        titrationTemplateID: String = ""
+        remindersOn: Bool = false, reminderHour: Int = 9, reminderMinute: Int = 0
     ) {
         self.id = id; self.name = name; self.items = items
         self.scheduleKindRaw = scheduleKindRaw; self.intervalDays = intervalDays; self.weekdays = weekdays
         self.startDate = startDate; self.isActive = isActive; self.notes = notes
         self.remindersOn = remindersOn; self.reminderHour = reminderHour; self.reminderMinute = reminderMinute
-        self.titrationTemplateID = titrationTemplateID
     }
 }
 
@@ -105,33 +127,16 @@ extension SavedProtocol {
     /// Human summary of contents, e.g. "Semaglutide · BPC-157".
     var contentsSummary: String { items.isEmpty ? "No compounds" : compoundNames.joined(separator: " · ") }
 
-    // MARK: Ramp-up (titration)
-
-    var titrationTemplate: TitrationTemplate? {
-        titrationTemplateID.isEmpty ? nil : TitrationTemplates.all.first { $0.id == titrationTemplateID }
-    }
-    var isTitrating: Bool { titrationTemplate != nil }
-    /// The titration phase active today (or the last phase once the ramp completes).
-    func currentTitrationPhase(on date: Date = Date()) -> TitrationPlanner.Phase? {
-        guard let t = titrationTemplate else { return nil }
-        let phases = TitrationPlanner.plan(steps: t.steps, startDate: startDate)
-        return TitrationPlanner.phase(on: date, in: phases) ?? phases.last
-    }
-    /// Dose to show/use now: the ramp-up phase dose if titrating, else the primary item's dose.
-    var effectiveDose: Mass { currentTitrationPhase()?.dose ?? dose }
-    /// Short "step N of M" label while ramping.
-    var titrationLabel: String? {
-        guard let t = titrationTemplate, let phase = currentTitrationPhase() else { return nil }
-        return "Ramp-up · step \(phase.id + 1) of \(t.steps.count)"
-    }
+    /// The dose to show/use — always the dose the user set. The app never auto-advances a dose
+    /// over time; every dose change is an explicit user edit to the protocol (record-keeper posture).
+    var effectiveDose: Mass { dose }
 
     var scheduleKind: DoseSchedule.Kind { DoseSchedule.Kind(rawValue: scheduleKindRaw) ?? .daily }
     var schedule: DoseSchedule { DoseSchedule(kind: scheduleKind, intervalDays: intervalDays, weekdays: weekdays) }
 
     func asDomain() -> DoseProtocol {
-        let cid = CompoundCatalog.all.first { $0.name == compoundName }?.id ?? UUID()
-        return DoseProtocol(id: id, name: name, compoundID: cid, dose: dose, schedule: schedule,
-                            startDate: startDate, isActive: isActive, notes: notes)
+        DoseProtocol(id: id, name: name, compoundID: stableCompoundID(for: compoundName), dose: dose,
+                     schedule: schedule, startDate: startDate, isActive: isActive, notes: notes)
     }
 
     /// Next scheduled dose date on/after `date` (nil for as-needed / none upcoming).

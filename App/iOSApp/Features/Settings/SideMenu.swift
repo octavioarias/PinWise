@@ -6,6 +6,13 @@ import SwiftUI
 struct SideMenuDrawer: View {
     @Binding var isOpen: Bool
     @State private var route: MenuRoute?
+    @State private var auth = AuthManager.shared
+    @State private var photos = ProfilePhotoStore.shared
+    @State private var showSignOut = false
+    @AppStorage("completedIntroTour") private var completedIntroTour = false
+    @Environment(\.colorScheme) private var scheme
+
+    private var headerName: String { auth.displayName ?? "" }
 
     var body: some View {
         GeometryReader { geo in
@@ -24,7 +31,13 @@ struct SideMenuDrawer: View {
                     panel(topInset: topInset)
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
-                        .background(BrandColor.surface)
+                        // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
+                        // the blur samples. Scheme-split tint: 0.7 on dark is bounded (scrim +
+                        // dark material cap the backdrop), but LIGHT mode needs 0.92 — there the
+                        // black scrim works AGAINST a bright panel and no ultraThin tint below
+                        // ~0.9 holds textSecondary at 4.5:1 over dark content behind the drawer.
+                        .background(BrandColor.background.opacity(scheme == .dark ? 0.7 : 0.92))
+                        .background(.ultraThinMaterial)
                         .overlay(alignment: .trailing) {
                             Rectangle().fill(BrandColor.stroke).frame(width: 0.5)
                         }
@@ -33,7 +46,7 @@ struct SideMenuDrawer: View {
                         .transition(.move(edge: .leading))
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.9), value: isOpen)
+            .animation(Motion.drawer, value: isOpen)
         }
         .allowsHitTesting(isOpen)
         .sheet(item: $route) { $0.view }
@@ -43,7 +56,7 @@ struct SideMenuDrawer: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("PinWise")
-                    .font(.system(size: 26, weight: .black))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button { isOpen = false } label: {
@@ -58,20 +71,85 @@ struct SideMenuDrawer: View {
             }
             .padding(.top, topInset + Space.md)
             .padding(.horizontal, Space.xl)
-            .padding(.bottom, Space.xl)
+            .padding(.bottom, Space.sm)
+
+            // Identity header — avatar + name, tappable straight into My Profile (Oura-style).
+            Button {
+                isOpen = false
+                route = .profile
+            } label: {
+                HStack(spacing: Space.md) {
+                    ProfileAvatar(name: headerName, size: 44, photo: photos.image)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(headerName.isEmpty ? "Set up your profile" : headerName)
+                            .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                            .lineLimit(1)
+                        Text(auth.accountSubtitle)
+                            .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(BrandColor.textSecondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            // Keep the account identity audible — VoiceOver users check guest vs signed-in here.
+            .accessibilityLabel("My Profile — \(headerName.isEmpty ? "not set up" : headerName), \(auth.accountSubtitle)")
+            .padding(.horizontal, Space.xl)
+            .padding(.bottom, Space.lg)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    row("person", "My Profile", .profile)
                     row("slider.horizontal.3", "Settings", .settings)
                     row("heart.text.square", "Connections", .health)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     row("info.circle", "About & Legal", .about)
+                    actionRow("sparkles", "Show me around") { completedIntroTour = false; isOpen = false }
+                    Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
+                    actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
+                              auth.isGuest ? "Sign in" : "Sign out") {
+                        // Guest upgrading to an account keeps their name/photo; real sign-out asks first.
+                        if auth.isGuest { auth.beginAccountUpgrade(); isOpen = false } else { showSignOut = true }
+                    }
                 }
                 .padding(.horizontal, Space.lg)
             }
             Spacer(minLength: 0)
         }
+        .confirmationDialog("Sign out?", isPresented: $showSignOut, titleVisibility: .visible) {
+            Button("Sign out", role: .destructive) {
+                auth.signOut()
+                ProfilePhotoStore.shared.clear()   // don't leave the previous user's face behind
+                // Reset personal details and re-arm the setup screen so the next account
+                // personalizes fresh instead of inheriting this user's profile.
+                let d = UserDefaults.standard
+                d.removeObject(forKey: "profileBirthday")
+                d.removeObject(forKey: "profileHeightCm")
+                d.set("male", forKey: "bodyGender")
+                d.set(false, forKey: "completedProfileSetup")
+                isOpen = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your protocols, doses, and vials stay on this device. Your profile — name, photo, and personal details — is removed.")
+        }
+    }
+
+    private func actionRow(_ icon: String, _ title: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Space.lg) {
+                Image(systemName: icon).font(.title3).frame(width: 26).foregroundStyle(BrandColor.textSecondary)
+                Text(title).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Spacer()
+            }
+            .padding(.vertical, Space.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
     }
 
     private func row(_ icon: String, _ title: String, _ dest: MenuRoute) -> some View {
@@ -112,8 +190,8 @@ enum MenuRoute: String, Identifiable {
     }
 }
 
-/// Small helper for a modal screen presented from the menu.
-private struct MenuSheet<Content: View>: View {
+/// Small helper for a modal screen presented from the menu (also used by ProfileView).
+struct MenuSheet<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
     @Environment(\.dismiss) private var dismiss
@@ -132,52 +210,22 @@ private struct MenuSheet<Content: View>: View {
     }
 }
 
-struct ProfileView: View {
-    @AppStorage("profileName") private var name = ""
-    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
-
-    var body: some View {
-        MenuSheet(title: "My Profile") {
-            Card {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    SectionHeader(title: "Profile")
-                    FieldRow("Your name", hint: "Optional — used to personalize the app.") {
-                        TextField("Name", text: $name).pinwiseField()
-                    }
-                }
-            }
-            Card {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    SectionHeader(title: "Injection map body")
-                    Picker("", selection: $bodyGenderRaw) {
-                        Text("Male").tag("male")
-                        Text("Female").tag("female")
-                    }
-                    .pickerStyle(.segmented)
-                    Text("Which body the injection map draws.")
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
-            }
-        }
-    }
-}
-
 struct HealthConnectionsView: View {
     @State private var health = HealthManager.shared
 
     var body: some View {
         MenuSheet(title: "Connections") {
-            Text("PinWise syncs through Apple Health. Connect once and the metrics that matter — weight, resting heart rate, HRV, sleep, and activity — flow in, including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write to Apple Health. No separate logins.")
+            Text("PinWise reads from Apple Health. Connect once and it shows your weight, resting heart rate, HRV, sleep, and steps — including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write into Apple Health. No separate logins.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
             Card {
                 VStack(alignment: .leading, spacing: Space.md) {
                     SectionHeader(title: "Sources")
                     sourceRow("Apple Health", "heart.fill", health.authorized ? "Connected — the hub for everything below." : "The hub — connect above to sync.", on: health.authorized)
-                    sourceRow("Apple Fitness", "figure.run", "Workouts, move & exercise minutes — via Apple Health.")
-                    sourceRow("Oura Ring", "circle.circle", "Sleep, HRV, readiness — turn on Apple Health sharing in the Oura app.")
-                    sourceRow("Whoop", "bolt.heart.fill", "Recovery, strain, sleep — turn on Apple Health sharing in the Whoop app.")
-                    sourceRow("Garmin", "figure.outdoor.cycle", "Activity & sleep — enable Apple Health in Garmin Connect.")
+                    sourceRow("Apple Fitness", "figure.run", "Steps & activity — via Apple Health.")
+                    sourceRow("Oura Ring", "circle.circle", "Sleep & HRV — turn on Apple Health sharing in the Oura app.")
+                    sourceRow("Whoop", "bolt.heart.fill", "Sleep & HRV — turn on Apple Health sharing in the Whoop app.")
+                    sourceRow("Garmin", "figure.outdoor.cycle", "Steps & sleep — enable Apple Health in Garmin Connect.")
                 }
             }
             if health.authorized {
@@ -204,6 +252,8 @@ struct HealthConnectionsView: View {
 }
 
 struct AboutView: View {
+    @State private var showTerms = false
+
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -211,7 +261,7 @@ struct AboutView: View {
     }
 
     var body: some View {
-        MenuSheet(title: "About") {
+        MenuSheet(title: "About & Legal") {
             Card {
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text("PinWise").font(Typo.title).foregroundStyle(BrandColor.textPrimary)
@@ -232,6 +282,19 @@ struct AboutView: View {
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
             }
+            Button { showTerms = true } label: {
+                HStack {
+                    Image(systemName: "doc.text").foregroundStyle(BrandColor.accentText)
+                    Text("Terms of Service & Privacy Policy").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                }
+                .padding(Space.lg)
+                .background(BrandColor.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showTerms) { LegalDocumentView() }
         }
     }
 }

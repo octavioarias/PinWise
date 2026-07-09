@@ -32,7 +32,7 @@ enum LabelParser {
         }
     }
 
-    static func parse(_ text: String) -> ScannedLabel {
+    static func parse(_ text: String, extraNames: [String] = []) -> ScannedLabel {
         var result = ScannedLabel(rawText: text)
         let lower = text.lowercased()
 
@@ -46,11 +46,17 @@ enum LabelParser {
         if let v = number(#"([0-9]+(?:\.[0-9]+)?)\s*ml\b"#, in: lower) {
             result.volumeMl = v
         }
-        // Compound: match a catalog name or alias.
-        outer: for compound in CompoundCatalog.all {
-            for name in [compound.name] + compound.aliases where lower.contains(name.lowercased()) {
-                result.compoundName = compound.name
-                break outer
+        // Compound: the caller's extra names first (user-added compounds), then catalog/aliases.
+        for name in extraNames where !name.isEmpty && lower.contains(name.lowercased()) {
+            result.compoundName = name
+            break
+        }
+        if result.compoundName == nil {
+            outer: for compound in CompoundCatalog.all {
+                for name in [compound.name] + compound.aliases where lower.contains(name.lowercased()) {
+                    result.compoundName = compound.name
+                    break outer
+                }
             }
         }
         // Expiration: pick the latest date the detector finds (expiry is usually the latest).
@@ -76,6 +82,8 @@ enum LabelParser {
 
 /// Photo → on-device OCR → parsed fields the user can apply to the vial.
 struct LabelScannerView: View {
+    /// Names beyond the catalog the parser should recognize (the user's own compounds).
+    var extraCompoundNames: [String] = []
     let onApply: (ScannedLabel) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -189,7 +197,7 @@ struct LabelScannerView: View {
         guard let cg = ui.cgImage else { error = "Couldn't read that image."; return }
         let text = await LabelParser.recognizeText(cg)
         guard !text.isEmpty else { error = "No text found. Try a clearer, closer photo."; return }
-        result = LabelParser.parse(text)
+        result = LabelParser.parse(text, extraNames: extraCompoundNames)
     }
 }
 

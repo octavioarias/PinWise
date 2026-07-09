@@ -1,17 +1,27 @@
 name: CI
 
-# Builds and tests PinWise in the cloud on a macOS runner (real Xcode + iOS SDK),
-# so the iOS app is verified even without local Xcode. Runs on every push/PR.
+# Builds and tests PinWise. The domain core (pure Swift/Foundation) runs on a cheap Linux
+# runner (1× minutes); only the iOS app build needs macOS + Xcode (10× minutes), so we keep
+# that job as lean as possible.
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md", "App/design/**", "RefImages/**", "feed/**"]
   pull_request:
+    paths-ignore: ["**.md", "App/design/**", "RefImages/**", "feed/**"]
   workflow_dispatch:
+
+# Cancel an in-progress run when a newer commit lands on the same ref — saves minutes during
+# iterative pushes (the biggest recurring drain).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   domain-core:
     name: Domain core (PeptideKit)
-    runs-on: macos-15
+    runs-on: ubuntu-latest          # 1× minutes (was macOS = 10×); PeptideKit is Foundation-only
+    container: swift:6.0
     steps:
       - uses: actions/checkout@v4
       - name: Verify dosing math (assertion harness)
@@ -23,9 +33,15 @@ jobs:
 
   ios-app:
     name: Build iOS app
-    runs-on: macos-15
+    runs-on: macos-15               # 10× minutes — unavoidable (needs Xcode + iOS SDK)
     steps:
       - uses: actions/checkout@v4
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('App/project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
@@ -37,4 +53,6 @@ jobs:
           xcodebuild build \
             -project PinWise.xcodeproj \
             -scheme PinWise \
-            -destination 'generic/platform=iOS Simulator'
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            COMPILER_INDEX_STORE_ENABLE=NO

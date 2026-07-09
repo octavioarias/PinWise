@@ -15,12 +15,10 @@ let package = Package(
         .library(name: "PeptideKit", targets: ["PeptideKit"]),
     ],
     targets: [
-        .target(
-            name: "PeptideKit",
-            swiftSettings: [
-                .enableUpcomingFeature("StrictConcurrency"),
-            ]
-        ),
+        // Swift 6 language mode (from swift-tools-version: 6.0) already enables strict
+        // concurrency, so no explicit upcoming-feature flag is needed — and the Swift 6.0
+        // toolchain errors on the redundant flag.
+        .target(name: "PeptideKit"),
         // Runnable verification harness (`swift run pk-verify`). Exists because the
         // Command Line Tools toolchain ships no XCTest/swift-testing; in full Xcode,
         // run the PeptideKitTests suite instead — it covers the same cases.

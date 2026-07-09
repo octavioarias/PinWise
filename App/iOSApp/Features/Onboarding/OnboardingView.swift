@@ -3,13 +3,13 @@ import PeptideKit
 
 /// One-time onboarding + disclaimer acceptance. Three focused pages ending in a gated
 /// agreement (18+ confirmation required). Sets the accepted disclaimer version so it shows
-/// only once. On-brand: dark, hero mesh, edge glow, a success haptic on accept.
+/// only once. On-brand: dark, hero mesh, a success haptic on accept.
 struct OnboardingView: View {
     @Binding var acceptedVersion: Int
-    @AppStorage("bodyGender") private var bodyGenderRaw = "male"
     @State private var page = 0
     @State private var is18 = false
     @State private var acceptTrigger = 0
+    @State private var showTerms = false
 
     var body: some View {
         ZStack {
@@ -35,9 +35,17 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         pageScaffold {
             Spacer()
-            Text("PinWise")
-                .font(.system(size: 40, weight: .black))
-                .foregroundStyle(BrandColor.textPrimary)
+            // "Welcome to" sized so its line length roughly matches the wordmark below it.
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Welcome to")
+                    .font(.system(size: 42, weight: .semibold))
+                    .foregroundStyle(BrandColor.textPrimary)
+                    .minimumScaleFactor(0.8).lineLimit(1)
+                Text("PinWise")
+                    .font(.system(size: 58, weight: .black))
+                    .foregroundStyle(BrandColor.accentText)
+                    .minimumScaleFactor(0.8).lineLimit(1)
+            }
             Text("The source of truth for peptides and dose tracking.")
                 .font(Typo.title)
                 .foregroundStyle(BrandColor.textPrimary)
@@ -70,30 +78,24 @@ struct OnboardingView: View {
             Text("Before you start")
                 .font(Typo.title).textCase(.uppercase)
                 .foregroundStyle(BrandColor.textPrimary)
-            ScrollView {
-                Text(Disclaimer.onboarding)
-                    .font(Typo.body)
-                    .foregroundStyle(BrandColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            Text("PinWise is a personal record-keeping tool — it isn't a medical device and doesn't give medical advice. Your records stay on your device.")
+                .font(Typo.body)
+                .foregroundStyle(BrandColor.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button { showTerms = true } label: {
+                Text("Read the Terms of Service & Privacy Policy")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(BrandColor.accentText)
             }
-            .frame(maxHeight: 180)
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("Body for your injection map").font(.footnote.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
-                Picker("", selection: $bodyGenderRaw) {
-                    Text("Male").tag("male")
-                    Text("Female").tag("female")
-                }
-                .pickerStyle(.segmented)
-                Text("Used to draw your body map — change it anytime in My Profile.")
-                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
-            }
-            Toggle("I'm 18 or older and understand this is not medical advice.", isOn: $is18)
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showTerms) { LegalDocumentView() }
+            Toggle("I'm 18 or older and I agree to the Terms of Service and Privacy Policy.", isOn: $is18)
                 .tint(BrandColor.accent)
                 .font(.footnote)
                 .foregroundStyle(BrandColor.textPrimary)
             PrimaryButton(title: "Agree & continue", systemImage: "checkmark") {
                 acceptTrigger += 1
-                withAnimation { acceptedVersion = Disclaimer.currentVersion }
+                withAnimation(.easeInOut(duration: 0.55)) { acceptedVersion = Disclaimer.currentVersion }
             }
             .disabled(!is18)
             .opacity(is18 ? 1 : 0.5)

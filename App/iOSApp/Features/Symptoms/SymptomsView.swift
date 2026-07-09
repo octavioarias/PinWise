@@ -28,19 +28,62 @@ enum SymptomType: String, CaseIterable, Identifiable {
     }
 }
 
+/// Chart encoding: nine symptoms on ChartPalette's five categorical colors — the palette
+/// repeats after index 4 and the symbol SHAPE becomes the secondary encoding (circles for
+/// the first pass, squares for the repeat) so repeated hues stay distinguishable. Declared
+/// in `allCases` order and applied through explicit chart scales, so the mapping never
+/// depends on the order data arrives in.
+extension SymptomType {
+    private var caseIndex: Int { Self.allCases.firstIndex(of: self) ?? 0 }
+
+    var chartColor: Color { ChartPalette.categorical[caseIndex % ChartPalette.categorical.count] }
+    var chartSymbol: BasicChartSymbolShape { caseIndex < ChartPalette.categorical.count ? .circle : .square }
+}
+
 /// Log side effects with a severity and see how they trend over the last month — the most-
 /// requested capability most trackers skip.
 struct SymptomsView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \SymptomEntry.timestamp, order: .reverse) private var entries: [SymptomEntry]
 
     @State private var selected: SymptomType = .nausea
     @State private var severity: Double = 3
     @State private var note = ""
     @State private var savedCount = 0
+    @State private var range: ChartRange = .thirtyDays
 
-    private var cutoff: Date { Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? .distantPast }
+    /// Visible chart window, selected by the range control.
+    private enum ChartRange: String, CaseIterable, Identifiable {
+        case sevenDays = "7D"
+        case thirtyDays = "30D"
+        case ninetyDays = "90D"
+        var id: String { rawValue }
+        var days: Int {
+            switch self {
+            case .sevenDays: return 7
+            case .thirtyDays: return 30
+            case .ninetyDays: return 90
+            }
+        }
+        var title: String { "Last \(days) days" }
+    }
+
+    /// Widest selectable window — gates the chart card, so narrowing the range to an empty
+    /// week can never make the range control itself disappear.
+    private var chartCutoff: Date { Calendar.current.date(byAdding: .day, value: -ChartRange.ninetyDays.days, to: Date()) ?? .distantPast }
+    private var chartableEntries: [SymptomEntry] { entries.filter { $0.timestamp >= chartCutoff } }
+    private var cutoff: Date { Calendar.current.date(byAdding: .day, value: -range.days, to: Date()) ?? .distantPast }
     private var recentWindow: [SymptomEntry] { entries.filter { $0.timestamp >= cutoff } }
+    private var distinctSymptomCount: Int { Set(recentWindow.map(\.symptomRaw)).count }
+    /// Only the symptoms actually plotted in the window — an explicit scale domain fixes
+    /// the LEGEND to the whole domain, so passing allCases would render nine legend
+    /// entries (seven of them dead) for a two-symptom chart. Filtering allCases (not the
+    /// window's order of appearance) keeps each symptom's fixed color/shape identity.
+    private var plottedSymptoms: [SymptomType] {
+        let present = Set(recentWindow.map(\.symptomRaw))
+        return SymptomType.allCases.filter { present.contains($0.rawValue) }
+    }
 
     var body: some View {
         ScrollView {
@@ -59,6 +102,7 @@ struct SymptomsView: View {
                                 }
                                 .padding(.vertical, 2)
                             }
+                            .sensoryFeedback(.selection, trigger: selected)
                         }
                         VStack(alignment: .leading, spacing: Space.xs) {
                             HStack {
@@ -67,6 +111,7 @@ struct SymptomsView: View {
                                 Text("\(Int(severity)) / 10").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
                             }
                             Slider(value: $severity, in: 0...10, step: 1).tint(BrandColor.accent)
+                                .sensoryFeedback(.selection, trigger: Int(severity))
                         }
                         FieldRow("Note", hint: "Optional.") {
                             TextField("Anything worth remembering", text: $note, axis: .vertical).pinwiseField()
@@ -75,21 +120,54 @@ struct SymptomsView: View {
                     }
                 }
 
-                if !recentWindow.isEmpty {
+                if !chartableEntries.isEmpty {
                     Card {
                         VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Last 30 days")
+                            SectionHeader(title: range.title)
                             Chart(recentWindow) { e in
                                 PointMark(
                                     x: .value("Day", e.timestamp),
                                     y: .value("Severity", e.severity)
                                 )
                                 .foregroundStyle(by: .value("Symptom", e.symptomRaw))
+                                .symbol(by: .value("Symptom", e.symptomRaw))
                                 .symbolSize(60)
                             }
                             .chartYScale(domain: 0...10)
-                            .chartForegroundStyleScale(range: chartColors)
+                            // Both scales share the "Symptom" plottable value and the same
+                            // domain (plotted symptoms only), so Swift Charts merges color +
+                            // shape into one legend entry per PLOTTED symptom — while each
+                            // symptom's color/shape stays fixed by its allCases index.
+                            .chartForegroundStyleScale(domain: plottedSymptoms.map(\.rawValue), range: plottedSymptoms.map(\.chartColor))
+                            .chartSymbolScale(domain: plottedSymptoms.map(\.rawValue), range: plottedSymptoms.map(\.chartSymbol))
+                            .chartLegend(position: .bottom)
+                            .chartLegend(distinctSymptomCount > 1 ? .visible : .hidden)
+                            .chartXAxis {
+                                AxisMarks { _ in
+                                    AxisGridLine().foregroundStyle(BrandColor.stroke.opacity(0.5))
+                                    AxisValueLabel()
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                            .chartYAxis {
+                                AxisMarks { _ in
+                                    AxisGridLine().foregroundStyle(BrandColor.stroke.opacity(0.5))
+                                    AxisValueLabel()
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
                             .frame(height: 200)
+                            .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: range)
+
+                            Picker("Chart range", selection: $range) {
+                                ForEach(ChartRange.allCases) { r in
+                                    Text(r.rawValue).tag(r)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .sensoryFeedback(.selection, trigger: range)
                         }
                     }
                 }
@@ -120,8 +198,6 @@ struct SymptomsView: View {
                 } else {
                     Text("No symptoms logged yet.").font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
-
-                DisclaimerBanner(text: "A personal symptom journal — not medical advice. Tell a clinician about anything concerning.")
             }
             .padding(Space.lg)
         }
@@ -129,11 +205,6 @@ struct SymptomsView: View {
         .navigationTitle("How you feel")
         .navigationBarTitleDisplayMode(.inline)
         .sensoryFeedback(.success, trigger: savedCount)
-    }
-
-    private var chartColors: [Color] {
-        [BrandColor.accentText, BrandColor.success, BrandColor.warning, BrandColor.danger,
-         Color(hex: 0x8A97FF), Color(hex: 0x18E39A), Color(hex: 0xFFB020), Color(hex: 0xFF7AB0), Color(hex: 0x7FB4FF)]
     }
 
     private func chip(_ s: SymptomType) -> some View {

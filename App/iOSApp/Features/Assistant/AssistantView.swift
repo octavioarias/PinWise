@@ -10,6 +10,7 @@ import FoundationModels
 /// guardrails: informational only, never dosing/medical advice, jailbreak-resistant.
 struct AssistantDrawer: View {
     @Binding var isOpen: Bool
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         GeometryReader { geo in
@@ -26,14 +27,20 @@ struct AssistantDrawer: View {
                     AssistantView(topInset: topInset) { isOpen = false }
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
-                        .background(BrandColor.surface)
+                        // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
+                        // the blur samples. Scheme-split tint: 0.7 on dark is bounded (scrim +
+                        // dark material cap the backdrop), but LIGHT mode needs 0.92 — there the
+                        // black scrim works AGAINST a bright panel and no ultraThin tint below
+                        // ~0.9 holds textSecondary at 4.5:1 over dark content behind the drawer.
+                        .background(BrandColor.background.opacity(scheme == .dark ? 0.7 : 0.92))
+                        .background(.ultraThinMaterial)
                         .overlay(alignment: .leading) { Rectangle().fill(BrandColor.stroke).frame(width: 0.5) }
                         .ignoresSafeArea()
                         .shadow(color: .black.opacity(0.45), radius: 24, x: -8)
                         .transition(.move(edge: .trailing))
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.9), value: isOpen)
+            .animation(Motion.drawer, value: isOpen)
         }
         .allowsHitTesting(isOpen)
     }
@@ -52,6 +59,9 @@ final class AssistantEngine {
 
     var messages: [Message] = []
     var isThinking = false
+    /// The live model session, reused across turns so the assistant remembers the conversation.
+    /// Typed `Any?` because `LanguageModelSession` is gated behind iOS 26 + FoundationModels.
+    private var session: Any?
 
     /// The safety contract. Written to resist persuasion / jailbreak attempts.
     static let guardrails = """
@@ -93,18 +103,26 @@ final class AssistantEngine {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), case .available = SystemLanguageModel.default.availability {
             do {
-                let instructions = Self.guardrails + "\n\nContext about this user (for reference only): " + context
-                let session = LanguageModelSession(instructions: instructions)
-                let response = try await session.respond(to: trimmed)
+                // Reuse one session across the conversation so earlier turns are remembered
+                // (follow-ups like "and its half-life?" keep context).
+                let active: LanguageModelSession
+                if let existing = session as? LanguageModelSession {
+                    active = existing
+                } else {
+                    let instructions = Self.guardrails + "\n\nContext about this user (for reference only): " + context
+                    active = LanguageModelSession(instructions: instructions)
+                    session = active
+                }
+                let response = try await active.respond(to: trimmed)
                 messages.append(Message(isUser: false, text: response.content))
             } catch {
-                messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Try rephrasing, and remember I can't give medical advice."))
+                messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Try rephrasing."))
             }
             return
         }
         #endif
 
-        messages.append(Message(isUser: false, text: "On-device AI isn't available on this device yet (it needs Apple Intelligence). You can still use the snapshot, compound lookup, and the tiers/half-life guide below — and please talk to a clinician for any medical questions."))
+        messages.append(Message(isUser: false, text: "The on-device assistant needs Apple Intelligence, which isn't available here yet. For anything health-related, please talk to a licensed clinician."))
     }
 }
 
@@ -142,11 +160,13 @@ struct AssistantView: View {
         func day(_ d: Date) -> String { d.formatted(.dateTime.month().day()) }
         var lines: [String] = []
 
+        if let n = AuthManager.shared.displayName, !n.isEmpty {
+            lines.append("USER: \(n)")
+        }
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {
-                var s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
-                if p.isTitrating, let label = p.titrationLabel { s += " · \(label) (current \(p.effectiveDose.displayString))" }
+                let s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
                 lines.append(s)
             }
         }
@@ -189,7 +209,7 @@ struct AssistantView: View {
         VStack(spacing: 0) {
             HStack {
                 Label("Assistant", systemImage: "sparkles")
-                    .font(.system(size: 22, weight: .black)).foregroundStyle(BrandColor.textPrimary)
+                    .font(.system(size: 22, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button { close() } label: {
                     Image(systemName: "xmark").font(.headline.weight(.semibold))
@@ -335,6 +355,7 @@ struct AssistantView: View {
             }
             .buttonStyle(.plain)
             .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || engine.isThinking)
+            .accessibilityLabel("Send message")
         }
         .padding(.horizontal, Space.lg)
         .padding(.top, Space.sm)

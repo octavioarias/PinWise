@@ -18,6 +18,19 @@ private extension NewsCategory {
     }
 }
 
+/// Formats a feed item's ISO-8601 `publishedAt` as a friendly abbreviated date (falls back to
+/// the raw date substring if parsing ever fails).
+func newsDisplayDate(_ iso: String) -> String {
+    if let d = ISO8601DateFormatter().date(from: iso) {
+        return d.formatted(date: .abbreviated, time: .omitted)
+    }
+    let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = TimeZone(identifier: "UTC")
+    if let d = df.date(from: String(iso.prefix(10))) {
+        return d.formatted(date: .abbreviated, time: .omitted)
+    }
+    return String(iso.prefix(10))
+}
+
 struct NewsView: View {
     @State private var loader = NewsFeedLoader()
     @State private var searchText = ""
@@ -25,6 +38,7 @@ struct NewsView: View {
     @State private var myStack = false
     @State private var searchActive = false
     @FocusState private var searchFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query private var protocols: [SavedProtocol]
     @Query private var vials: [StoredVial]
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
@@ -39,7 +53,12 @@ struct NewsView: View {
         return s
     }
     private func matchesStack(_ item: NewsItem) -> Bool {
-        !userCompounds.isEmpty && item.compounds.contains { userCompounds.contains($0.lowercased()) }
+        guard !userCompounds.isEmpty else { return false }
+        // Substring match both ways so catalog aliases line up (e.g. "GHK-Cu" ⟷ "GHK-Cu (injectable)").
+        return item.compounds.contains { ic in
+            let icl = ic.lowercased()
+            return userCompounds.contains { uc in uc == icl || uc.contains(icl) || icl.contains(uc) }
+        }
     }
 
     private var items: [NewsItem] { feed.trending }
@@ -77,10 +96,6 @@ struct NewsView: View {
                     }
 
                     content
-
-                    DisclaimerBanner(
-                        text: "PinWise summarizes public research and regulatory updates and links to the original sources. Informational only — not medical advice."
-                    )
                 }
                 .padding(Space.lg)
             }
@@ -91,8 +106,8 @@ struct NewsView: View {
     }
 
     private var masthead: some View {
-        VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(alignment: .center) {
                 Text("News")
                     .font(Typo.screenTitle)
                     .foregroundStyle(BrandColor.textPrimary)
@@ -124,7 +139,9 @@ struct NewsView: View {
 
     private var stackToggle: some View {
         HStack(spacing: Space.sm) {
-            filterChip("My Stack", active: myStack) { withAnimation(.snappy) { myStack.toggle() } }
+            SelectableChip(title: "My compounds", isSelected: myStack) {
+                withAnimation(.snappy) { myStack.toggle() }
+            }
             if myStack {
                 Text(userCompounds.isEmpty ? "Add a protocol or log a dose to use this"
                                            : "Filtered to what you're taking")
@@ -132,6 +149,7 @@ struct NewsView: View {
             }
             Spacer()
         }
+        .sensoryFeedback(.selection, trigger: myStack)
     }
 
     @ViewBuilder private var content: some View {
@@ -139,11 +157,11 @@ struct NewsView: View {
             resultsList
         } else {
             if let featured {
-                SectionHeader(title: "Popular")
+                SectionHeader(title: "Top story")
                 newsLink(featured) { FeaturedNewsCard(item: featured) }
             }
             SectionHeader(title: "Latest")
-            ForEach(latest) { item in newsLink(item) { NewsRow(item: item) } }
+            ForEach(latest) { item in rowLink(item) }
         }
     }
 
@@ -173,13 +191,16 @@ struct NewsView: View {
     private var categoryFilter: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Space.sm) {
-                filterChip("All", active: category == nil) { category = nil }
+                SelectableChip(title: "All", isSelected: category == nil) { category = nil }
                 ForEach(NewsCategory.allCases, id: \.self) { c in
-                    filterChip(c.rawValue, active: category == c) { category = (category == c ? nil : c) }
+                    SelectableChip(title: c.rawValue, isSelected: category == c) {
+                        category = (category == c ? nil : c)
+                    }
                 }
             }
             .padding(.vertical, 2)
         }
+        .sensoryFeedback(.selection, trigger: category)
     }
 
     @ViewBuilder private var resultsList: some View {
@@ -193,31 +214,29 @@ struct NewsView: View {
         if results.isEmpty {
             Card {
                 Text(myStack && userCompounds.isEmpty
-                     ? "Add a protocol or log a dose — then My Stack shows news about what you're taking."
+                     ? "Add a protocol or log a dose — then this shows news about the compounds you're taking."
                      : "No stories match. Try a different word or category.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         } else {
-            ForEach(results) { item in newsLink(item) { NewsRow(item: item) } }
+            ForEach(results) { item in rowLink(item) }
         }
-    }
-
-    private func filterChip(_ title: String, active: Bool, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, Space.md)
-                .padding(.vertical, Space.sm)
-                .background(active ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                .foregroundStyle(active ? BrandColor.onAccent : BrandColor.textSecondary)
-                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: active ? 0 : 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private func newsLink<Label: View>(_ item: NewsItem, @ViewBuilder label: () -> Label) -> some View {
         NavigationLink { NewsDetailView(item: item) } label: { label() }.buttonStyle(PressableStyle())
+    }
+
+    /// A list-row link with the shared scroll-edge treatment (rows only — the featured card
+    /// stays static). Scale is ternaried out under Reduce Motion; the fade stays.
+    private func rowLink(_ item: NewsItem) -> some View {
+        newsLink(item) { NewsRow(item: item) }
+            .scrollTransition(axis: .vertical) { content, phase in
+                content
+                    .opacity(phase.isIdentity ? 1 : 0.8)
+                    .scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.98))
+            }
     }
 
     private func matches(_ item: NewsItem, _ query: String) -> Bool {
@@ -242,7 +261,7 @@ struct FeaturedNewsCard: View {
                     TagChip(text: item.category.rawValue, color: item.category.tint)
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
                     Spacer()
-                    Text(String(item.publishedAt.prefix(10)))
+                    Text(newsDisplayDate(item.publishedAt))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text(item.headline)
@@ -276,13 +295,13 @@ struct NewsRow: View {
             HStack(alignment: .top, spacing: Space.md) {
                 FeedImage(urlString: item.imageURL, tint: item.category.tint)
                     .frame(width: 66, height: 66)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
 
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
-                        Text(String(item.publishedAt.prefix(10)))
+                        Text(newsDisplayDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)
                     }
@@ -311,15 +330,16 @@ struct NewsDetailView: View {
                 FeedImage(urlString: item.imageURL, tint: item.category.tint)
                     .frame(height: 180)
                     .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    // The one sanctioned on-image badge — frosted, over real photo pixels.
+                    .overlay(alignment: .topLeading) {
+                        FrostedTagChip(text: item.category.rawValue)
+                            .padding(Space.md)
+                    }
 
                 VStack(alignment: .leading, spacing: Space.sm) {
-                    HStack {
-                        TagChip(text: item.category.rawValue, color: item.category.tint)
-                        Spacer()
-                        Text(String(item.publishedAt.prefix(10)))
-                            .font(.caption)
-                            .foregroundStyle(BrandColor.textSecondary)
-                    }
+                    Text(newsDisplayDate(item.publishedAt))
+                        .font(.caption)
+                        .foregroundStyle(BrandColor.textSecondary)
                     Text(item.headline)
                         .font(Typo.title)
                         .foregroundStyle(BrandColor.textPrimary)
@@ -351,8 +371,6 @@ struct NewsDetailView: View {
                         }
                     }
                 }
-
-                DisclaimerBanner(text: item.disclaimer)
             }
             .padding(Space.lg)
         }

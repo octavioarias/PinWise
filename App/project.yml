@@ -5,7 +5,7 @@
 # SwiftUI sources under iOSApp/. Keeps the manual-setup steps in iOSApp/README.md optional.
 name: PinWise
 options:
-  bundleIdPrefix: com.saphobio.pinwise
+  bundleIdPrefix: com.pinwise
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
@@ -31,11 +31,13 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        UILaunchScreen: {}
+        # Launch: gradient PinWise wordmark centered on brand black. Config must live HERE —
+        # xcodegen regenerates Info.plist. V6 filename = fresh launch-snapshot cache key.
+        UILaunchStoryboardName: LaunchScreenV8
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
-        NSHealthShareUsageDescription: "PinWise displays the weight, heart-rate, and HRV values you choose to share from Health alongside your dose logs."
+        NSHealthShareUsageDescription: "PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs."
         NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label. The photo is read on your device to fill in the details."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
@@ -44,6 +46,10 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        # Sign in with Apple (native, no backend). Google/Email sign-in route through
+        # AuthManager and require a backend + Google client ID to complete.
+        com.apple.developer.applesignin:
+          - Default
     dependencies:
       - package: PeptideKit
         product: PeptideKit
@@ -51,11 +57,15 @@ targets:
         product: MuscleMap
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.saphobio.pinwise
+        PRODUCT_BUNDLE_IDENTIFIER: com.pinwise.app
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+        # App icon: single 1024 asset per appearance (Light / Dark / Tinted) in
+        # iOSApp/Assets.xcassets/AppIcon.appiconset — iOS picks the slot to match the
+        # user's home-screen style. Source SVGs live in App/design/AppIcon.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # App target uses Swift 5 language mode to avoid strict-concurrency friction during
         # early iteration; PeptideKit stays on Swift 6. Bump to "6.0" once the UI settles.
         SWIFT_VERSION: "5.0"
