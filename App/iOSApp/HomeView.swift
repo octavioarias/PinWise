@@ -86,7 +86,6 @@ struct HomeView: View {
                     HomeHealthCard()
                         .padding(.top, Space.xxxl - Space.xl)
                         .entrance(4)
-                    if !recent.isEmpty { recentSection.entrance(5) }
                 }
                 .padding(Space.lg)
             }
@@ -323,33 +322,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Recent / empty
-
-    private var recentSection: some View {
-        VStack(alignment: .leading, spacing: Space.md) {
-            SectionHeader(title: "Recent")
-            ForEach(Array(recent.prefix(4)), id: \.id) { entry in
-                Card(style: .flat) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                            Text(entry.dose.displayString + (entry.site.map { " · \($0.displayName)" } ?? ""))
-                                .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                        }
-                        Spacer()
-                        Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
-                            .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    }
-                }
-                // Rows soften as they leave the viewport; scale is dropped under Reduce Motion.
-                .scrollTransition(axis: .vertical) { content, phase in
-                    content
-                        .opacity(phase.isIdentity ? 1 : 0.8)
-                        .scaleEffect(reduceMotion ? 1 : (phase.isIdentity ? 1 : 0.98))
-                }
-            }
-        }
-    }
+    // MARK: Empty
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: Space.md) {

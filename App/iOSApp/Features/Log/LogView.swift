@@ -139,11 +139,6 @@ struct LogView: View {
                             .buttonStyle(.plain)
                         }
                     }
-
-                    if !recent.isEmpty {
-                        SectionHeader(title: "Recent")
-                        ForEach(Array(recent.prefix(12)), id: \.id) { entry in recentRow(entry) }
-                    }
                 }
                 .padding(Space.lg)
             }
@@ -210,7 +205,9 @@ struct LogView: View {
                     HStack(spacing: Space.sm) {
                         ForEach(loggableProtocols, id: \.id) { p in
                             SelectableChip(title: p.name, isSelected: selectedProtocolID == p.id) {
-                                selectedProtocolID = p.id
+                                // Re-tapping the selected protocol deselects it, collapsing the
+                                // entry fields back to just the picker.
+                                selectedProtocolID = (selectedProtocolID == p.id) ? nil : p.id
                             }
                         }
                     }
@@ -388,32 +385,6 @@ struct LogView: View {
                 Text("\(Int(value.wrappedValue)) / 10").font(.caption).foregroundStyle(BrandColor.textPrimary)
             }
             Slider(value: value, in: 0...10, step: 1).tint(BrandColor.accent)
-        }
-    }
-
-    private func recentRow(_ entry: LoggedDose) -> some View {
-        Card(style: .flat) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text(entry.dose.displayString + (entry.site.map { " · \($0.displayName)" } ?? ""))
-                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                }
-                Spacer()
-                Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
-                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
-            }
-        }
-        .contextMenu {
-            Button(role: .destructive) {
-                // Restore the vial only for the record that actually decremented it (so a blend
-                // stack — one decrement, several records — gives back exactly one dose).
-                if entry.didDecrement, let vid = entry.vialID,
-                   let vial = vials.first(where: { $0.id == vid }), vial.dosesTaken > 0 {
-                    vial.dosesTaken -= 1
-                }
-                context.delete(entry)
-            } label: { Label("Delete", systemImage: "trash") }
         }
     }
 
