@@ -304,23 +304,34 @@ final class StoredVial {
     /// of auto-switching by magnitude. Additive optional to stay CloudKit-safe; nil = legacy vial
     /// (falls back to the magnitude heuristic via `doseUnit`).
     var doseUnitRaw: String? = nil
+    /// The unit the vial's STRENGTH/concentration is expressed in (mg ⇒ mg/mL, mcg ⇒ mcg/mL).
+    /// The user chooses this for pre-mixed vials (whose label states a strength directly); nil for
+    /// powder vials, which fall back to the dose unit via `concentrationUnit`. Additive/CloudKit-safe.
+    var concentrationUnitRaw: String? = nil
 
     init(
         id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double? = nil,
         perDoseMicrograms: Double? = nil, dosesTaken: Int = 0, cost: Decimal? = nil, expirationDate: Date? = nil,
         dateAcquired: Date = Date(), notes: String = "", isPremixed: Bool = false,
-        dateReconstituted: Date? = nil, doseUnitRaw: String? = nil
+        dateReconstituted: Date? = nil, doseUnitRaw: String? = nil, concentrationUnitRaw: String? = nil
     ) {
         self.id = id; self.label = label; self.apis = apis; self.solventVolumeMilliliters = solventVolumeMilliliters
         self.perDoseMicrograms = perDoseMicrograms; self.dosesTaken = dosesTaken; self.cost = cost
         self.expirationDate = expirationDate; self.dateAcquired = dateAcquired; self.notes = notes
         self.isPremixed = isPremixed; self.dateReconstituted = dateReconstituted; self.doseUnitRaw = doseUnitRaw
+        self.concentrationUnitRaw = concentrationUnitRaw
     }
 
     /// The dose unit chosen for this vial; legacy vials (no stored choice) fall back to the same
     /// magnitude heuristic the old auto display used, so nothing regresses.
     var doseUnit: MassUnit {
         doseUnitRaw.flatMap(MassUnit.init(rawValue:)) ?? MassUnit.auto(forMicrograms: perDoseMicrograms ?? 0)
+    }
+
+    /// The unit the vial's concentration is shown in (mg/mL or mcg/mL). Uses the explicit pre-mixed
+    /// choice when set, else follows the dose unit so powder vials read consistently.
+    var concentrationUnit: MassUnit {
+        concentrationUnitRaw.flatMap(MassUnit.init(rawValue:)) ?? doseUnit
     }
 
     /// Format a mass in THIS vial's chosen unit.
@@ -393,7 +404,7 @@ extension StoredVial {
     /// "BPC-157 5 mg / TB-500 3 mg / mL" (or the mcg forms). nil until a solvent volume is known.
     var concentrationSummary: String? {
         guard let vol = solventVolumeMilliliters, vol > 0, !apis.isEmpty else { return nil }
-        let unit = doseUnit
+        let unit = concentrationUnit
         let perUnit = unit.microgramsPerUnit
         func fmt(_ perMl: Double) -> String {
             let rounded = (perMl * 100).rounded() / 100          // 2 dp, trailing zeros trimmed

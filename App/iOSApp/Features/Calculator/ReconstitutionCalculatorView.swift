@@ -20,6 +20,8 @@ final class DoseCalculatorViewModel {
     var solventText = "2"
 
     var concentrationText = "2.5"
+    /// Strength unit for the premixed concentration input + the Strength readout (mg/mL or mcg/mL).
+    var concentrationUnit: MassUnit = .milligram
     var totalVolumeText = ""
 
     var doseText = "2.5"
@@ -46,10 +48,11 @@ final class DoseCalculatorViewModel {
                     ReconstitutionInput(vialMass: Mass(vialMass, vialMassUnit),
                                         solventVolumeMilliliters: solvent, desiredDose: desired, syringe: syringe))
             case .premixed:
-                guard let mgPerMl = concentrationText.decimalValue else {
-                    errorMessage = "Enter the concentration (mg/mL)."; return
+                guard let strength = concentrationText.decimalValue else {
+                    errorMessage = "Enter the concentration (\(concentrationUnit.rawValue)/mL)."; return
                 }
-                result = try DosingCalculator.draw(dose: desired, concentration: .mgPerMl(mgPerMl),
+                let conc = Concentration(microgramsPerMilliliter: Mass(strength, concentrationUnit).micrograms)
+                result = try DosingCalculator.draw(dose: desired, concentration: conc,
                                                    totalVolumeMilliliters: totalVolumeText.decimalValue, syringe: syringe)
             }
         } catch let e as ReconstitutionError {
@@ -102,7 +105,7 @@ struct ReconstitutionCalculatorView: View {
                 // keystroke, and the top of the screen is the one region the decimal pad
                 // can never cover. Always present — an em-dash hero when there's nothing
                 // to show — so the form never bounces under the user's finger.
-                DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe, concentrationUnit: model.doseUnit)
+                DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe, concentrationUnit: model.concentrationUnit)
 
                 Card {
                     VStack(alignment: .leading, spacing: Space.lg) {
@@ -133,7 +136,8 @@ struct ReconstitutionCalculatorView: View {
                             FieldRow("What's the concentration?", hint: "On the pharmacy label, e.g. 2.5 mg/mL.") {
                                 HStack {
                                     TextField("e.g. 2.5", text: $model.concentrationText).keyboardType(.decimalPad).pinwiseField()
-                                    Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                    MassUnitPicker(selection: $model.concentrationUnit)
+                                    Text("/mL").foregroundStyle(BrandColor.textSecondary)
                                 }
                             }
                             FieldRow("Vial size (optional)", hint: "Total liquid in the vial — lets us estimate how many doses it holds.") {
@@ -163,6 +167,7 @@ struct ReconstitutionCalculatorView: View {
         .scrollDismissesKeyboard(.interactively)
         .sensoryFeedback(.selection, trigger: model.mode)
         .sensoryFeedback(.selection, trigger: model.vialMassUnit)
+        .sensoryFeedback(.selection, trigger: model.concentrationUnit)
         .sensoryFeedback(.selection, trigger: model.doseUnit)
         .sensoryFeedback(.selection, trigger: model.syringe)
         .heroScreen()
@@ -173,6 +178,7 @@ struct ReconstitutionCalculatorView: View {
         .onChange(of: model.vialMassText) { _, _ in model.recalculate() }
         .onChange(of: model.solventText) { _, _ in model.recalculate() }
         .onChange(of: model.concentrationText) { _, _ in model.recalculate() }
+        .onChange(of: model.concentrationUnit) { _, _ in model.recalculate() }
         .onChange(of: model.totalVolumeText) { _, _ in model.recalculate() }
         .onChange(of: model.doseText) { _, _ in model.recalculate() }
         .onChange(of: model.vialMassUnit) { _, _ in model.recalculate() }
@@ -185,12 +191,14 @@ struct ReconstitutionCalculatorView: View {
     /// with no solvent volume) prefills reconstitute mode. The existing `.onChange`
     /// wiring recalculates automatically.
     private func applyVial(_ v: StoredVial) {
-        // Open the dose (and thus the Strength readout) in the vial's chosen unit, so this calc
-        // agrees with the vial's Stack row instead of always reading mg/mL.
+        // Open the dose + concentration in the vial's chosen units, so this calc agrees with the
+        // vial's Stack row instead of always reading mg/mL.
         model.doseUnit = v.doseUnit
+        model.concentrationUnit = v.concentrationUnit
         if v.isPremixed, let mgPerMl = v.primaryConcentrationMgPerMl {
             model.mode = .premixed
-            model.concentrationText = Self.numberText(mgPerMl)
+            // Fill the strength in the vial's concentration unit (mgPerMl → mg/mL or mcg/mL).
+            model.concentrationText = Self.numberText(Mass(mgPerMl, .milligram).value(in: v.concentrationUnit))
             model.totalVolumeText = v.solventVolumeMilliliters.map(Self.numberText) ?? ""
         } else {
             model.mode = .reconstitute

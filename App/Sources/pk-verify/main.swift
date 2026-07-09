@@ -94,6 +94,12 @@ check(Mass.mcg(1500).displayString(in: .milligram) == "1.5 mg", "1500 mcg in mg 
 check(Mass.mg(2.5).displayString(in: .milligram) == "2.5 mg", "2.5 mg in mg ⇒ 2.5 mg (trimmed)")
 check(Mass.mg(2).displayString(in: .milligram) == "2 mg", "2 mg in mg ⇒ 2 mg (no decimals)")
 check(Mass.mcg(250).displayString(in: .microgram) == "250 mcg", "250 mcg in mcg ⇒ 250 mcg")
+// Pre-mixed strength entry: a value typed in a chosen unit/mL becomes the right µg/mL concentration.
+check(approx(Concentration(microgramsPerMilliliter: Mass(2.5, .milligram).micrograms).milligramsPerMilliliter, 2.5),
+      "2.5 entered as mg/mL ⇒ 2.5 mg/mL")
+check(approx(Concentration(microgramsPerMilliliter: Mass(500, .microgram).micrograms).microgramsPerMilliliter, 500),
+      "500 entered as mcg/mL ⇒ 500 mcg/mL (not 500000)")
+check(approx(Mass(0.5, .milligram).value(in: .microgram), 500), "0.5 mg strength reads 500 in mcg")
 
 // MARK: - Inventory
 section("Inventory estimator")
