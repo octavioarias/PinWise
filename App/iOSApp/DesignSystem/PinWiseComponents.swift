@@ -422,7 +422,7 @@ struct AdherenceRing: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Adherence")
-        .accessibilityValue("\(pct) percent of scheduled doses taken over the last 14 days")
+        .accessibilityValue("\(pct) percent of your recent scheduled doses taken")
     }
 }
 

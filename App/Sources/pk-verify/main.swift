@@ -124,6 +124,29 @@ do {
     check(weekly == [start, day(2026, 1, 12)], "weekly ⇒ 2 hits in 14 days")
 }
 
+// MARK: - Adherence grace
+section("Adherence grace (late doses)")
+do {
+    // every-3-days Jan 1/4/7; a single dose logged Jan 2 (1 day late for Jan 1, not itself due).
+    let logs = [day(2026, 1, 2)]
+    let g0 = AdherenceCalculator.evaluate(schedule: .everyNDays(3), start: day(2026, 1, 1),
+                                          end: day(2026, 1, 7), logDates: logs, graceDays: 0, calendar: cal)
+    check(g0.takenCount == 0, "grace 0 ⇒ Jan-2 dose doesn't cover Jan-1 (0 taken)")
+    let g1 = AdherenceCalculator.evaluate(schedule: .everyNDays(3), start: day(2026, 1, 1),
+                                          end: day(2026, 1, 7), logDates: logs, graceDays: 1, calendar: cal)
+    check(g1.takenCount == 1 && g1.takenDates == [day(2026, 1, 1)], "grace 1 ⇒ Jan-2 covers Jan-1 late")
+    // No double-count: one log can't satisfy two scheduled days even with a wide grace.
+    let wide = AdherenceCalculator.evaluate(schedule: .everyNDays(3), start: day(2026, 1, 1),
+                                            end: day(2026, 1, 7), logDates: logs, graceDays: 6, calendar: cal)
+    check(wide.takenCount == 1, "wide grace ⇒ one log still covers only one day")
+    // On-time doses are never stolen to backfill a miss: Jan 2 & 3 logged, daily Jan 1-3,
+    // grace 2 ⇒ Jan 1 stays missed (its neighbors' on-time logs aren't consumed for it).
+    let protect = AdherenceCalculator.evaluate(schedule: .daily, start: day(2026, 1, 1),
+                                               end: day(2026, 1, 3), logDates: [day(2026, 1, 2), day(2026, 1, 3)],
+                                               graceDays: 2, calendar: cal)
+    check(protect.missedDates == [day(2026, 1, 1)], "exact matches protect on-time doses from grace theft")
+}
+
 // MARK: - Streak
 section("Streak calculator")
 do {

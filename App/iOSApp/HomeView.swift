@@ -27,37 +27,41 @@ struct HomeView: View {
     }
     private var sitesInRotation: Int { Set(recent.prefix(30).compactMap { $0.site }).count }
 
-    private var adherenceFraction: Double {
-        let cal = Calendar.current
-        let end = Date()
-        let start = cal.date(byAdding: .day, value: -13, to: cal.startOfDay(for: end)) ?? end
-        var expected = 0, taken = 0
-        for p in activeProtocols {
-            let logDates = recent.filter { p.compoundNames.contains($0.compoundName) }.map(\.timestamp)
-            let r = AdherenceCalculator.evaluate(schedule: p.schedule,
-                                                 start: max(start, cal.startOfDay(for: p.startDate)),
-                                                 end: end, logDates: logDates, calendar: cal)
-            expected += r.expectedCount
-            taken += r.takenCount
-        }
-        return expected == 0 ? 0 : Double(taken) / Double(expected)
-    }
+    /// Adherence is judged over the last N SCHEDULED DOSES (not a fixed run of calendar days),
+    /// so a weekly and a daily protocol are measured on the same footing and one miss is a
+    /// small, predictable dip (~1/N) that recovers as new on-time doses push it out of the
+    /// window. A dose logged up to `graceDays` late still counts (people don't dose to the
+    /// minute). Both constants are the single tuning point.
+    private static let adherenceWindow = 12
+    private static let graceDays = 1
 
-    /// On-time dose streak across every active protocol — consecutive scheduled doses taken
-    /// with no miss (current), and the best run ever (longest). Same "taken = logged that day"
-    /// rule as the adherence % above; today's not-yet-taken dose is pending, never a miss.
-    private var streak: StreakCalculator.Result {
+    /// Every past-due scheduled dose across all active protocols, tagged taken/missed with the
+    /// grace rule, sorted chronologically. The one basis both the streak and the adherence %
+    /// read, so they can never disagree. (Today's not-yet-taken dose is pending, not a miss.)
+    private var doseEvents: [StreakCalculator.DoseEvent] {
         let cal = Calendar.current
         let now = Date()
         var events: [StreakCalculator.DoseEvent] = []
         for p in activeProtocols {
             let logs = recent.filter { p.compoundNames.contains($0.compoundName) }.map(\.timestamp)
             let r = AdherenceCalculator.evaluate(schedule: p.schedule, start: p.startDate,
-                                                 end: now, logDates: logs, calendar: cal)
+                                                 end: now, logDates: logs,
+                                                 graceDays: Self.graceDays, calendar: cal)
             events += StreakCalculator.events(from: r, asOf: now, calendar: cal)
         }
-        return StreakCalculator.compute(events: events)
+        return events.sorted { $0.date < $1.date }
     }
+
+    /// Fraction of the last `adherenceWindow` scheduled doses that were taken (0 if none due yet).
+    private var adherenceFraction: Double {
+        let window = doseEvents.suffix(Self.adherenceWindow)
+        guard !window.isEmpty else { return 0 }
+        return Double(window.filter(\.taken).count) / Double(window.count)
+    }
+
+    /// On-time dose streak: consecutive scheduled doses taken with no miss (current) + best run
+    /// ever (longest), over the same grace-aware event basis as the adherence %.
+    private var streak: StreakCalculator.Result { StreakCalculator.compute(events: doseEvents) }
 
     private var nextDoseDate: Date? { activeProtocols.compactMap { $0.nextDose() }.min() }
 
@@ -178,11 +182,11 @@ struct HomeView: View {
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
             if streak.longest > 0 {
-                Text("Best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                Text("Personal best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Best \(streak.longest).")
+        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Personal best \(streak.longest).")
     }
 
     private func milestoneBadge(_ m: Int) -> some View {
