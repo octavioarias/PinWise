@@ -93,13 +93,6 @@ private struct ToolCard<Destination: View>: View {
     }
 }
 
-private func unitPicker(_ binding: Binding<MassUnit>) -> some View {
-    Picker("", selection: binding) {
-        ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-    }
-    .pickerStyle(.segmented).frame(width: 120)
-}
-
 // MARK: - Check a dose (units drawn → dose)
 
 struct ReverseDoseView: View {
@@ -109,10 +102,26 @@ struct ReverseDoseView: View {
     @State private var unitsText = "10"
     @State private var syringe: SyringeScale = .u100
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var dose: Mass? {
-        guard let m = Double(massText), let s = Double(solventText), let u = Double(unitsText) else { return nil }
+        guard let m = massText.decimalValue, let s = solventText.decimalValue, let u = unitsText.decimalValue else { return nil }
         return try? ReconstitutionCalculator.dose(forUnits: u, vialMass: Mass(m, massUnit),
                                                   solventVolumeMilliliters: s, syringe: syringe)
+    }
+
+    /// The typed draw restated as a volume — computed locally in the view (PeptideKit
+    /// untouched; the `dose` call above already carries the verified math).
+    private var volumeString: String {
+        guard let u = unitsText.decimalValue, u >= 0 else { return "—" }
+        return String(format: "%.2f mL", u / syringe.unitsPerMilliliter)
+    }
+
+    /// Vial strength from the two vial inputs; em-dash until both parse.
+    private var strengthString: String {
+        guard let m = massText.decimalValue, m >= 0,
+              let s = solventText.decimalValue, s > 0 else { return "—" }
+        return String(format: "%.1f mg/mL", Mass(m, massUnit).micrograms / s / 1000)
     }
 
     var body: some View {
@@ -121,12 +130,32 @@ struct ReverseDoseView: View {
                 Text("Already drew a dose? See how much that actually is.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
+                // Hero result ABOVE the inputs: the decimal pad covers the bottom of the
+                // screen and this recomputes per keystroke — the top is the one region the
+                // keyboard can never occlude. Always present (em-dash when inputs don't
+                // parse) so the form never bounces under the user's finger. No SyringeGauge
+                // here: units are the INPUT — a gauge would echo the question, not answer it.
+                Card {
+                    VStack(alignment: .leading, spacing: Space.sm) {
+                        MicroLabel("You drew about")
+                        Text(dose?.displayString ?? "—")
+                            .font(Typo.numberXL)
+                            .foregroundStyle(BrandColor.accentText)
+                            .contentTransition(.numericText(value: dose?.micrograms ?? 0))
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: dose?.micrograms)
+                        HStack(spacing: Space.md) {
+                            StatTile(label: "Volume", value: volumeString, compact: true)
+                            StatTile(label: "Strength", value: strengthString, compact: true)
+                        }
+                    }
+                }
+
                 Card {
                     VStack(alignment: .leading, spacing: Space.lg) {
                         FieldRow("How much peptide was in the vial?", hint: "The amount on the vial label.") {
                             HStack {
                                 TextField("e.g. 5", text: $massText).keyboardType(.decimalPad).pinwiseField()
-                                unitPicker($massUnit)
+                                MassUnitPicker(selection: $massUnit)
                             }
                         }
                         FieldRow("How much water was added?", hint: "The water it was mixed with.") {
@@ -144,20 +173,14 @@ struct ReverseDoseView: View {
                     }
                 }
 
-                syringeAdvanced($syringe)
-
-                if let d = dose {
-                    Card {
-                        VStack(alignment: .leading, spacing: Space.sm) {
-                            Text("YOU DREW ABOUT").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
-                            Text(d.displayString).font(Typo.numberXL).foregroundStyle(BrandColor.accentText)
-                        }
-                    }
-                }
+                SyringeAdvancedCard(selection: $syringe)
             }
             .padding(Space.lg)
         }
         .heroScreen()
+        .scrollDismissesKeyboard(.interactively)
+        .sensoryFeedback(.selection, trigger: massUnit)
+        .sensoryFeedback(.selection, trigger: syringe)
         .navigationTitle("Check a dose")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -250,12 +273,33 @@ struct BlendCalculatorView: View {
                         }
                     }
                 }
-                syringeAdvanced($syringe)
+                SyringeAdvancedCard(selection: $syringe)
 
+                // Result stays BELOW the inputs — a deliberate asymmetry with the other
+                // dose calculators: this card's height varies with 2–4 component rows (top
+                // placement would bounce the pickers), and the primary flow here starts
+                // with menu selection, not typing.
                 if let r = result {
                     Card {
                         VStack(alignment: .leading, spacing: Space.md) {
-                            Text("EACH SHOT GIVES YOU").font(Typo.caption).tracking(0.8).foregroundStyle(BrandColor.textSecondary)
+                            // Draw hero: what to pull, restated in mL, then the barrel.
+                            VStack(alignment: .leading, spacing: Space.xs) {
+                                MicroLabel("Draw to")
+                                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                                    Text(fmt(r.syringeUnits))
+                                        .font(Typo.numberXL)
+                                        .foregroundStyle(BrandColor.accentText)
+                                    Text("units")
+                                        .font(Typo.caption)
+                                        .foregroundStyle(BrandColor.textSecondary)
+                                }
+                                Text("= \(String(format: "%.2f", r.drawVolumeMilliliters)) mL")
+                                    .font(Typo.caption)
+                                    .foregroundStyle(BrandColor.textSecondary)
+                            }
+                            SyringeGauge(units: r.syringeUnits, syringe: syringe)
+                            Divider().overlay(BrandColor.stroke)
+                            MicroLabel("Each shot gives you")
                             ForEach(r.components) { comp in
                                 HStack {
                                     Text(comp.name).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
@@ -270,8 +314,15 @@ struct BlendCalculatorView: View {
             .padding(Space.lg)
         }
         .heroScreen()
+        .sensoryFeedback(.selection, trigger: syringe)
+        .sensoryFeedback(.selection, trigger: blend.id)
         .navigationTitle("Blend")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Whole draws render bare ("20"), fractional draws keep one decimal ("12.5").
+    private func fmt(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
     }
 }
 
@@ -307,12 +358,13 @@ struct TitrationPreviewView: View {
                 }
                 Card {
                     VStack(alignment: .leading, spacing: Space.md) {
+                        TitrationLadderBar(phases: phases)
                         SectionHeader(title: "Example ladder")
                         ForEach(phases) { phase in
                             HStack(alignment: .firstTextBaseline) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(phase.dose.displayString).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                                    Text("\(phase.startDate.formatted(.dateTime.month().day())) – \(phase.endDate.formatted(.dateTime.month().day()))")
+                                    Text("\(phase.startDate.formatted(.dateTime.month().day())) – \(phase.endDate.formatted(.dateTime.month().day())) · \(weeks(phase.durationDays)) wks")
                                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                                 }
                                 Spacer()
@@ -328,24 +380,89 @@ struct TitrationPreviewView: View {
             .padding(Space.lg)
         }
         .heroScreen()
+        .sensoryFeedback(.selection, trigger: template)
+        .sensoryFeedback(.selection, trigger: startDate)
         .navigationTitle("Ramp-up plan")
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    private func weeks(_ days: Int) -> Int {
+        Int((Double(days) / 7).rounded())
+    }
 }
 
-/// Shared "Advanced — syringe type" disclosure (hidden by default; most people use U-100).
-private func syringeAdvanced(_ binding: Binding<SyringeScale>) -> some View {
-    Card {
-        DisclosureGroup {
-            Picker("Syringe type", selection: binding) {
-                ForEach(SyringeScale.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+/// A proportional plan-timeline bar for the titration ladder: one segment per phase, width
+/// proportional to the phase's share of the full plan; the phase containing today wears the
+/// accent fill (none when the plan is entirely past or future). Display-only; a single
+/// accessibility element.
+private struct TitrationLadderBar: View {
+    let phases: [TitrationPlanner.Phase]
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var revealed = false
+
+    private static let gap: CGFloat = 3
+    private static let barHeight: CGFloat = 30
+    /// Minimum segment width that can carry a dose label without smearing.
+    private static let labelMinWidth: CGFloat = 34
+
+    private var currentID: Int? { TitrationPlanner.phase(on: Date(), in: phases)?.id }
+    private var totalDays: Int { phases.reduce(0) { $0 + $1.durationDays } }
+
+    var body: some View {
+        GeometryReader { geo in
+            let available = max(geo.size.width - Self.gap * CGFloat(max(phases.count - 1, 0)), 0)
+            HStack(spacing: Self.gap) {
+                ForEach(phases) { phase in
+                    segment(phase, width: available * CGFloat(phase.durationDays) / CGFloat(max(totalDays, 1)))
+                }
             }
-            .pickerStyle(.segmented)
-            Text("Most insulin syringes are U-100. Only change this if yours says otherwise.")
-                .font(.caption).foregroundStyle(BrandColor.textSecondary).padding(.top, Space.xs)
-        } label: {
-            Text("Advanced — syringe type").font(.caption).foregroundStyle(BrandColor.textSecondary)
         }
-        .tint(BrandColor.accentText)
+        .frame(height: Self.barHeight)
+        // Left-anchored grow-in on arrival; instant under Reduce Motion.
+        .scaleEffect(x: revealed ? 1 : 0, anchor: .leading)
+        .onAppear {
+            if reduceMotion {
+                revealed = true
+            } else {
+                withAnimation(.easeOut(duration: 0.5)) { revealed = true }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Plan timeline")
+        .accessibilityValue(summary)
+    }
+
+    private func segment(_ phase: TitrationPlanner.Phase, width: CGFloat) -> some View {
+        let isCurrent = phase.id == currentID
+        return RoundedRectangle(cornerRadius: 4)
+            .fill(isCurrent ? BrandColor.accent : BrandColor.surfaceElevated)
+            .overlay {
+                if !isCurrent {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(BrandColor.stroke, lineWidth: 1)
+                }
+            }
+            .overlay {
+                // Dose label only where it fits — squeezed segments stay clean.
+                if width > Self.labelMinWidth {
+                    Text(phase.dose.displayString)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(isCurrent ? BrandColor.onAccent : BrandColor.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(width: width, height: Self.barHeight)
+    }
+
+    private var summary: String {
+        let base = "\(phases.count) phases over \(Int((Double(totalDays) / 7).rounded())) weeks"
+        if let current = TitrationPlanner.phase(on: Date(), in: phases) {
+            return base + "; today: \(current.dose.displayString)"
+        }
+        if let first = phases.first {
+            return base + "; starts \(first.startDate.formatted(.dateTime.month().day()))"
+        }
+        return base
     }
 }
