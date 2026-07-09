@@ -5,13 +5,12 @@ import PeptideKit
 private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-Time Pin" }
 
 /// The Log tab — record a dose against a protocol (all its compounds at once) or a one-time
-/// pin. Opens on Protocol whenever protocols exist. A grouped front/back picker keeps
-/// injection sites compact; a success haptic confirms the save; logging draws down matching
-/// vials; after a save the app returns Home (with a beat to tap "Log another dose").
+/// pin. Protocol-first: pick a protocol, its entry fields appear, you log it, and it returns
+/// to the picker with that protocol removed for the day. When every due protocol is logged the
+/// tab says "You're all set!". A grouped front/back picker keeps sites compact; a success
+/// haptic confirms the save; logging draws down matching vials.
 struct LogView: View {
-    @Binding var selected: AppTab
     @Environment(\.modelContext) private var context
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Query(sort: \LoggedDose.timestamp, order: .reverse) private var recent: [LoggedDose]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
@@ -19,7 +18,6 @@ struct LogView: View {
 
     @State private var mode: LogMode = .protocolBased   // protocol-first every time the tab opens
     @State private var selectedProtocolID: UUID?
-    @State private var postSaveNav: Task<Void, Never>?
     @State private var compound: Compound = CompoundCatalog.semaglutide
     @State private var doseText: String = ""
     @State private var doseUnit: MassUnit = .milligram
@@ -30,7 +28,6 @@ struct LogView: View {
     @State private var showMetrics = false
     @State private var energy: Double = 5
     @State private var sideEffect: Double = 0
-    @State private var savedConfirmation = false
     @State private var savedCount = 0
     /// One-time mode: the vial the user chose to log from (nil = pick any compound).
     @State private var selectedVialID: UUID?
@@ -105,46 +102,42 @@ struct LogView: View {
                         .foregroundStyle(BrandColor.textPrimary)
                         .minimumScaleFactor(0.7).lineLimit(1)
 
-                    if !loggableProtocols.isEmpty {
-                        Picker("", selection: $mode) {
-                            ForEach(LogMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                    } else if !activeProtocols.isEmpty {
-                        // Every due protocol is already logged for today — say so, and point to
-                        // a one-time pin for anything extra (rather than an empty protocol picker).
-                        Label("Today's protocol doses are all logged. Use a one-time pin below for anything extra.",
-                              systemImage: "checkmark.circle.fill")
-                            .font(.caption).foregroundStyle(BrandColor.success)
-                    }
-
-                    if mode == .protocolBased && !loggableProtocols.isEmpty {
-                        protocolCard
-                    } else {
+                    if activeProtocols.isEmpty {
+                        // No protocols yet — a one-time pin is the only way to log.
                         compoundCard
-                    }
-
-                    siteCard
-                    feelCard
-
-                    PrimaryButton(title: savedConfirmation ? "Logged ✓" : saveTitle,
-                                  systemImage: savedConfirmation ? "checkmark" : "plus") { save() }
-                        .disabled(!canSave || savedConfirmation)
-                        .opacity(canSave ? 1 : 0.5)
-                        .scaleEffect(savedConfirmation ? 1.02 : 1)
-                        .animation(reduceMotion ? nil : Motion.emphasis, value: savedConfirmation)
-
-                    if savedConfirmation {
-                        Button {
-                            postSaveNav?.cancel()
-                            savedConfirmation = false
-                        } label: {
-                            Text("Log another dose")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(BrandColor.accentText)
-                                .frame(maxWidth: .infinity)
+                        entrySection
+                    } else {
+                        // Protocol-first. The Protocol / One-Time Pin toggle only appears while a
+                        // protocol is still loggable today; otherwise we're in the all-set state.
+                        if !loggableProtocols.isEmpty {
+                            Picker("", selection: $mode) {
+                                ForEach(LogMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
                         }
-                        .buttonStyle(.plain)
+
+                        if mode == .compound {
+                            compoundCard
+                            entrySection
+                        } else if !loggableProtocols.isEmpty {
+                            // Step 1: pick a protocol (the picker leads). Step 2 — its entry fields
+                            // — appears only once one is selected; logging it returns here with that
+                            // protocol removed for the day.
+                            protocolCard
+                            if let sel = selectedProtocolID, loggableProtocols.contains(where: { $0.id == sel }) {
+                                entrySection
+                            }
+                        } else {
+                            // Every due protocol is logged for today.
+                            allSetView
+                            Button { mode = .compound } label: {
+                                Text("Log a one-time pin instead")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(BrandColor.accentText)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
 
                     if !recent.isEmpty {
@@ -158,13 +151,10 @@ struct LogView: View {
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {
-                // Protocol-first: fall back to a one-time pin when nothing is left to log today.
-                // Keep the selection on a protocol that's actually offered (not one filtered out
-                // for being done today).
-                if loggableProtocols.isEmpty { mode = .compound }
-                else if selectedProtocolID == nil || !loggableProtocols.contains(where: { $0.id == selectedProtocolID }) {
-                    selectedProtocolID = loggableProtocols.first?.id
-                }
+                // Protocol-first, always opening on the "Which protocol?" picker with nothing
+                // pre-selected — a one-time pin only when there are no protocols at all.
+                mode = activeProtocols.isEmpty ? .compound : .protocolBased
+                selectedProtocolID = nil
                 doseUnit = compound.preferredDoseUnit
                 // Do NOT auto-fill the site: a log must record where you ACTUALLY injected, not a
                 // rotation suggestion. The "Suggested" hint below applies the pick on tap.
@@ -177,11 +167,31 @@ struct LogView: View {
                     selectedVialID = nil
                 }
             }
-            .onChange(of: doseText) { _, _ in
-                postSaveNav?.cancel()
-                savedConfirmation = false
+        }
+    }
+
+    /// Site + feelings + the log button — the "fill out the dose" section that appears once a
+    /// protocol is picked (or immediately in one-time-pin mode). Grouped so the parent VStack's
+    /// spacing flows through.
+    private var entrySection: some View {
+        Group {
+            siteCard
+            feelCard
+            PrimaryButton(title: saveTitle, systemImage: "plus") { save() }
+                .disabled(!canSave)
+                .opacity(canSave ? 1 : 0.5)
+        }
+    }
+
+    /// Shown when every protocol due today has already been logged.
+    private var allSetView: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.sm) {
+                Label("You're all set!", systemImage: "checkmark.circle.fill")
+                    .font(Typo.headline).foregroundStyle(BrandColor.success)
+                Text("You've logged all your doses for today.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             }
-            .onDisappear { postSaveNav?.cancel() }
         }
     }
 
@@ -476,15 +486,11 @@ struct LogView: View {
         site = nil          // clear so the next log starts unselected (no silently-wrong location)
         showBack = false
         selectedVialID = nil
-        savedConfirmation = true
+        doseText = ""
+        // Return to the "Which protocol?" picker: deselecting hides the entry fields, and the
+        // just-logged protocol has already dropped out of `loggableProtocols`. When it was the
+        // last one, the all-set state shows instead. The success haptic confirms the save.
+        selectedProtocolID = nil
         savedCount += 1
-        // Return Home after a beat — long enough to read "Logged ✓" and tap "Log another dose".
-        postSaveNav?.cancel()
-        postSaveNav = Task {
-            try? await Task.sleep(for: .seconds(1.4))
-            guard !Task.isCancelled else { return }
-            selected = .home
-            savedConfirmation = false
-        }
     }
 }

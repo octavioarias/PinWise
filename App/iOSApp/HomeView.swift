@@ -131,8 +131,10 @@ struct HomeView: View {
     private var greeting: String? {
         guard let name = auth.displayName?.split(separator: " ").first, !name.isEmpty else { return nil }
         let hour = Calendar.current.component(.hour, from: Date())
-        let salutation = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
-        return "\(salutation),\n\(name)."
+        let isLate = hour < 5
+        let salutation = isLate ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
+        // "Up late" is a question ("Up late, Alex?"); the rest are statements.
+        return "\(salutation),\n\(name)\(isLate ? "?" : ".")"
     }
 
     // MARK: Hero
