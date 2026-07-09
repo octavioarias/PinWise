@@ -69,7 +69,9 @@ struct ProtocolBuilderView: View {
     }
 
     /// Add a line from one of the user's vials — carrying its nickname link, compound, and
-    /// per-shot dose. Protocols always reference vials, never raw catalog compounds.
+    /// per-shot dose. Protocols always reference vials, never raw catalog compounds. For a
+    /// blend the line's compound/dose anchor on the PRIMARY API; every other compound in the
+    /// vial rides along at a fixed mass ratio (see `blendBreakdown`) and is shown in the row.
     private func addVial(_ vial: StoredVial) {
         let comp = resolveCompound(vial.primaryAPI?.name ?? "")
         let unit = comp.preferredDoseUnit
@@ -79,6 +81,33 @@ struct ProtocolBuilderView: View {
                               doseUnit: unit, vialID: vial.id)
         items.append(entry)
         if trimmedName.isEmpty { name = vial.displayName }
+    }
+
+    /// One compound delivered by a blend line, with its per-shot dose.
+    private struct BlendLine: Identifiable { let name: String; let dose: Mass; var id: String { name } }
+
+    /// The full compound scope a vial-backed line delivers per shot. A blend vial draws all its
+    /// APIs together in one shot, so each rides along at `apiMass / primaryMass × primaryDose`
+    /// (the solvent volume cancels — the ratio is purely mass-based). Returns nil for a
+    /// non-vial line or a single-compound vial (nothing extra to break out).
+    private func blendBreakdown(for item: ItemEntry) -> [BlendLine]? {
+        guard let vid = item.vialID, let vial = vials.first(where: { $0.id == vid }),
+              vial.isBlend, let primary = vial.primaryAPI, primary.massMicrograms > 0,
+              let entered = item.doseText.decimalValue, entered > 0 else { return nil }
+        let primaryDose = Mass(entered, item.doseUnit).micrograms
+        return vial.apis.map { api in
+            BlendLine(name: api.name,
+                      dose: Mass(micrograms: api.massMicrograms / primary.massMicrograms * primaryDose))
+        }
+    }
+
+    /// The full-scope title for a line: every compound in the linked vial (a blend shows all of
+    /// them), falling back to the single compound name for non-vial lines.
+    private func lineTitle(for item: ItemEntry) -> String {
+        if let vid = item.vialID, let vial = vials.first(where: { $0.id == vid }), !vial.apiNames.isEmpty {
+            return vial.apiNames.joined(separator: " + ")
+        }
+        return item.compound.name
     }
 
     var body: some View {
@@ -101,7 +130,9 @@ struct ProtocolBuilderView: View {
                                 VStack(alignment: .leading, spacing: Space.sm) {
                                     HStack(alignment: .firstTextBaseline) {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(item.compound.name)
+                                            // Full scope: a blend vial shows every compound it holds,
+                                            // not just the primary.
+                                            Text(lineTitle(for: item))
                                                 .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                                             if let vid = item.vialID, let v = vials.first(where: { $0.id == vid }) {
                                                 Label("From \(v.displayName)", systemImage: "cross.vial.fill")
@@ -113,7 +144,7 @@ struct ProtocolBuilderView: View {
                                             Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)
                                         }
                                         .buttonStyle(.plain)
-                                        .accessibilityLabel("Remove \(item.compound.name)")
+                                        .accessibilityLabel("Remove \(lineTitle(for: item))")
                                     }
                                     HStack {
                                         TextField("Dose per shot", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
@@ -121,6 +152,24 @@ struct ProtocolBuilderView: View {
                                             ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                                         }
                                         .pickerStyle(.segmented).frame(width: 120)
+                                    }
+                                    // For a blend, break out what each compound delivers per shot — the
+                                    // dose above sets the primary; the rest scale by their vial mass ratio.
+                                    if let breakdown = blendBreakdown(for: item) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Each shot delivers")
+                                                .font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                                            ForEach(breakdown) { line in
+                                                HStack {
+                                                    Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                                    Spacer()
+                                                    Text(line.dose.displayString)
+                                                        .font(.caption2).foregroundStyle(BrandColor.textPrimary)
+                                                }
+                                            }
+                                        }
+                                        .padding(Space.sm)
+                                        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                                     }
                                 }
                                 .padding(.bottom, Space.xs)

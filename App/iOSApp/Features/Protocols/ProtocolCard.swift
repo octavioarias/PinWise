@@ -14,6 +14,12 @@ struct ProtocolCard: View {
     let proto: SavedProtocol
     /// Vial-linked supply readout; nil when the protocol has no linked vial (row omitted).
     var supply: SupplyInfo?
+    /// Full compound scope for the contents line — expands blend vials to every compound they
+    /// hold. Caller resolves it (it needs the vials); nil falls back to the primary-only
+    /// `proto.contentsSummary` so any caller without vials still renders.
+    var contents: String?
+
+    private var contentsText: String { contents ?? proto.contentsSummary }
 
     /// The caller resolves the protocol's vial linkage into this — the card stays a pure renderer.
     struct SupplyInfo {
@@ -76,9 +82,10 @@ struct ProtocolCard: View {
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
 
-                // Contents meta — omitted when it would just repeat the name.
-                if proto.contentsSummary != proto.name {
-                    Text(proto.contentsSummary)
+                // Contents meta — full compound scope (blend vials expanded); omitted when it
+                // would just repeat the name.
+                if contentsText != proto.name {
+                    Text(contentsText)
                         .font(.caption)
                         .foregroundStyle(BrandColor.textSecondary)
                 }

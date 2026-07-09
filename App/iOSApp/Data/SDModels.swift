@@ -134,8 +134,32 @@ extension SavedProtocol {
     var compoundNames: [String] { items.map(\.compoundName) }
     /// Primary dose.
     var dose: Mass { Mass(micrograms: primaryItem?.doseMicrograms ?? 0) }
-    /// Human summary of contents, e.g. "Semaglutide · BPC-157".
+    /// Human summary of contents, e.g. "Semaglutide · BPC-157". Primary-only: a line backed by
+    /// a blend vial contributes just its primary compound. Use `fullContentsSummary(vials:)`
+    /// wherever the vials are available to show a blend's full scope.
     var contentsSummary: String { items.isEmpty ? "No compounds" : compoundNames.joined(separator: " · ") }
+
+    /// Full compound scope, expanding any blend vial a line references into every compound it
+    /// holds (deduped, order-preserving). The stored `ProtocolItem` keeps only the primary +
+    /// `vialID`, so the rest of a blend is recovered here via the vial link.
+    func fullCompoundNames(vials: [StoredVial]) -> [String] {
+        var names: [String] = []
+        for item in items {
+            if let vid = item.vialID, let vial = vials.first(where: { $0.id == vid }), vial.isBlend {
+                names.append(contentsOf: vial.apiNames)
+            } else {
+                names.append(item.compoundName)
+            }
+        }
+        var seen = Set<String>()
+        return names.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
+
+    /// `contentsSummary` with blend vials expanded to their full compound scope.
+    func fullContentsSummary(vials: [StoredVial]) -> String {
+        let names = fullCompoundNames(vials: vials)
+        return names.isEmpty ? "No compounds" : names.joined(separator: " · ")
+    }
 
     /// The dose to show/use — always the dose the user set. The app never auto-advances a dose
     /// over time; every dose change is an explicit user edit to the protocol (record-keeper posture).
