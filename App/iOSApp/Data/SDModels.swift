@@ -39,6 +39,10 @@ final class LoggedDose {
     /// Optional 0–10 quick self-reports (nil = not recorded).
     var energy: Double?
     var sideEffectSeverity: Double?
+    /// The protocol this dose fulfilled, if it came from one — enables real per-protocol
+    /// adherence (matching logs to their source schedule). Additive optional to stay
+    /// CloudKit-safe; nil = one-time dose not tied to any protocol (and every legacy row).
+    var protocolID: UUID? = nil
 
     init(
         id: UUID = UUID(),
@@ -50,7 +54,8 @@ final class LoggedDose {
         vialID: UUID? = nil,
         didDecrement: Bool = false,
         energy: Double? = nil,
-        sideEffectSeverity: Double? = nil
+        sideEffectSeverity: Double? = nil,
+        protocolID: UUID? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -62,6 +67,7 @@ final class LoggedDose {
         self.didDecrement = didDecrement
         self.energy = energy
         self.sideEffectSeverity = sideEffectSeverity
+        self.protocolID = protocolID
     }
 }
 
@@ -70,9 +76,13 @@ extension LoggedDose {
     var site: InjectionSite? { siteRaw.flatMap(InjectionSite.init(rawValue:)) }
 
     /// Bridge to the pure-domain type so PeptideKit logic can operate on logs.
+    /// Carries the 0–10 quick self-reports through as `SubjectiveMetric`s (previously dropped),
+    /// and the source-protocol link so domain adherence can attribute the dose.
     func asDomain() -> DoseLog {
-        DoseLog(id: id, compoundID: stableCompoundID(for: compoundName), vialID: vialID,
-                timestamp: timestamp, dose: dose, site: site, notes: notes)
+        DoseLog(id: id, protocolID: protocolID, compoundID: stableCompoundID(for: compoundName),
+                vialID: vialID, timestamp: timestamp, dose: dose, site: site,
+                metrics: SubjectiveMetric.quickReports(energy: energy, sideEffectSeverity: sideEffectSeverity),
+                notes: notes)
     }
 }
 
@@ -169,9 +179,13 @@ final class BiomarkerEntry {
     var typeRaw: String = ""   // BiomarkerType rawValue
     var value: Double = 0
     var notes: String = ""
+    /// The unit this value was entered in (e.g. "lb", "kg", "in", "cm"). Stamped at write so the
+    /// global lb/kg toggle can no longer reinterpret a historical row's stored number. Additive
+    /// optional to stay CloudKit-safe; nil = legacy row → read paths fall back to the global flag.
+    var unitRaw: String? = nil
 
-    init(id: UUID = UUID(), timestamp: Date = Date(), typeRaw: String = "", value: Double = 0, notes: String = "") {
-        self.id = id; self.timestamp = timestamp; self.typeRaw = typeRaw; self.value = value; self.notes = notes
+    init(id: UUID = UUID(), timestamp: Date = Date(), typeRaw: String = "", value: Double = 0, notes: String = "", unitRaw: String? = nil) {
+        self.id = id; self.timestamp = timestamp; self.typeRaw = typeRaw; self.value = value; self.notes = notes; self.unitRaw = unitRaw
     }
 }
 
@@ -212,20 +226,49 @@ final class StoredVial {
     var dateAcquired: Date = Date()
     var notes: String = ""
     var isPremixed: Bool = false                // true = came ready-to-use from a pharmacy
+    /// When this vial was reconstituted — provenance the domain `Vial` carries, used for
+    /// beyond-use-date / freshness display. Additive optional to stay CloudKit-safe; nil =
+    /// unknown (legacy rows, premixed, or not yet mixed).
+    var dateReconstituted: Date? = nil
 
     init(
         id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double = 0,
         perDoseMicrograms: Double = 0, dosesTaken: Int = 0, cost: Double = 0, expirationDate: Date? = nil,
-        dateAcquired: Date = Date(), notes: String = "", isPremixed: Bool = false
+        dateAcquired: Date = Date(), notes: String = "", isPremixed: Bool = false,
+        dateReconstituted: Date? = nil
     ) {
         self.id = id; self.label = label; self.apis = apis; self.solventVolumeMilliliters = solventVolumeMilliliters
         self.perDoseMicrograms = perDoseMicrograms; self.dosesTaken = dosesTaken; self.cost = cost
         self.expirationDate = expirationDate; self.dateAcquired = dateAcquired; self.notes = notes
-        self.isPremixed = isPremixed
+        self.isPremixed = isPremixed; self.dateReconstituted = dateReconstituted
     }
 }
 
 extension StoredVial {
+    /// CloudKit-safe manual cascade for vial deletion. There is no `@Relationship` to cascade
+    /// (the posture forbids them), so every soft UUID link pointing at this vial must be nilled
+    /// by hand before removal — otherwise deleting a vial leaves dangling `vialID`s on logs and
+    /// protocols, and a stale `didDecrement` could later mis-restore a vial that no longer exists.
+    ///
+    /// For each dose drawn from this vial: clear `vialID` and reset `didDecrement` (nothing left
+    /// to restore to). For each protocol whose items reference it: rebuild `items` nilling the
+    /// matching `vialID` and reassign the array so SwiftData re-persists the JSON blob. Then delete.
+    func reconcileDelete(in context: ModelContext,
+                         doses: [LoggedDose], protocols: [SavedProtocol]) {
+        for dose in doses where dose.vialID == id {
+            dose.vialID = nil
+            dose.didDecrement = false
+        }
+        for proto in protocols where proto.items.contains(where: { $0.vialID == id }) {
+            proto.items = proto.items.map { item in
+                var updated = item
+                if updated.vialID == id { updated.vialID = nil }
+                return updated
+            }
+        }
+        context.delete(self)
+    }
+
     var isBlend: Bool { apis.count > 1 }
     var primaryAPI: VialAPI? { apis.first }
     var primaryMass: Mass { Mass(micrograms: primaryAPI?.massMicrograms ?? 0) }
