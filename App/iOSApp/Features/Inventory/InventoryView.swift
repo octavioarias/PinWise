@@ -255,6 +255,24 @@ struct VialBuilderView: View {
     }
     private var primaryName: String { entries.first?.compound.name ?? "" }
 
+    /// For a multi-compound (blend) vial, what a single shot delivers of EACH compound. They share
+    /// one solution, so the primary's dose fixes the rest by the mass ratio (the solvent cancels —
+    /// no volume needed). Recomputed live as ingredients/dose change. nil unless there are 2+
+    /// ingredients with amounts and a primary dose entered.
+    private var liveBlendBreakdown: [(name: String, dose: Mass)]? {
+        guard entries.count > 1, let pd = doseText.decimalValue, pd > 0 else { return nil }
+        // Ratio-only: for pre-mixed vials the volume cancels, so strength stands in for mass.
+        func relativeMass(_ e: APIEntry) -> Double? {
+            guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
+            return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
+        }
+        guard let primary = entries.first, let primaryMass = relativeMass(primary), primaryMass > 0 else { return nil }
+        let primaryDose = Mass(pd, doseUnit).micrograms
+        return entries.compactMap { e in
+            relativeMass(e).map { (e.compound.name, Mass(micrograms: $0 / primaryMass * primaryDose)) }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -364,6 +382,34 @@ struct VialBuilderView: View {
                                     TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                                     unitPicker($doseUnit)
                                 }
+                            }
+
+                            // Multi-compound vial: you set ONE dose (the primary) and every other
+                            // compound follows by the fixed mass ratio — they can't be dialed in
+                            // separately from a single vial. Show what a shot delivers, live, and
+                            // explain why a second dose field would be physically meaningless.
+                            if entries.count > 1 {
+                                if let breakdown = liveBlendBreakdown {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Each shot delivers").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                                        ForEach(breakdown, id: \.name) { line in
+                                            HStack {
+                                                Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                                Spacer()
+                                                Text(line.dose.displayString(in: doseUnit))
+                                                    .font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
+                                            }
+                                        }
+                                    }
+                                    .padding(Space.sm)
+                                    .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                                }
+                                Label {
+                                    Text("These compounds share one vial, so a single injection draws them together at the fixed ratio set by how much of each is in the vial. You set \(primaryName.isEmpty ? "the first compound" : primaryName)'s dose; the rest follow automatically. They can't be targeted separately — e.g. a vial of 10 mg + 3 mg + 3 mg can never give 5 mg of each. To dose each compound independently, put them in separate vials.")
+                                } icon: {
+                                    Image(systemName: "info.circle")
+                                }
+                                .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             }
                         }
                     }
