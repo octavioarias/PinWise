@@ -181,6 +181,10 @@ struct VialBuilderView: View {
     @State private var expiration: Date
     @State private var showScanner = false
     @State private var resetDoseCount = false
+    /// The ingredient the user "doses by" in a blend — its dose is the number they type, and every
+    /// other compound scales to it. nil = the first ingredient. Tracked by id so it survives
+    /// add/remove/reorder.
+    @State private var anchorID: UUID? = nil
     /// Set when a blend preset autofilled the nickname: the name it wrote + the formula it
     /// described. If the ingredients later diverge, the autofill is cleared (a "GLOW" label
     /// on a hand-rolled formula would be wrong) — unless the user typed their own name over it.
@@ -255,22 +259,73 @@ struct VialBuilderView: View {
     }
     private var primaryName: String { entries.first?.compound.name ?? "" }
 
+    /// The id that actually anchors the dose right now — the tapped one, or the first ingredient
+    /// when unset / the anchored ingredient was removed.
+    private var effectiveAnchorID: UUID? { (entries.first { $0.id == anchorID }?.id) ?? entries.first?.id }
+    private var anchorEntry: APIEntry? { entries.first { $0.id == effectiveAnchorID } }
+    /// The compound whose dose the user types ("dose by"); the rest scale to it.
+    private var anchorName: String { anchorEntry?.compound.name ?? "" }
+
     /// For a multi-compound (blend) vial, what a single shot delivers of EACH compound. They share
-    /// one solution, so the primary's dose fixes the rest by the mass ratio (the solvent cancels —
-    /// no volume needed). Recomputed live as ingredients/dose change. nil unless there are 2+
-    /// ingredients with amounts and a primary dose entered.
+    /// one solution, so the ANCHOR's dose fixes the rest by the mass ratio (the solvent cancels —
+    /// no volume needed). Recomputed live as ingredients/dose/anchor change. nil unless there are
+    /// 2+ ingredients with amounts and an anchor dose entered.
     private var liveBlendBreakdown: [(name: String, dose: Mass)]? {
         guard entries.count > 1, let pd = doseText.decimalValue, pd > 0 else { return nil }
-        // Ratio-only: for pre-mixed vials the volume cancels, so strength stands in for mass.
-        func relativeMass(_ e: APIEntry) -> Double? {
-            guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
-            return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
-        }
-        guard let primary = entries.first, let primaryMass = relativeMass(primary), primaryMass > 0 else { return nil }
-        let primaryDose = Mass(pd, doseUnit).micrograms
+        guard let anchor = anchorEntry, let anchorMass = relativeMass(anchor), anchorMass > 0 else { return nil }
+        let anchorDose = Mass(pd, doseUnit).micrograms
         return entries.compactMap { e in
-            relativeMass(e).map { (e.compound.name, Mass(micrograms: $0 / primaryMass * primaryDose)) }
+            relativeMass(e).map { (e.compound.name, Mass(micrograms: $0 / anchorMass * anchorDose)) }
         }
+    }
+
+    /// Relative mass of an ingredient for ratio math — the solvent cancels, so for a pre-mixed
+    /// vial the per-mL strength stands in for mass. nil when the amount isn't a positive number.
+    private func relativeMass(_ e: APIEntry) -> Double? {
+        guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
+        return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
+    }
+
+    /// The blend "hero": what one shot actually delivers of every compound (live), the anchor
+    /// highlighted, plus the ratio explanation and the separate-vials escape hatch.
+    private var blendHero: some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "syringe.fill").font(.caption).foregroundStyle(BrandColor.accent)
+                Text("This shot delivers").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+            }
+            if let breakdown = liveBlendBreakdown {
+                ForEach(breakdown, id: \.name) { line in
+                    let isAnchor = line.name == anchorName
+                    HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
+                        Text(line.name).font(.subheadline).foregroundStyle(BrandColor.textPrimary)
+                        if isAnchor {
+                            Text("you set this").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                        }
+                        Spacer()
+                        Text(line.dose.displayString(in: doseUnit))
+                            .font(Typo.numberMD)
+                            .foregroundStyle(isAnchor ? BrandColor.accentText : BrandColor.textPrimary)
+                    }
+                }
+            } else {
+                Text("Enter each ingredient's amount and a dose to see the split.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            }
+            Divider().overlay(BrandColor.stroke)
+            Text("Everything is mixed in one vial, so a shot always pulls this exact ratio. Choose which compound to dose by above — the rest follow.")
+                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            Label {
+                Text("Want a different amount of each? Add them as separate vials, then combine them in a protocol — a stack lets you dose every compound on its own.")
+            } icon: {
+                Image(systemName: "square.stack.3d.up")
+            }
+            .font(.caption).foregroundStyle(BrandColor.accentText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Space.md)
+        .background(BrandColor.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.accent.opacity(0.3), lineWidth: 1))
     }
 
     var body: some View {
@@ -320,9 +375,22 @@ struct VialBuilderView: View {
                                 }
                             }
 
+                            if entries.count > 1 {
+                                Text("Tap a circle to choose which compound you dose by — the rest scale to it.")
+                                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                            }
                             ForEach($entries) { $entry in
                                 VStack(spacing: Space.sm) {
                                     HStack {
+                                        if entries.count > 1 {
+                                            let isAnchor = entry.id == effectiveAnchorID
+                                            Button { anchorID = entry.id } label: {
+                                                Image(systemName: isAnchor ? "largecircle.fill.circle" : "circle")
+                                                    .foregroundStyle(isAnchor ? BrandColor.accent : BrandColor.textSecondary)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .accessibilityLabel(isAnchor ? "Dosing by \(entry.compound.name)" : "Dose by \(entry.compound.name)")
+                                        }
                                         CompoundMenu(selection: $entry.compound,
                                                      options: pickerOptions(including: entry.compound))
                                         Spacer(minLength: Space.sm)
@@ -376,41 +444,19 @@ struct VialBuilderView: View {
                                     Text("mL").foregroundStyle(BrandColor.textSecondary)
                                 }
                             }
-                            FieldRow(primaryName.isEmpty ? "Dose per shot" : "Dose of \(primaryName) per shot",
-                                     hint: entries.count > 1 ? "The rest of the blend scales with this." : "The dose you intend to inject each time.") {
+                            FieldRow(entries.count > 1
+                                     ? (anchorName.isEmpty ? "Dose per shot" : "Dose of \(anchorName) per shot")
+                                     : (primaryName.isEmpty ? "Dose per shot" : "Dose of \(primaryName) per shot"),
+                                     hint: entries.count > 1 ? "You set \(anchorName)'s dose — everything else scales to it." : "The dose you intend to inject each time.") {
                                 HStack {
                                     TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                                     unitPicker($doseUnit)
                                 }
                             }
 
-                            // Multi-compound vial: you set ONE dose (the primary) and every other
-                            // compound follows by the fixed mass ratio — they can't be dialed in
-                            // separately from a single vial. Show what a shot delivers, live, and
-                            // explain why a second dose field would be physically meaningless.
-                            if entries.count > 1 {
-                                if let breakdown = liveBlendBreakdown {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Each shot delivers").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
-                                        ForEach(breakdown, id: \.name) { line in
-                                            HStack {
-                                                Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
-                                                Spacer()
-                                                Text(line.dose.displayString(in: doseUnit))
-                                                    .font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
-                                            }
-                                        }
-                                    }
-                                    .padding(Space.sm)
-                                    .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                                }
-                                Label {
-                                    Text("These compounds share one vial, so a single injection draws them together at the fixed ratio set by how much of each is in the vial. You set \(primaryName.isEmpty ? "the first compound" : primaryName)'s dose; the rest follow automatically. They can't be targeted separately — e.g. a vial of 10 mg + 3 mg + 3 mg can never give 5 mg of each. To dose each compound independently, put them in separate vials.")
-                                } icon: {
-                                    Image(systemName: "info.circle")
-                                }
-                                .font(.caption2).foregroundStyle(BrandColor.textSecondary)
-                            }
+                            // HERO: for a blend, the numbers do the explaining (extracted to keep
+                            // this large view's body within the type-checker's reach).
+                            if entries.count > 1 { blendHero }
                         }
                     }
 
@@ -592,7 +638,13 @@ struct VialBuilderView: View {
 
     private func save() {
         let vol = solventText.decimalValue ?? 0
-        let apis = entries.compactMap { e -> VialAPI? in
+        // Store the "dose by" anchor FIRST so it becomes the primary API — `perDoseMicrograms` is
+        // defined as the primary's dose, and every downstream breakdown scales off apis.first.
+        var ordered = entries
+        if let idx = ordered.firstIndex(where: { $0.id == effectiveAnchorID }), idx != 0 {
+            ordered.insert(ordered.remove(at: idx), at: 0)
+        }
+        let apis = ordered.compactMap { e -> VialAPI? in
             guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
             // Pre-mixed entries are a label strength in `concentrationUnit` per mL: total content
             // = strength × volume. Powder entries are a total mass in the entry's own unit.
