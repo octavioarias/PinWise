@@ -200,7 +200,7 @@ struct LogView: View {
     private var protocolCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.md) {
-                Text("Which protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                Text("Select a Protocol").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Space.sm) {
                         ForEach(loggableProtocols, id: \.id) { p in

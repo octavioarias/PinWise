@@ -26,6 +26,9 @@ struct ToolsView: View {
                         ToolCard(title: "Ramp-up plan", subtitle: "Typical label ladder (reference)", systemImage: "chart.line.uptrend.xyaxis", hue: BrandColor.accentText) {
                             TitrationPreviewView()
                         }
+                        ToolCard(title: "Dose history", subtitle: "Review or undo logged doses", systemImage: "clock.arrow.circlepath", hue: BrandColor.accentText) {
+                            DoseHistoryView()
+                        }
                         ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand", hue: BrandColor.success) {
                             BodyMapView()
                         }
