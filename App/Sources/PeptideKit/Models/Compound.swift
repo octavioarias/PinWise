@@ -9,6 +9,20 @@ public enum CompoundCategory: String, Codable, CaseIterable, Sendable {
     case cosmeticLongevity = "Cosmetic / longevity"
     case metabolic = "Metabolic / other"
     case blend = "Blend"
+
+    /// Human-facing label for the category. Decoupled from `rawValue` so display copy can
+    /// change without altering the frozen, stored `rawValue` keys. Currently identical to
+    /// each case's `rawValue`.
+    public var displayName: String {
+        switch self {
+        case .glp1: return "GLP-1 / incretin"
+        case .healingRecovery: return "Healing / recovery"
+        case .growthHormoneSecretagogue: return "GH secretagogue"
+        case .cosmeticLongevity: return "Cosmetic / longevity"
+        case .metabolic: return "Metabolic / other"
+        case .blend: return "Blend"
+        }
+    }
 }
 
 /// Regulatory status drives which disclaimers and claim-restrictions the app must apply.

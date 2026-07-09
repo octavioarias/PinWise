@@ -267,6 +267,70 @@ do {
     check(false, "news feed failed to decode: \(error)")
 }
 
+// MARK: - Subjective metric quick-reports
+section("Subjective metric quick-reports")
+do {
+    check(SubjectiveMetric.quickReports(energy: nil, sideEffectSeverity: nil).isEmpty,
+          "both nil ⇒ no metrics")
+
+    let energyOnly = SubjectiveMetric.quickReports(energy: 7, sideEffectSeverity: nil)
+    check(energyOnly.count == 1 && energyOnly.first?.name == SubjectiveMetric.energyName,
+          "energy only ⇒ 1 metric named \"\(SubjectiveMetric.energyName)\"")
+
+    let sideOnly = SubjectiveMetric.quickReports(energy: nil, sideEffectSeverity: 3)
+    check(sideOnly.count == 1 && sideOnly.first?.name == SubjectiveMetric.sideEffectName,
+          "side-effect only ⇒ 1 metric named \"\(SubjectiveMetric.sideEffectName)\"")
+
+    let both = SubjectiveMetric.quickReports(energy: 5, sideEffectSeverity: 2)
+    check(both.count == 2, "both non-nil ⇒ 2 metrics")
+    check(both.map(\.name) == [SubjectiveMetric.energyName, SubjectiveMetric.sideEffectName],
+          "metrics ordered energy then side-effects")
+
+    let clamped = SubjectiveMetric.quickReports(energy: 12, sideEffectSeverity: -4)
+    check(approx(clamped[0].value, 10), "energy 12 clamps to 10")
+    check(approx(clamped[1].value, 0), "side-effect -4 clamps to 0")
+}
+
+// MARK: - CompoundCategory display/storage decoupling
+section("CompoundCategory display name")
+do {
+    check(CompoundCategory.allCases.count == 6, "6 categories (count unchanged)")
+    check(CompoundCategory.allCases.allSatisfy { !$0.displayName.isEmpty },
+          "every category has a non-empty displayName")
+    // rawValues are now frozen stable storage keys — assert they are unchanged.
+    check(CompoundCategory.glp1.rawValue == "GLP-1 / incretin", "glp1 rawValue is stable")
+    check(CompoundCategory.blend.rawValue == "Blend", "blend rawValue is stable")
+    // Today displayName mirrors rawValue verbatim (decoupled, not yet diverged).
+    check(CompoundCategory.allCases.allSatisfy { $0.displayName == $0.rawValue },
+          "displayName currently matches rawValue for every case")
+}
+
+// MARK: - DoseDrawResult protocol
+section("DoseDrawResult protocol")
+do {
+    // Same physical scenario via both paths: 5 mg vial in 2 mL ⇒ 2500 mcg/mL; 250 mcg dose.
+    let recon = try ReconstitutionCalculator.calculate(
+        ReconstitutionInput(vialMass: .mg(5), solventVolumeMilliliters: 2, desiredDose: .mcg(250)))
+    let prepared = try DosingCalculator.draw(
+        dose: .mcg(250), concentration: .mgPerMl(2.5), totalVolumeMilliliters: 2)
+
+    let a: any DoseDrawResult = recon
+    let b: any DoseDrawResult = prepared
+    check(approx(a.syringeUnits, b.syringeUnits), "both results agree on syringeUnits (10)")
+    check(approx(a.drawVolumeMilliliters, b.drawVolumeMilliliters), "both agree on draw volume (0.10 mL)")
+    check(approx(a.concentrationMcgPerMl, b.concentrationMcgPerMl), "both agree on concentration (2500)")
+    check(a.exactDosesPerVialOrNil != nil && approx(a.exactDosesPerVialOrNil ?? -1, 20),
+          "reconstitution exposes exactDosesPerVialOrNil == 20")
+    check(b.exactDosesPerVialOrNil != nil && approx(b.exactDosesPerVialOrNil ?? -1, 20),
+          "prepared (with total volume) exposes exactDosesPerVialOrNil == 20")
+
+    // No total volume ⇒ prepared result's exactDosesPerVialOrNil is nil.
+    let noTotal: any DoseDrawResult = try DosingCalculator.draw(dose: .mcg(500), concentration: .mgPerMl(5))
+    check(noTotal.exactDosesPerVialOrNil == nil, "prepared without total volume ⇒ exactDosesPerVialOrNil nil")
+} catch {
+    check(false, "DoseDrawResult section threw: \(error)")
+}
+
 // MARK: - Summary
 print("\n\(failures == 0 ? "✅ PASS" : "❌ FAIL") — \(checks - failures)/\(checks) checks passed")
 exit(failures == 0 ? 0 : 1)
