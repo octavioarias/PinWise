@@ -256,9 +256,14 @@ struct ProtocolBuilderView: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             // Custom compounds aren't queryable in init — swap placeholders for the real thing.
             .onAppear {
-                items = items.map { e in
-                    var e = e
+                items = items.enumerated().map { idx, entry in
+                    var e = entry
                     e.compound = resolveCompound(e.compound.name)
+                    // Pre-fill each line's unit to EXACTLY what Home/Stack display for it (same
+                    // resolver), so editing a legacy protocol — whose lines never stored a unit —
+                    // inherits the linked vial's chosen unit instead of silently defaulting to the
+                    // compound's mg and flipping the unit the moment the user taps Save.
+                    if let editing { e.doseUnit = editing.doseUnit(forItemAt: idx, vials: vials) }
                     return e
                 }
             }
