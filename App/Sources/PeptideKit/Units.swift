@@ -41,6 +41,16 @@ public struct Mass: Codable, Hashable, Sendable, Comparable {
         return micrograms == micrograms.rounded() ? "\(Int(micrograms)) mcg" : String(format: "%.1f mcg", micrograms)
     }
 
+    /// Format in a SPECIFIC unit (no auto mg/mcg switch) — used where the user picked a unit for
+    /// a vial/protocol and that choice must hold everywhere the amount is shown. Up to 2 decimals,
+    /// trailing zeros trimmed.
+    public func displayString(in unit: MassUnit) -> String {
+        let v = value(in: unit)
+        let rounded = (v * 100).rounded() / 100
+        let number = rounded == rounded.rounded() ? "\(Int(rounded))" : String(format: "%g", rounded)
+        return "\(number) \(unit.rawValue)"
+    }
+
     public static func mcg(_ v: Double) -> Mass { Mass(v, .microgram) }
     public static func mg(_ v: Double) -> Mass { Mass(v, .milligram) }
 

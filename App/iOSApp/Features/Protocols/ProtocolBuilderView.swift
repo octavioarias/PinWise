@@ -163,7 +163,7 @@ struct ProtocolBuilderView: View {
                                                 HStack {
                                                     Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
                                                     Spacer()
-                                                    Text(line.dose.displayString)
+                                                    Text(line.dose.displayString(in: item.doseUnit))
                                                         .font(.caption2).foregroundStyle(BrandColor.textPrimary)
                                                 }
                                             }

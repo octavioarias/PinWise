@@ -21,7 +21,7 @@ enum NotificationManager {
     }
 
     /// Clears PinWise dose reminders and reschedules the rolling window for enabled protocols.
-    static func reschedule(protocols: [SavedProtocol]) async {
+    static func reschedule(protocols: [SavedProtocol], vials: [StoredVial] = []) async {
         let center = UNUserNotificationCenter.current()
 
         // Only touch our own reminders.
@@ -56,7 +56,7 @@ enum NotificationManager {
                 content.title = "Dose reminder"
                 // Name every compound in the stack — a reminder for "Recovery stack" that only
                 // mentions BPC-157 invites logging half the injection.
-                content.body = "\(p.name): \(p.effectiveDose.displayString) — \(p.contentsSummary)"
+                content.body = "\(p.name): \(p.effectiveDose.displayString(in: p.doseUnit(vials: vials))) — \(p.contentsSummary)"
                 content.sound = .default
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)

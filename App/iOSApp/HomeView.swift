@@ -271,7 +271,7 @@ struct HomeView: View {
                                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                             }
                             Spacer()
-                            Text(p.effectiveDose.displayString).font(Typo.statValue).foregroundStyle(BrandColor.accentText)
+                            Text(p.effectiveDose.displayString(in: p.doseUnit(vials: vials))).font(Typo.statValue).foregroundStyle(BrandColor.accentText)
                         }
                     }
                     if activeProtocols.count > 4 {
@@ -440,7 +440,7 @@ struct HomeHealthCard: View {
                         }
                         NavigationLink { BiomarkersView() } label: {
                             HStack(spacing: 4) {
-                                Text("Log a lab")
+                                Text("Log a Metric")
                                 Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                             }
                             .font(.caption.weight(.semibold))

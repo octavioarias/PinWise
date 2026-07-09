@@ -41,11 +41,13 @@ struct DoseHistoryView: View {
     }
 
     private func row(_ entry: LoggedDose) -> some View {
-        Card(style: .flat) {
+        // Show the dose in its vial's chosen unit when the vial still exists; else fall back.
+        let unit = vials.first { $0.id == entry.vialID }?.doseUnit ?? MassUnit.auto(forMicrograms: entry.dose.micrograms)
+        return Card(style: .flat) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                    Text(entry.dose.displayString + (entry.site.map { " · \($0.displayName)" } ?? ""))
+                    Text(entry.dose.displayString(in: unit) + (entry.site.map { " · \($0.displayName)" } ?? ""))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Spacer()

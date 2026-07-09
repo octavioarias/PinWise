@@ -15,6 +15,7 @@ struct RootTabView: View {
     @State private var showMenu = false
     @State private var showAssistant = false
     @Query(sort: \SavedProtocol.startDate) private var protocols: [SavedProtocol]
+    @Query private var vials: [StoredVial]
 
     /// Changes whenever a reminder-relevant field changes, re-triggering scheduling.
     private var reminderSignature: String {
@@ -43,7 +44,7 @@ struct RootTabView: View {
         }
         .tint(BrandColor.accent)
         .task(id: reminderSignature) {
-            await NotificationManager.reschedule(protocols: protocols)
+            await NotificationManager.reschedule(protocols: protocols, vials: vials)
         }
     }
 }

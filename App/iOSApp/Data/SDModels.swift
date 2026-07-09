@@ -293,17 +293,48 @@ final class StoredVial {
     /// beyond-use-date / freshness display. Additive optional to stay CloudKit-safe; nil =
     /// unknown (legacy rows, premixed, or not yet mixed).
     var dateReconstituted: Date? = nil
+    /// The dose unit the user chose when entering this vial (mg or mcg). Persisted so the same
+    /// unit is shown everywhere the vial — or any protocol drawing from it — is displayed, instead
+    /// of auto-switching by magnitude. Additive optional to stay CloudKit-safe; nil = legacy vial
+    /// (falls back to the magnitude heuristic via `doseUnit`).
+    var doseUnitRaw: String? = nil
 
     init(
         id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double? = nil,
         perDoseMicrograms: Double? = nil, dosesTaken: Int = 0, cost: Decimal? = nil, expirationDate: Date? = nil,
         dateAcquired: Date = Date(), notes: String = "", isPremixed: Bool = false,
-        dateReconstituted: Date? = nil
+        dateReconstituted: Date? = nil, doseUnitRaw: String? = nil
     ) {
         self.id = id; self.label = label; self.apis = apis; self.solventVolumeMilliliters = solventVolumeMilliliters
         self.perDoseMicrograms = perDoseMicrograms; self.dosesTaken = dosesTaken; self.cost = cost
         self.expirationDate = expirationDate; self.dateAcquired = dateAcquired; self.notes = notes
-        self.isPremixed = isPremixed; self.dateReconstituted = dateReconstituted
+        self.isPremixed = isPremixed; self.dateReconstituted = dateReconstituted; self.doseUnitRaw = doseUnitRaw
+    }
+
+    /// The dose unit chosen for this vial; legacy vials (no stored choice) fall back to the same
+    /// magnitude heuristic the old auto display used, so nothing regresses.
+    var doseUnit: MassUnit {
+        doseUnitRaw.flatMap(MassUnit.init(rawValue:)) ?? MassUnit.auto(forMicrograms: perDoseMicrograms ?? 0)
+    }
+
+    /// Format a mass in THIS vial's chosen unit.
+    func formatDose(_ mass: Mass) -> String { mass.displayString(in: doseUnit) }
+}
+
+extension MassUnit {
+    /// The unit the old auto-display would have picked for a canonical microgram amount — mg at or
+    /// above 1 mg, otherwise mcg. Used as the fallback when no explicit choice is stored.
+    static func auto(forMicrograms mcg: Double) -> MassUnit { mcg >= 1_000 ? .milligram : .microgram }
+}
+
+extension SavedProtocol {
+    /// A protocol shows doses in the unit of the vial it draws from — the vial is the source of
+    /// truth for the unit choice. `forItemAt` resolves per-line (for a stack); with no index it
+    /// resolves the primary. Falls back to the magnitude heuristic when no vial is linked.
+    func doseUnit(forItemAt index: Int? = nil, vials: [StoredVial]) -> MassUnit {
+        let item = index.flatMap { items.indices.contains($0) ? items[$0] : nil } ?? primaryItem
+        if let vid = item?.vialID, let v = vials.first(where: { $0.id == vid }) { return v.doseUnit }
+        return MassUnit.auto(forMicrograms: item?.doseMicrograms ?? 0)
     }
 }
 

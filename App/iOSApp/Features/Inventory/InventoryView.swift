@@ -118,7 +118,7 @@ struct VialRow: View {
                 }
 
                 if let breakdown = vial.doseBreakdown() {
-                    Text("Per shot: " + breakdown.map { "\($0.name) \($0.deliveredDose.displayString)" }.joined(separator: " · "))
+                    Text("Per shot: " + breakdown.map { "\($0.name) \(vial.formatDose($0.deliveredDose))" }.joined(separator: " · "))
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 }
 
@@ -217,7 +217,9 @@ struct VialBuilderView: View {
                             unit: unit)
         })
         let perDoseMcg = v.perDoseMicrograms ?? 0
-        let du: MassUnit = perDoseMcg >= 1_000 ? .milligram : .microgram
+        // Reopen the vial in the unit it was saved in (falls back to the magnitude heuristic for
+        // legacy vials with no stored choice).
+        let du: MassUnit = v.doseUnit
         _doseUnit = State(initialValue: du)
         _doseText = State(initialValue: perDoseMcg > 0 ? Self.fmt(v.perDose.value(in: du)) : "")
         // nil cost = unknown → empty field; a stored 0 = a genuine free/comped vial → shows "0".
@@ -520,6 +522,9 @@ struct VialBuilderView: View {
         target.apis = apis
         target.solventVolumeMilliliters = vol > 0 ? vol : nil
         target.perDoseMicrograms = Mass(pd, doseUnit).micrograms
+        // Remember the unit the user dosed in so every display of this vial (and any protocol
+        // drawing from it) shows the same unit rather than auto-switching by magnitude.
+        target.doseUnitRaw = doseUnit.rawValue
         target.cost = costText.decimalValue.map { Decimal($0) }
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed

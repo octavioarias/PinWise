@@ -219,13 +219,14 @@ struct LogView: View {
                     Divider().overlay(BrandColor.stroke)
                     ForEach(Array(p.items.enumerated()), id: \.offset) { i, item in
                         let dose = doseFor(i, in: p)
+                        let unit = p.doseUnit(forItemAt: i, vials: vials)
                         let draw = vials.first { $0.id == item.vialID }?.draw(forDose: dose)
                         VStack(alignment: .leading, spacing: Space.xs) {
                             Text(item.compoundName).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
                             // Two distinct values: the DOSE (how much drug) and the DRAW (how far
                             // to pull the plunger) — labeled + colored apart so they never blur.
                             HStack(alignment: .top, spacing: Space.xl) {
-                                doseMetric("DOSE", dose.displayString, BrandColor.accentText)
+                                doseMetric("DOSE", dose.displayString(in: unit), BrandColor.accentText)
                                 if let d = draw {
                                     doseMetric("DRAW TO", drawText(d), BrandColor.success)
                                 }
@@ -278,7 +279,8 @@ struct LogView: View {
     /// so the draw-down hits the right one. (Protocols remain the way to log a full stack at once.)
     private func applyVial(_ v: StoredVial) {
         if let name = v.primaryAPI?.name, !name.isEmpty { compound = resolveCompound(name) }
-        doseUnit = compound.preferredDoseUnit
+        // Log in the unit the vial was entered in, so it matches the vial/protocol everywhere else.
+        doseUnit = v.doseUnit
         let dose = v.perDose.value(in: doseUnit)
         doseText = dose == dose.rounded() ? String(Int(dose)) : String(dose)
         selectedVialID = v.id

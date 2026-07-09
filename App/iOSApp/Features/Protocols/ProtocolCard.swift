@@ -18,8 +18,14 @@ struct ProtocolCard: View {
     /// hold. Caller resolves it (it needs the vials); nil falls back to the primary-only
     /// `proto.contentsSummary` so any caller without vials still renders.
     var contents: String?
+    /// The unit to show the dose in — follows the linked vial's choice (caller resolves it). nil
+    /// falls back to the auto mg/mcg display for callers without vials.
+    var doseUnit: MassUnit?
 
     private var contentsText: String { contents ?? proto.contentsSummary }
+    private var doseText: String {
+        doseUnit.map { proto.effectiveDose.displayString(in: $0) } ?? proto.effectiveDose.displayString
+    }
 
     /// The caller resolves the protocol's vial linkage into this — the card stays a pure renderer.
     struct SupplyInfo {
@@ -58,7 +64,7 @@ struct ProtocolCard: View {
     }
 
     private var accessibilityValueText: String {
-        var value = "\(statusLabel), dose \(proto.effectiveDose.displayString), \(proto.cadenceText), next pin \(nextPin.text)"
+        var value = "\(statusLabel), dose \(doseText), \(proto.cadenceText), next pin \(nextPin.text)"
         if let supply {
             value += ", \(supply.dosesLeft) of \(supply.total) doses left"
         }
@@ -95,7 +101,7 @@ struct ProtocolCard: View {
                     .frame(height: 1)
 
                 HStack(alignment: .top, spacing: Space.md) {
-                    ProtocolStat(label: "Dose", value: proto.effectiveDose.displayString,
+                    ProtocolStat(label: "Dose", value: doseText,
                                  tint: BrandColor.accentText)
                     ProtocolStat(label: "Cadence", value: proto.cadenceText, compresses: true)
                     ProtocolStat(label: "Next pin", value: nextPin.text,
