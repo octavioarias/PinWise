@@ -182,11 +182,11 @@ struct HomeView: View {
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
             if streak.longest > 0 {
-                Text("Personal best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                Text("Personal Best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Personal best \(streak.longest).")
+        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Personal Best \(streak.longest).")
     }
 
     private func milestoneBadge(_ m: Int) -> some View {
