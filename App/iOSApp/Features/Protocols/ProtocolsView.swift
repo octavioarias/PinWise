@@ -68,7 +68,7 @@ struct ProtocolsView: View {
             ForEach(Array(active.enumerated()), id: \.element.id) { i, proto in
                 let supplyInfo = supply(for: proto)
                 Button { editTarget = EditTarget(proto: proto) } label: {
-                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials))
+                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials), isBlend: proto.items.contains { item in vials.first(where: { $0.id == item.vialID })?.isBlend == true })
                 }
                 .buttonStyle(PressableStyle())
                 .contextMenu {
@@ -93,7 +93,7 @@ struct ProtocolsView: View {
             ForEach(Array(inactive.enumerated()), id: \.element.id) { i, proto in
                 let supplyInfo = supply(for: proto)
                 Button { editTarget = EditTarget(proto: proto) } label: {
-                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials))
+                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials), isBlend: proto.items.contains { item in vials.first(where: { $0.id == item.vialID })?.isBlend == true })
                 }
                 .buttonStyle(PressableStyle())
                 .contextMenu {

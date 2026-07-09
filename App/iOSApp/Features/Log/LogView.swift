@@ -221,16 +221,34 @@ struct LogView: View {
                         let dose = doseFor(i, in: p)
                         let unit = p.doseUnit(forItemAt: i, vials: vials)
                         let draw = vials.first { $0.id == item.vialID }?.draw(forDose: dose)
+                        let deliver = blendDeliver(item, dose: dose)
                         VStack(alignment: .leading, spacing: Space.xs) {
-                            Text(item.compoundName).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
+                            Text(lineTitle(item)).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
                             // Two distinct values: the DOSE (how much drug) and the DRAW (how far
-                            // to pull the plunger) — labeled + colored apart so they never blur.
+                            // to pull the plunger) — labeled + colored apart so they never blur. For
+                            // a blend the DOSE is the PRIMARY's; the breakdown below shows the rest.
                             HStack(alignment: .top, spacing: Space.xl) {
-                                doseMetric("DOSE", dose.displayString(in: unit), BrandColor.accentText)
+                                doseMetric(deliver == nil ? "DOSE" : "DOSE (\(item.compoundName))", dose.displayString(in: unit), BrandColor.accentText)
                                 if let d = draw {
                                     doseMetric("DRAW TO", drawText(d), BrandColor.success)
                                 }
                                 Spacer(minLength: 0)
+                            }
+                            // A blend is one injection at a fixed mass ratio — show every compound
+                            // that single shot delivers (the primary's dose fixes them all).
+                            if let deliver {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Each shot delivers").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                                    ForEach(deliver, id: \.name) { line in
+                                        HStack {
+                                            Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                            Spacer()
+                                            Text(line.dose.displayString(in: unit)).font(.caption2).foregroundStyle(BrandColor.textPrimary)
+                                        }
+                                    }
+                                }
+                                .padding(Space.sm)
+                                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -260,12 +278,30 @@ struct LogView: View {
 
     private func drawHint(for p: SavedProtocol) -> String {
         let haveDraw = p.items.contains { item in vials.first { $0.id == item.vialID }?.draw(forDose: Mass(micrograms: 1)) != nil }
-        let base = p.items.count > 1 ? "Logs all \(p.items.count) compounds at once." : "\(p.cadenceText)."
+        let hasBlend = p.items.contains { ($0.vialID.flatMap { id in vials.first { $0.id == id } }?.apis.count ?? 0) > 1 }
+        let base: String
+        if p.items.count > 1 { base = "Logs all \(p.items.count) compounds at once." }
+        else if hasBlend { base = "One injection delivers every compound in the blend." }
+        else { base = "\(p.cadenceText)." }
         return haveDraw ? base + " Draw is for a U-100 insulin syringe." : base
     }
 
     private func doseFor(_ index: Int, in p: SavedProtocol) -> Mass {
         index == 0 ? p.effectiveDose : Mass(micrograms: p.items[index].doseMicrograms)
+    }
+
+    /// Full title for a protocol line — a blend vial names every compound it holds.
+    private func lineTitle(_ item: ProtocolItem) -> String {
+        if let v = vials.first(where: { $0.id == item.vialID }), v.isBlend { return v.apiNames.joined(separator: " + ") }
+        return item.compoundName
+    }
+
+    /// For a blend line, what each compound the shot delivers, scaled off the primary's `dose` by
+    /// the vial's fixed mass ratio (solvent cancels). nil for a single-compound line.
+    private func blendDeliver(_ item: ProtocolItem, dose: Mass) -> [(name: String, dose: Mass)]? {
+        guard let v = vials.first(where: { $0.id == item.vialID }), v.isBlend,
+              let primary = v.primaryAPI, primary.massMicrograms > 0 else { return nil }
+        return v.apis.map { ($0.name, Mass(micrograms: $0.massMicrograms / primary.massMicrograms * dose.micrograms)) }
     }
 
     // MARK: Compound mode

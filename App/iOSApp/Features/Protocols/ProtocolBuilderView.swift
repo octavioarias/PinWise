@@ -149,7 +149,9 @@ struct ProtocolBuilderView: View {
                                         .accessibilityLabel("Remove \(lineTitle(for: item))")
                                     }
                                     HStack {
-                                        TextField("Dose per shot", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
+                                        // For a blend the typed value sets the PRIMARY; name it so the
+                                        // single field isn't read as "the dose of all compounds".
+                                        TextField("Dose of \(item.compound.name)", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
                                         Picker("", selection: $item.doseUnit) {
                                             ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                                         }
@@ -181,12 +183,16 @@ struct ProtocolBuilderView: View {
                                 Text("No vials yet — add one under My Vials first. Protocols schedule doses from the vials you own.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
                             } else {
+                                // Exclude vials already on the protocol — adding the same physical
+                                // vial twice would double-count one injection.
+                                let available = vials.filter { v in !items.contains { $0.vialID == v.id } }
                                 Menu {
-                                    ForEach(vials) { v in Button(v.displayName) { addVial(v) } }
+                                    ForEach(available) { v in Button(v.displayName) { addVial(v) } }
                                 } label: {
                                     Label(items.isEmpty ? "Choose a vial" : "Add another vial", systemImage: "plus")
                                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
                                 }
+                                .disabled(available.isEmpty)
                             }
                         }
                     }

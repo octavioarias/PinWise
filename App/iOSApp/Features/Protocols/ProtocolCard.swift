@@ -21,6 +21,9 @@ struct ProtocolCard: View {
     /// The unit to show the dose in — follows the linked vial's choice (caller resolves it). nil
     /// falls back to the auto mg/mcg display for callers without vials.
     var doseUnit: MassUnit?
+    /// True when any linked vial is itself a blend (multiple compounds in ONE vial = one injection).
+    /// Distinct from `proto.isStack` (multiple vials = multiple injections). Caller resolves it.
+    var isBlend: Bool = false
 
     private var contentsText: String { contents ?? proto.contentsSummary }
     private var doseText: String {
@@ -78,7 +81,10 @@ struct ProtocolCard: View {
                     StatusDot(color: statusColor, glows: status != .paused)
                     MicroLabel(statusLabel, color: statusColor)
                     Spacer()
-                    if proto.isStack { TagChip(text: "Blend", color: BrandColor.accentText) }
+                    // A single blend vial (one shot, several compounds) = "Blend"; several vials
+                    // (several injections) = "Stack". Previously both read "Blend", inverting it.
+                    if isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
+                    else if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(BrandColor.textSecondary)
@@ -115,7 +121,7 @@ struct ProtocolCard: View {
             .opacity(status == .paused ? 0.55 : 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(proto.isStack ? "\(proto.name), blend" : proto.name)
+        .accessibilityLabel(isBlend ? "\(proto.name), blend" : proto.isStack ? "\(proto.name), stack" : proto.name)
         .accessibilityValue(accessibilityValueText)
     }
 }

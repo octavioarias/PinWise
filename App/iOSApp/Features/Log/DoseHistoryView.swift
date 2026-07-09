@@ -42,13 +42,25 @@ struct DoseHistoryView: View {
 
     private func row(_ entry: LoggedDose) -> some View {
         // Show the dose in its vial's chosen unit when the vial still exists; else fall back.
-        let unit = vials.first { $0.id == entry.vialID }?.doseUnit ?? MassUnit.auto(forMicrograms: entry.dose.micrograms)
+        let vial = vials.first { $0.id == entry.vialID }
+        let unit = vial?.doseUnit ?? MassUnit.auto(forMicrograms: entry.dose.micrograms)
+        // A logged blend stores only the primary; reconstruct the full shot from the vial link so
+        // the ride-along compounds aren't hidden in history.
+        let blend: String? = {
+            guard let v = vial, v.isBlend, let primary = v.primaryAPI, primary.massMicrograms > 0 else { return nil }
+            return v.apis.map { "\($0.name) \(Mass(micrograms: $0.massMicrograms / primary.massMicrograms * entry.dose.micrograms).displayString(in: unit))" }
+                .joined(separator: " · ")
+        }()
         return Card(style: .flat) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.compoundName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                    Text(vial?.isBlend == true ? vial!.apiNames.joined(separator: " + ") : entry.compoundName)
+                        .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                     Text(entry.dose.displayString(in: unit) + (entry.site.map { " · \($0.displayName)" } ?? ""))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                    if let blend {
+                        Text("Delivers \(blend)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                    }
                 }
                 Spacer()
                 Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
