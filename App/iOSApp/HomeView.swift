@@ -13,6 +13,12 @@ struct HomeView: View {
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @State private var auth = AuthManager.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Reward layer: highest streak milestone already celebrated (so each one fires once per
+    // run), a one-time silent seed so the update doesn't retroactively celebrate a streak the
+    // user already had, and the milestone currently being celebrated (nil = none).
+    @AppStorage("celebratedStreakMilestone") private var celebratedMilestone = 0
+    @AppStorage("didSeedStreakMilestone") private var didSeedStreakMilestone = false
+    @State private var celebratingMilestone: Int?
 
     private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
     private var thisWeekCount: Int {
@@ -36,6 +42,23 @@ struct HomeView: View {
         }
         return expected == 0 ? 0 : Double(taken) / Double(expected)
     }
+
+    /// On-time dose streak across every active protocol — consecutive scheduled doses taken
+    /// with no miss (current), and the best run ever (longest). Same "taken = logged that day"
+    /// rule as the adherence % above; today's not-yet-taken dose is pending, never a miss.
+    private var streak: StreakCalculator.Result {
+        let cal = Calendar.current
+        let now = Date()
+        var events: [StreakCalculator.DoseEvent] = []
+        for p in activeProtocols {
+            let logs = recent.filter { p.compoundNames.contains($0.compoundName) }.map(\.timestamp)
+            let r = AdherenceCalculator.evaluate(schedule: p.schedule, start: p.startDate,
+                                                 end: now, logDates: logs, calendar: cal)
+            events += StreakCalculator.events(from: r, asOf: now, calendar: cal)
+        }
+        return StreakCalculator.compute(events: events)
+    }
+
     private var nextDoseDate: Date? { activeProtocols.compactMap { $0.nextDose() }.min() }
 
     var body: some View {
@@ -116,10 +139,79 @@ struct HomeView: View {
                 AdherenceRing(fraction: adherenceFraction, size: 112)
                 VStack(alignment: .leading, spacing: Space.lg) {
                     heroStat("Next pin", nextDoseText)
-                    heroStat("This week", "\(thisWeekCount) logged")
+                    streakStat
                 }
                 Spacer(minLength: 0)
             }
+        }
+        // A crossed milestone celebrates once (per run): a solid flame chip springs in, a
+        // success haptic fires, and it clears itself after a few seconds. Reduce Motion keeps
+        // the chip but drops the spring.
+        .overlay(alignment: .topTrailing) {
+            if let m = celebratingMilestone {
+                milestoneBadge(m)
+                    .padding(Space.md)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
+            }
+        }
+        .onAppear { checkMilestone() }
+        .onChange(of: streak.current) { checkMilestone() }
+        .sensoryFeedback(.success, trigger: celebratingMilestone) { _, new in new != nil }
+        .task(id: celebratingMilestone) {
+            guard celebratingMilestone != nil else { return }
+            try? await Task.sleep(for: .seconds(3.5))
+            withAnimation { celebratingMilestone = nil }
+        }
+    }
+
+    /// The reward stat: current on-time streak with a lit flame, and the best run beneath.
+    private var streakStat: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            MicroLabel("On-time streak")
+            HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                Image(systemName: "flame.fill")
+                    .font(.caption)
+                    .foregroundStyle(streak.current > 0 ? BrandColor.warning : BrandColor.textSecondary)
+                    .accessibilityHidden(true)
+                Text("\(streak.current)").font(Typo.statValue).foregroundStyle(BrandColor.textPrimary)
+                Text(streak.current == 1 ? "dose" : "doses")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            }
+            if streak.longest > 0 {
+                Text("Best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Best \(streak.longest).")
+    }
+
+    private func milestoneBadge(_ m: Int) -> some View {
+        HStack(spacing: Space.xs) {
+            Image(systemName: "flame.fill")
+            Text("\(m)-dose streak!")
+        }
+        .font(.caption2.weight(.bold))
+        .padding(.horizontal, Space.sm).padding(.vertical, Space.xs)
+        .background(BrandColor.warning, in: Capsule())
+        .foregroundStyle(BrandColor.onBadge)
+        .accessibilityLabel("Milestone reached: \(m) doses on track.")
+    }
+
+    /// Fire a milestone celebration when the streak first crosses one. Silently adopt the
+    /// user's current standing on first run so the update doesn't celebrate a pre-existing
+    /// streak; re-arm (no celebration) if the streak later drops below a milestone.
+    private func checkMilestone() {
+        let earned = StreakCalculator.earnedMilestone(for: streak.current)
+        if !didSeedStreakMilestone {
+            celebratedMilestone = earned
+            didSeedStreakMilestone = true
+            return
+        }
+        if earned > celebratedMilestone {
+            celebratedMilestone = earned
+            withAnimation(reduceMotion ? nil : Motion.emphasis) { celebratingMilestone = earned }
+        } else if earned < celebratedMilestone {
+            celebratedMilestone = earned
         }
     }
 
