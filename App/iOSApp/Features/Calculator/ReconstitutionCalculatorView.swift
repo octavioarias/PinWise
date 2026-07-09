@@ -102,7 +102,7 @@ struct ReconstitutionCalculatorView: View {
                 // keystroke, and the top of the screen is the one region the decimal pad
                 // can never cover. Always present — an em-dash hero when there's nothing
                 // to show — so the form never bounces under the user's finger.
-                DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe)
+                DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe, concentrationUnit: model.doseUnit)
 
                 Card {
                     VStack(alignment: .leading, spacing: Space.lg) {
@@ -185,6 +185,9 @@ struct ReconstitutionCalculatorView: View {
     /// with no solvent volume) prefills reconstitute mode. The existing `.onChange`
     /// wiring recalculates automatically.
     private func applyVial(_ v: StoredVial) {
+        // Open the dose (and thus the Strength readout) in the vial's chosen unit, so this calc
+        // agrees with the vial's Stack row instead of always reading mg/mL.
+        model.doseUnit = v.doseUnit
         if v.isPremixed, let mgPerMl = v.primaryConcentrationMgPerMl {
             model.mode = .premixed
             model.concentrationText = Self.numberText(mgPerMl)
@@ -219,6 +222,10 @@ private struct DoseHeroCard: View {
     let result: (any DoseDrawResult)?
     let errorMessage: String?
     let syringe: SyringeScale
+    /// Unit for the Strength readout — follows the working dose unit (which is seeded from a
+    /// vial's chosen unit when the form was opened from one), so concentration reads mg/mL or
+    /// mcg/mL consistently with that vial's Stack row.
+    var concentrationUnit: MassUnit = .milligram
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -253,7 +260,7 @@ private struct DoseHeroCard: View {
                                  value: result.map { String(format: "%.2f mL", $0.drawVolumeMilliliters) } ?? "—",
                                  compact: true)
                         StatTile(label: "Strength",
-                                 value: result.map { "\(fmtConc($0.concentrationMcgPerMl)) mg/mL" } ?? "—",
+                                 value: result.map { "\(fmtConc($0.concentrationMcgPerMl, in: concentrationUnit)) \(concentrationUnit.rawValue)/mL" } ?? "—",
                                  compact: true)
                         StatTile(label: "Doses/vial",
                                  value: (result?.exactDosesPerVialOrNil).map(fmt) ?? "—",
@@ -265,10 +272,10 @@ private struct DoseHeroCard: View {
     }
 
     private func fmt(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
-    private func fmtConc(_ mcgPerMl: Double) -> String {
-        let mgPerMl = mcgPerMl / 1_000
-        if mgPerMl == mgPerMl.rounded() { return String(Int(mgPerMl)) }
-        let s = String(format: "%.2f", mgPerMl)
+    private func fmtConc(_ mcgPerMl: Double, in unit: MassUnit) -> String {
+        let perMl = mcgPerMl / unit.microgramsPerUnit
+        if perMl == perMl.rounded() { return String(Int(perMl)) }
+        let s = String(format: "%.2f", perMl)
         return s.hasSuffix("0") ? String(s.dropLast()) : s   // 2.50 → "2.5", 2.55 stays
     }
 }

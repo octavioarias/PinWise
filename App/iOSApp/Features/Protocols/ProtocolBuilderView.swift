@@ -259,11 +259,17 @@ struct ProtocolBuilderView: View {
                 items = items.enumerated().map { idx, entry in
                     var e = entry
                     e.compound = resolveCompound(e.compound.name)
-                    // Pre-fill each line's unit to EXACTLY what Home/Stack display for it (same
-                    // resolver), so editing a legacy protocol — whose lines never stored a unit —
-                    // inherits the linked vial's chosen unit instead of silently defaulting to the
-                    // compound's mg and flipping the unit the moment the user taps Save.
-                    if let editing { e.doseUnit = editing.doseUnit(forItemAt: idx, vials: vials) }
+                    // Align the picker to what Home/Stack display for this line (the linked vial's
+                    // unit for a legacy line that never stored its own), AND recompute the NUMBER in
+                    // that unit from the stored micrograms so the mass is preserved. Setting the unit
+                    // WITHOUT recomputing would leave a number formatted for the old unit under the
+                    // new one, and Save would corrupt the dose (e.g. 500 mcg → "0.5" + mcg → 0.5 mcg).
+                    if let editing, editing.items.indices.contains(idx) {
+                        let u = editing.doseUnit(forItemAt: idx, vials: vials)
+                        let val = Mass(micrograms: editing.items[idx].doseMicrograms).value(in: u)
+                        e.doseUnit = u
+                        e.doseText = val == val.rounded() ? String(Int(val)) : String(val)
+                    }
                     return e
                 }
             }
