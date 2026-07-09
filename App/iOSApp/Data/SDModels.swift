@@ -247,6 +247,22 @@ final class SymptomEntry {
     }
 }
 
+/// A progress ("physique") photo the user captured to track body changes over time. Only
+/// lightweight metadata lives in SwiftData (CloudKit-safe: defaults, no relationships); the
+/// image itself is a JPEG on disk (`PhysiquePhotoStore`), never a blob in the store or synced.
+@Model
+final class PhysiquePhoto {
+    var id: UUID = UUID()
+    var timestamp: Date = Date()
+    /// Filename of the JPEG in the physique-photos directory (see `PhysiquePhotoStore`).
+    var filename: String = ""
+    var notes: String = ""
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), filename: String = "", notes: String = "") {
+        self.id = id; self.timestamp = timestamp; self.filename = filename; self.notes = notes
+    }
+}
+
 /// One active pharmaceutical ingredient (API) inside a vial's formula.
 struct VialAPI: Codable, Hashable, Identifiable {
     var id: UUID = UUID()

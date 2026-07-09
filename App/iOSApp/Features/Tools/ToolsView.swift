@@ -32,6 +32,9 @@ struct ToolsView: View {
                         ToolCard(title: "Injection map", subtitle: "Where you've been pinning", systemImage: "figure.stand", hue: BrandColor.success) {
                             BodyMapView()
                         }
+                        ToolCard(title: "Progress photos", subtitle: "Track your physique over time", systemImage: "camera.fill", hue: BrandColor.success) {
+                            PhysiqueView()
+                        }
                         ToolCard(title: "How you feel", subtitle: "Track side effects over time", systemImage: "heart.text.square", hue: BrandColor.warning) {
                             SymptomsView()
                         }
