@@ -117,11 +117,13 @@ struct ReverseDoseView: View {
         return String(format: "%.2f mL", u / syringe.unitsPerMilliliter)
     }
 
-    /// Vial strength from the two vial inputs; em-dash until both parse.
+    /// Vial strength from the two vial inputs; em-dash until both parse. Strength is derived by
+    /// the domain `Concentration` (mass dissolved in a volume), not a hand-rolled formula.
     private var strengthString: String {
         guard let m = massText.decimalValue, m >= 0,
               let s = solventText.decimalValue, s > 0 else { return "—" }
-        return String(format: "%.1f mg/mL", Mass(m, massUnit).micrograms / s / 1000)
+        let mgml = Concentration(mass: Mass(m, massUnit), inMilliliters: s).milligramsPerMilliliter
+        return String(format: "%.1f mg/mL", mgml)
     }
 
     var body: some View {

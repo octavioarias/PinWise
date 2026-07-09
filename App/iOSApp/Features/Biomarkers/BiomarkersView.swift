@@ -16,6 +16,23 @@ enum BiomarkerType: String, CaseIterable, Identifiable {
     case waist = "Waist"
     var id: String { rawValue }
 
+    /// User-facing label. Decoupled from the stored `rawValue` (the permanent storage key) so
+    /// future copy edits never rewrite stored data. Returns today's strings verbatim.
+    var displayName: String {
+        switch self {
+        case .weight: return "Weight"
+        case .a1c: return "A1c"
+        case .glucose: return "Fasting glucose"
+        case .totalChol: return "Total cholesterol"
+        case .ldl: return "LDL"
+        case .hdl: return "HDL"
+        case .triglycerides: return "Triglycerides"
+        case .systolic: return "Systolic BP"
+        case .diastolic: return "Diastolic BP"
+        case .waist: return "Waist"
+        }
+    }
+
     func unit(pounds: Bool) -> String {
         switch self {
         case .weight: return pounds ? "lb" : "kg"
@@ -43,25 +60,8 @@ enum BiomarkerType: String, CaseIterable, Identifiable {
 
 /// Log labs and body metrics and watch them move as your protocol goes on.
 struct BiomarkersView: View {
-    /// Trailing window for the trend chart. `all` (the default) preserves the original
-    /// full-history behavior; the shorter windows are Oura-style trailing slices.
-    private enum ChartRange: String, CaseIterable, Identifiable {
-        case sevenDays = "7D"
-        case thirtyDays = "30D"
-        case ninetyDays = "90D"
-        case all = "All"
-        var id: String { rawValue }
-        /// nil = no cutoff (full history).
-        var days: Int? {
-            switch self {
-            case .sevenDays: return 7
-            case .thirtyDays: return 30
-            case .ninetyDays: return 90
-            case .all: return nil
-            }
-        }
-    }
-
+    // Trend-chart trailing window. Default `.all` preserves the original full-history behavior;
+    // shorter windows are Oura-style trailing slices. Definition now shared (PinWiseComponents).
     @Environment(\.modelContext) private var context
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("weightInPounds") private var weightInPounds = true
@@ -145,7 +145,7 @@ struct BiomarkersView: View {
                         FieldRow("Note", hint: "Optional — e.g. \"fasting\", \"post-workout\".") {
                             TextField("Anything worth remembering", text: $note, axis: .vertical).pinwiseField()
                         }
-                        PrimaryButton(title: "Log \(selected.rawValue)", systemImage: "plus") { save() }
+                        PrimaryButton(title: "Log \(selected.displayName)", systemImage: "plus") { save() }
                             .disabled(!canSave).opacity(canSave ? 1 : 0.5)
                     }
                 }
@@ -153,7 +153,7 @@ struct BiomarkersView: View {
                 if seriesForSelected.count >= 2 {
                     trendCard
                 } else if !seriesForSelected.isEmpty {
-                    Text("Log \(selected.rawValue) at least twice to see a trend.")
+                    Text("Log \(selected.displayName) at least twice to see a trend.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
 
@@ -164,9 +164,11 @@ struct BiomarkersView: View {
                             ForEach(Array(entries.prefix(14)), id: \.id) { e in
                                 let type = BiomarkerType(rawValue: e.typeRaw)
                                 HStack {
-                                    Text(e.typeRaw).font(.body).foregroundStyle(BrandColor.textPrimary)
+                                    Text(type?.displayName ?? e.typeRaw).font(.body).foregroundStyle(BrandColor.textPrimary)
                                     Spacer()
-                                    Text(format(e.value) + " " + (type?.unit(pounds: weightInPounds) ?? ""))
+                                    // Honor the unit stored at entry time (provenance); legacy rows
+                                    // (nil) fall back to the current global lb/kg preference.
+                                    Text(format(e.value) + " " + (e.unitRaw ?? type?.unit(pounds: weightInPounds) ?? ""))
                                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.data)
                                     Text(e.timestamp, format: .dateTime.month().day())
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
@@ -214,7 +216,7 @@ struct BiomarkersView: View {
     private var trendHero: some View {
         let latest = seriesForSelected.last?.value ?? 0
         return VStack(alignment: .leading, spacing: Space.xs) {
-            MicroLabel(selected.rawValue)
+            MicroLabel(selected.displayName)
             HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                 Text(format(latest))
                     .font(Typo.numberLG)
@@ -336,7 +338,7 @@ struct BiomarkersView: View {
     private func chip(_ t: BiomarkerType) -> some View {
         let isOn = selected == t
         return Button { selected = t } label: {
-            Text(t.rawValue)
+            Text(t.displayName)
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
                 .background(isOn ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
@@ -350,7 +352,8 @@ struct BiomarkersView: View {
 
     private func save() {
         guard let v = valueText.decimalValue, v > 0 else { return }
-        context.insert(BiomarkerEntry(typeRaw: selected.rawValue, value: v, notes: note))
+        context.insert(BiomarkerEntry(typeRaw: selected.rawValue, value: v, notes: note,
+                                      unitRaw: selected.unit(pounds: weightInPounds)))
         try? context.save()
         valueText = ""
         note = ""

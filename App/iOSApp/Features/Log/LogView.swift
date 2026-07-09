@@ -417,7 +417,7 @@ struct LogView: View {
             let vial = item.vialID.flatMap { id in vials.first { $0.id == id } } ?? resolveVial(for: item.compoundName)
             let firstForThisVial = vial.map { decremented.insert($0.id).inserted } ?? false
             insertDose(compoundName: item.compoundName, doseMicrograms: doseFor(i, in: p).micrograms,
-                       vial: vial, decrement: firstForThisVial)
+                       vial: vial, decrement: firstForThisVial, protocolID: p.id)
         }
         try? context.save()
         finishSave()
@@ -428,7 +428,8 @@ struct LogView: View {
         vials.first { $0.apiNames.contains(compoundName) && $0.dosesTaken < $0.totalDoses }
     }
 
-    private func insertDose(compoundName: String, doseMicrograms: Double, vial: StoredVial?, decrement: Bool) {
+    private func insertDose(compoundName: String, doseMicrograms: Double, vial: StoredVial?, decrement: Bool,
+                            protocolID: UUID? = nil) {
         let willDecrement = decrement && (vial.map { $0.dosesTaken < $0.totalDoses } ?? false)
         let entry = LoggedDose(
             timestamp: timestamp,
@@ -439,7 +440,8 @@ struct LogView: View {
             vialID: vial?.id,
             didDecrement: willDecrement,
             energy: showMetrics ? energy : nil,
-            sideEffectSeverity: showMetrics ? sideEffect : nil
+            sideEffectSeverity: showMetrics ? sideEffect : nil,
+            protocolID: protocolID
         )
         context.insert(entry)
         if decrement, let vial, vial.dosesTaken < vial.totalDoses {

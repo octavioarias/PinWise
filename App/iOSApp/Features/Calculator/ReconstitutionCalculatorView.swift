@@ -5,16 +5,6 @@ import PeptideKit
 
 // NOTE: iOS-app source. Math delegates to the verified PeptideKit core. Pushed from ToolsView.
 
-/// Shared, mode-agnostic result the view renders.
-struct DoseDisplay: Equatable {
-    let units: Double
-    let volumeMilliliters: Double
-    let concentrationMcgPerMl: Double
-    /// Exact (possibly fractional) doses the vial holds — nil in premixed mode when no
-    /// vial size was given.
-    let exactDosesPerVial: Double?
-}
-
 /// Observable state for the dose calculator. Two modes:
 /// - **Reconstitute**: lyophilized powder + water (derives concentration).
 /// - **Already mixed**: a known concentration (e.g. a compounded-pharmacy vial in mg/mL).
@@ -36,7 +26,9 @@ final class DoseCalculatorViewModel {
     var doseUnit: MassUnit = .milligram
     var syringe: SyringeScale = .u100
 
-    private(set) var result: DoseDisplay?
+    /// The domain result verbatim — `ReconstitutionResult` or `PreparedDoseResult`, both of
+    /// which conform to `DoseDrawResult`. No view-local wrapper.
+    private(set) var result: (any DoseDrawResult)?
     private(set) var errorMessage: String?
 
     func recalculate() {
@@ -50,19 +42,15 @@ final class DoseCalculatorViewModel {
                 guard let vialMass = vialMassText.decimalValue, let solvent = solventText.decimalValue else {
                     errorMessage = "Enter the vial amount and water volume."; return
                 }
-                let r = try ReconstitutionCalculator.calculate(
+                result = try ReconstitutionCalculator.calculate(
                     ReconstitutionInput(vialMass: Mass(vialMass, vialMassUnit),
                                         solventVolumeMilliliters: solvent, desiredDose: desired, syringe: syringe))
-                result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
-                                     concentrationMcgPerMl: r.concentrationMcgPerMl, exactDosesPerVial: r.exactDosesPerVial)
             case .premixed:
                 guard let mgPerMl = concentrationText.decimalValue else {
                     errorMessage = "Enter the concentration (mg/mL)."; return
                 }
-                let r = try DosingCalculator.draw(dose: desired, concentration: .mgPerMl(mgPerMl),
-                                                  totalVolumeMilliliters: totalVolumeText.decimalValue, syringe: syringe)
-                result = DoseDisplay(units: r.syringeUnits, volumeMilliliters: r.drawVolumeMilliliters,
-                                     concentrationMcgPerMl: r.concentrationMcgPerMl, exactDosesPerVial: r.exactDosesPerVial)
+                result = try DosingCalculator.draw(dose: desired, concentration: .mgPerMl(mgPerMl),
+                                                   totalVolumeMilliliters: totalVolumeText.decimalValue, syringe: syringe)
             }
         } catch let e as ReconstitutionError {
             errorMessage = Self.message(for: e)
@@ -228,7 +216,7 @@ struct ReconstitutionCalculatorView: View {
 /// stat strip (or the error message in the strip's slot, so the card never changes shape
 /// per keystroke). Renders an em-dash hero and a 0-fill gauge when there's no result yet.
 private struct DoseHeroCard: View {
-    let result: DoseDisplay?
+    let result: (any DoseDrawResult)?
     let errorMessage: String?
     let syringe: SyringeScale
 
@@ -239,18 +227,18 @@ private struct DoseHeroCard: View {
             VStack(alignment: .leading, spacing: Space.sm) {
                 MicroLabel("Draw to")
                 HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
-                    Text(result.map { fmt($0.units) } ?? "—")
+                    Text(result.map { fmt($0.syringeUnits) } ?? "—")
                         .font(Typo.numberXL)
                         .foregroundStyle(BrandColor.accentText)
-                        .contentTransition(.numericText(value: result?.units ?? 0))
+                        .contentTransition(.numericText(value: result?.syringeUnits ?? 0))
                         // Short per-keystroke roll — an appearance reveal would lag live edits.
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: result?.units)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: result?.syringeUnits)
                     Text("units")
                         .font(Typo.caption)
                         .foregroundStyle(BrandColor.textSecondary)
                 }
 
-                SyringeGauge(units: result?.units ?? 0, syringe: syringe)
+                SyringeGauge(units: result?.syringeUnits ?? 0, syringe: syringe)
 
                 if let errorMessage {
                     HStack(alignment: .top, spacing: Space.sm) {
@@ -262,13 +250,13 @@ private struct DoseHeroCard: View {
                 } else {
                     HStack(alignment: .top, spacing: Space.md) {
                         StatTile(label: "Volume",
-                                 value: result.map { String(format: "%.2f mL", $0.volumeMilliliters) } ?? "—",
+                                 value: result.map { String(format: "%.2f mL", $0.drawVolumeMilliliters) } ?? "—",
                                  compact: true)
                         StatTile(label: "Strength",
                                  value: result.map { "\(fmtConc($0.concentrationMcgPerMl)) mg/mL" } ?? "—",
                                  compact: true)
                         StatTile(label: "Doses/vial",
-                                 value: (result?.exactDosesPerVial).map(fmt) ?? "—",
+                                 value: (result?.exactDosesPerVialOrNil).map(fmt) ?? "—",
                                  compact: true)
                     }
                 }

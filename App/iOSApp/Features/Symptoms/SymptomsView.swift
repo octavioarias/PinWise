@@ -14,6 +14,21 @@ enum SymptomType: String, CaseIterable, Identifiable {
     case mood = "Mood"
     case sleep = "Sleep"
     var id: String { rawValue }
+    /// User-facing label. Decoupled from the stored `rawValue` (the permanent storage key) so
+    /// future copy edits never rewrite stored data. Returns today's strings verbatim.
+    var displayName: String {
+        switch self {
+        case .nausea: return "Nausea"
+        case .fatigue: return "Fatigue"
+        case .giUpset: return "GI upset"
+        case .constipation: return "Constipation"
+        case .injectionSite: return "Injection-site reaction"
+        case .appetite: return "Appetite change"
+        case .headache: return "Headache"
+        case .mood: return "Mood"
+        case .sleep: return "Sleep"
+        }
+    }
     var icon: String {
         switch self {
         case .nausea: return "face.dashed"
@@ -53,27 +68,15 @@ struct SymptomsView: View {
     @State private var savedCount = 0
     @State private var range: ChartRange = .thirtyDays
 
-    /// Visible chart window, selected by the range control.
-    private enum ChartRange: String, CaseIterable, Identifiable {
-        case sevenDays = "7D"
-        case thirtyDays = "30D"
-        case ninetyDays = "90D"
-        var id: String { rawValue }
-        var days: Int {
-            switch self {
-            case .sevenDays: return 7
-            case .thirtyDays: return 30
-            case .ninetyDays: return 90
-            }
-        }
-        var title: String { "Last \(days) days" }
-    }
+    /// The windows this view offers — the shared `ChartRange` also carries `.all`, which Symptoms
+    /// deliberately omits (this list, not `allCases`, drives the picker so behavior is unchanged).
+    private let rangeOptions: [ChartRange] = [.sevenDays, .thirtyDays, .ninetyDays]
 
     /// Widest selectable window — gates the chart card, so narrowing the range to an empty
-    /// week can never make the range control itself disappear.
-    private var chartCutoff: Date { Calendar.current.date(byAdding: .day, value: -ChartRange.ninetyDays.days, to: Date()) ?? .distantPast }
+    /// week can never make the range control itself disappear. (`.ninetyDays.days` is never nil.)
+    private var chartCutoff: Date { Calendar.current.date(byAdding: .day, value: -(ChartRange.ninetyDays.days ?? 90), to: Date()) ?? .distantPast }
     private var chartableEntries: [SymptomEntry] { entries.filter { $0.timestamp >= chartCutoff } }
-    private var cutoff: Date { Calendar.current.date(byAdding: .day, value: -range.days, to: Date()) ?? .distantPast }
+    private var cutoff: Date { Calendar.current.date(byAdding: .day, value: -(range.days ?? 90), to: Date()) ?? .distantPast }
     private var recentWindow: [SymptomEntry] { entries.filter { $0.timestamp >= cutoff } }
     private var distinctSymptomCount: Int { Set(recentWindow.map(\.symptomRaw)).count }
     /// Only the symptoms actually plotted in the window — an explicit scale domain fixes
@@ -162,7 +165,7 @@ struct SymptomsView: View {
                             .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: range)
 
                             Picker("Chart range", selection: $range) {
-                                ForEach(ChartRange.allCases) { r in
+                                ForEach(rangeOptions) { r in
                                     Text(r.rawValue).tag(r)
                                 }
                             }
@@ -179,7 +182,7 @@ struct SymptomsView: View {
                             ForEach(Array(entries.prefix(12)), id: \.id) { e in
                                 HStack {
                                     VStack(alignment: .leading, spacing: 1) {
-                                        Text(e.symptomRaw).font(.body).foregroundStyle(BrandColor.textPrimary)
+                                        Text(SymptomType(rawValue: e.symptomRaw)?.displayName ?? e.symptomRaw).font(.body).foregroundStyle(BrandColor.textPrimary)
                                         if !e.notes.isEmpty {
                                             Text(e.notes).font(.caption2).foregroundStyle(BrandColor.textSecondary).lineLimit(1)
                                         }
@@ -210,7 +213,7 @@ struct SymptomsView: View {
     private func chip(_ s: SymptomType) -> some View {
         let isOn = selected == s
         return Button { selected = s } label: {
-            Label(s.rawValue, systemImage: s.icon)
+            Label(s.displayName, systemImage: s.icon)
                 .font(.caption.weight(.semibold))
                 .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
                 .background(isOn ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())

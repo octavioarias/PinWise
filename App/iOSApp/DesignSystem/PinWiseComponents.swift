@@ -461,6 +461,29 @@ extension String {
     var decimalValue: Double? { Double(replacingOccurrences(of: ",", with: ".")) }
 }
 
+/// Trailing-window selector shared by the trend charts (Labs & Symptoms). `.all` = full history
+/// (nil cutoff). Superset of both former view-local copies; each view iterates only the options
+/// it offers — Symptoms omits `.all`, Labs includes it — so this is a pure definition-dedup, not
+/// a behavior change.
+enum ChartRange: String, CaseIterable, Identifiable {
+    case sevenDays = "7D"
+    case thirtyDays = "30D"
+    case ninetyDays = "90D"
+    case all = "All"
+    var id: String { rawValue }
+    /// Trailing-window length in days; nil = no cutoff (full history).
+    var days: Int? {
+        switch self {
+        case .sevenDays: return 7
+        case .thirtyDays: return 30
+        case .ninetyDays: return 90
+        case .all: return nil
+        }
+    }
+    /// Section-header phrasing (Symptoms); "All time" for the full-history option.
+    var title: String { days.map { "Last \($0) days" } ?? "All time" }
+}
+
 /// Menu-style compound chooser with a single-line, truncating label. A bare `.menu` Picker
 /// lets long names ("GHK-Cu (injectable)") overflow into neighboring fields — this never does.
 struct CompoundMenu: View {

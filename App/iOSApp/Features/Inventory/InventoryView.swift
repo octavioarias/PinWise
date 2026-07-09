@@ -8,6 +8,8 @@ struct InventoryList: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    // Needed so a vial delete can null the soft `vialID` links on every dose that drew from it.
+    @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
     /// Identifiable wrapper so a tapped vial can drive `.sheet(item:)` (same pattern as protocols).
@@ -45,13 +47,13 @@ struct InventoryList: View {
                             Button { editTarget = EditTarget(vial: vial) } label: {
                                 Label("Edit", systemImage: "pencil")
                             }
-                            Button(role: .destructive) { context.delete(vial) } label: {
+                            Button(role: .destructive) { vial.reconcileDelete(in: context, doses: logs, protocols: protocols) } label: {
                                 Label("Depleted — remove", systemImage: "trash.slash")
                             }
                         }
                         // Empty (or expired) vials get a one-tap way out of the inventory.
                         if projection.wholeDosesRemaining == 0 || (vial.expiryState?.isError ?? false) {
-                            Button(role: .destructive) { context.delete(vial) } label: {
+                            Button(role: .destructive) { vial.reconcileDelete(in: context, doses: logs, protocols: protocols) } label: {
                                 Label(projection.wholeDosesRemaining == 0 ? "Depleted — remove from inventory"
                                                                           : "Expired — remove from inventory",
                                       systemImage: "trash.slash")
@@ -492,6 +494,9 @@ struct VialBuilderView: View {
         target.cost = costText.decimalValue ?? 0
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
+        // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing
+        // date across edits; clear it if the vial isn't a reconstituted powder (premixed / no water).
+        target.dateReconstituted = (!isPremixed && vol > 0) ? (target.dateReconstituted ?? .now) : nil
         // Keep inventory math coherent after an edit: never more doses taken than the vial
         // now holds, and "fresh vial" resets the count entirely.
         target.dosesTaken = resetDoseCount ? 0 : min(target.dosesTaken, target.totalDoses)
