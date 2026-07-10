@@ -66,8 +66,19 @@ struct NewsView: View {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil || myStack
     }
 
-    /// Featured lead = most popular. "Latest" = everything else, newest first.
-    private var featured: NewsItem? { items.first }
+    /// Featured lead — personalized. If the user is on compounds and any story mentions one of
+    /// them, the highest-ranked matching story leads; otherwise the top editorial story. New
+    /// users (empty stack) always see the editorial Top story.
+    private var featured: NewsItem? {
+        if !userCompounds.isEmpty, let mine = items.first(where: { matchesStack($0) }) { return mine }
+        return items.first
+    }
+    /// True when the lead was chosen because it matches the user's stack (drives the header copy).
+    private var featuredIsPersonalized: Bool {
+        guard let featured, !userCompounds.isEmpty else { return false }
+        return matchesStack(featured)
+    }
+    /// "Latest" = everything else, newest first.
     private var latest: [NewsItem] {
         items.filter { $0.id != featured?.id }.sorted { $0.publishedAt > $1.publishedAt }
     }
@@ -157,7 +168,7 @@ struct NewsView: View {
             resultsList
         } else {
             if let featured {
-                SectionHeader(title: "Top story")
+                SectionHeader(title: featuredIsPersonalized ? "Top story for you" : "Top story")
                 newsLink(featured) { FeaturedNewsCard(item: featured) }
             }
             SectionHeader(title: "Latest")
