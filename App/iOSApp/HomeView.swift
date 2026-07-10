@@ -95,6 +95,7 @@ struct HomeView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.home)
             .toolbar(.hidden, for: .navigationBar)
         }
     }

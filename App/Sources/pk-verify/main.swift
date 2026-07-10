@@ -333,7 +333,7 @@ expectDosingThrow(.nonPositiveConcentration, "rejects zero concentration") {
 section("News feed")
 do {
     let feed = try NewsFeed.decodeSample()
-    check(feed.items.count == 35, "sample feed decodes 35 items")
+    check(feed.items.count == 36, "sample feed decodes 36 items")
     check(feed.trending.first?.popularity == feed.items.map(\.popularity).max(), "trending sorted by popularity")
     check(!feed.items(mentioning: "Retatrutide").isEmpty, "can filter items by compound")
     check(feed.majorUpdates.count == 5, "5 items flagged as major updates")

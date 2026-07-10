@@ -677,6 +677,23 @@ public extension NewsFeed {
           "popularity": 49,
           "isMajorUpdate": false,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "reta-prediabetes-reversion-2023",
+          "headline": "Retatrutide reversed prediabetes for most in Phase 2",
+          "summary": "In the Phase 2 obesity trial (NEJM 2023), among the roughly one in three participants who had prediabetes at baseline, 72% of those on retatrutide returned to normal blood sugar (HbA1c below 5.7%) by 48 weeks, versus 22% on placebo. This was an exploratory finding pooled across doses — not the trial's primary endpoint, and not statistically powered for this outcome. Retatrutide is investigational and not FDA-approved.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "NEJM 2023 (Jastreboff et al., retatrutide Phase 2)", "url": "https://doi.org/10.1056/NEJMoa2301972", "kind": "journal"},
+            {"name": "PubMed 37366315", "url": "https://pubmed.ncbi.nlm.nih.gov/37366315/", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT04881760", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"}
+          ],
+          "publishedAt": "2023-06-26T00:00:00Z",
+          "teaser": "Phase 2: 72% of prediabetic participants normalized blood sugar on retatrutide vs 22% on placebo.",
+          "popularity": 76,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         }
       ]
     }

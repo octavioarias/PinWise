@@ -46,6 +46,7 @@ struct ToolsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.tools)
             .toolbar(.hidden, for: .navigationBar)
         }
     }

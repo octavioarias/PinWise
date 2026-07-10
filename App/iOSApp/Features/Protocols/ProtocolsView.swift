@@ -41,6 +41,7 @@ struct ProtocolsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.protocols)
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showBuilder) { ProtocolBuilderView() }
             .sheet(item: $editTarget) { ProtocolBuilderView(editing: $0.proto) }

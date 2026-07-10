@@ -179,6 +179,7 @@ struct VialBuilderView: View {
     @State private var costText: String
     @State private var hasExpiration: Bool
     @State private var expiration: Date
+    @State private var expandExtras: Bool
     @State private var showScanner = false
     @State private var resetDoseCount = false
     /// The ingredient the user "doses by" in a blend — its dose is the number they type, and every
@@ -189,6 +190,11 @@ struct VialBuilderView: View {
     /// described. If the ingredients later diverge, the autofill is cleared (a "GLOW" label
     /// on a hand-rolled formula would be wrong) — unless the user typed their own name over it.
     @State private var appliedPreset: (label: String, names: [String])?
+
+    /// USP guidance for multi-dose injectables: discard ~28 days after opening/reconstitution to
+    /// limit bacterial or fungal growth. New vials default to this recommended beyond-use date
+    /// (pre-filled and on); users can extend it.
+    static let recommendedBeyondUseDays = 28
 
     init(editing: StoredVial? = nil) {
         self.editing = editing
@@ -201,8 +207,10 @@ struct VialBuilderView: View {
             _doseUnit = State(initialValue: .milligram)
             _concentrationUnit = State(initialValue: .milligram)
             _costText = State(initialValue: "")
-            _hasExpiration = State(initialValue: false)
-            _expiration = State(initialValue: Date())
+            // Default a new vial to the USP 28-day beyond-use date (recommended), pre-filled and on.
+            _hasExpiration = State(initialValue: true)
+            _expiration = State(initialValue: Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date())
+            _expandExtras = State(initialValue: true)
             return
         }
         let vol = v.solventVolumeMilliliters ?? 0
@@ -236,6 +244,7 @@ struct VialBuilderView: View {
         _costText = State(initialValue: v.cost.map { Self.fmt(NSDecimalNumber(decimal: $0).doubleValue) } ?? "")
         _hasExpiration = State(initialValue: v.expirationDate != nil)
         _expiration = State(initialValue: v.expirationDate ?? Date())
+        _expandExtras = State(initialValue: v.expirationDate != nil)
     }
 
     /// Catalog + the user's own compounds, one alphabetical list for the ingredient picker.
@@ -484,13 +493,24 @@ struct VialBuilderView: View {
                     }
 
                     Card {
-                        DisclosureGroup {
+                        DisclosureGroup(isExpanded: $expandExtras) {
                             VStack(alignment: .leading, spacing: Space.lg) {
-                                Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
+                                Toggle("Set a discard (beyond-use) date", isOn: $hasExpiration).tint(BrandColor.accent)
                                 if hasExpiration {
-                                    FieldRow("Expires") {
+                                    FieldRow("Discard by") {
                                         DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
                                     }
+                                    Text("USP recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Extend this only if you have a specific reason to.")
+                                        .font(.caption2)
+                                        .foregroundStyle(BrandColor.textSecondary)
+                                    Button {
+                                        expiration = Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date()
+                                    } label: {
+                                        Label("Use recommended 28-day date", systemImage: "arrow.counterclockwise")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(BrandColor.accentText)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                                 FieldRow("Cost", hint: "Optional — shows cost per dose.") {
                                     HStack {
@@ -501,7 +521,7 @@ struct VialBuilderView: View {
                             }
                             .padding(.top, Space.sm)
                         } label: {
-                            Text("Optional — expiry & cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("Discard date & cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                         }
                         .tint(BrandColor.accentText)
                     }

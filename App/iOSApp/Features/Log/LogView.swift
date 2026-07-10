@@ -143,6 +143,7 @@ struct LogView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.log)
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.success, trigger: savedCount)
             .onAppear {

@@ -159,6 +159,7 @@ struct NewsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.news)
             .toolbar(.hidden, for: .navigationBar)
             .task { await loader.load() }
         }
