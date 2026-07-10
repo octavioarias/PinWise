@@ -224,15 +224,19 @@ struct LogView: View {
                         let deliver = blendDeliver(item, dose: dose)
                         VStack(alignment: .leading, spacing: Space.xs) {
                             Text(lineTitle(item)).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
-                            // Two distinct values: the DOSE (how much drug) and the DRAW (how far
-                            // to pull the plunger) — labeled + colored apart so they never blur. For
-                            // a blend the DOSE is the PRIMARY's; the breakdown below shows the rest.
-                            HStack(alignment: .top, spacing: Space.xl) {
-                                doseMetric(deliver == nil ? "DOSE" : "DOSE (\(item.compoundName))", dose.displayString(in: unit), BrandColor.accentText)
-                                if let d = draw {
-                                    doseMetric("DRAW TO", drawText(d), BrandColor.success)
+                            // Single compound: DOSE (how much) + DRAW (how far to pull). For a blend
+                            // the per-compound doses live in the 'Each shot delivers' breakdown below,
+                            // so the DOSE metric here would just repeat it — show only DRAW.
+                            if deliver == nil || draw != nil {
+                                HStack(alignment: .top, spacing: Space.xl) {
+                                    if deliver == nil {
+                                        doseMetric("DOSE", dose.displayString(in: unit), BrandColor.accentText)
+                                    }
+                                    if let d = draw {
+                                        doseMetric("DRAW TO", drawText(d), BrandColor.success)
+                                    }
+                                    Spacer(minLength: 0)
                                 }
-                                Spacer(minLength: 0)
                             }
                             // A blend is one injection at a fixed mass ratio — show every compound
                             // that single shot delivers (the primary's dose fixes them all).
