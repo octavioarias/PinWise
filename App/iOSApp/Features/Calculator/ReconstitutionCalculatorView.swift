@@ -83,16 +83,23 @@ final class DoseCalculatorViewModel {
 
 struct ReconstitutionCalculatorView: View {
     @State private var model = DoseCalculatorViewModel()
+    /// Set when the chosen vial is a blend (2+ APIs) — drives the per-compound breakdown so this
+    /// one tool covers a vial with one OR more compounds.
+    @State private var selectedBlendVial: StoredVial?
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
 
-    /// Single-compound vials only — this calculator reasons about one peptide; multi-API
-    /// vials belong to the Blend tool.
-    private var singleCompoundVials: [StoredVial] { vials.filter { $0.apis.count == 1 } }
+    /// What each compound in the selected blend delivers for the current draw: its concentration
+    /// (mass ÷ water) × the computed draw volume. Reconstitute mode only (powder blends).
+    private var blendBreakdown: [(name: String, dose: Mass)]? {
+        guard let v = selectedBlendVial, v.apis.count > 1, model.mode == .reconstitute,
+              let r = model.result, let vol = model.solventText.decimalValue, vol > 0 else { return nil }
+        return v.apis.map { ($0.name, Mass(micrograms: $0.massMicrograms / vol * r.drawVolumeMilliliters)) }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                Text("Find out how much to draw into your syringe.")
+                Text("Find out how much to draw into your syringe — for a single peptide or a blend vial.")
                     .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
 
                 Picker("", selection: $model.mode) {
@@ -107,11 +114,28 @@ struct ReconstitutionCalculatorView: View {
                 // to show — so the form never bounces under the user's finger.
                 DoseHeroCard(result: model.result, errorMessage: model.errorMessage, syringe: model.syringe, concentrationUnit: model.concentrationUnit)
 
+                // For a blend vial, restate what that single draw delivers per compound.
+                if let breakdown = blendBreakdown {
+                    Card {
+                        VStack(alignment: .leading, spacing: Space.md) {
+                            MicroLabel("Each shot delivers")
+                            ForEach(Array(breakdown.enumerated()), id: \.offset) { _, comp in
+                                HStack {
+                                    Text(comp.name).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                                    Spacer()
+                                    Text(comp.dose.displayString(in: selectedBlendVial?.doseUnit ?? .milligram))
+                                        .font(Typo.numberMD).foregroundStyle(BrandColor.accentText)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Card {
                     VStack(alignment: .leading, spacing: Space.lg) {
-                        if !singleCompoundVials.isEmpty {
+                        if !vials.isEmpty {
                             Menu {
-                                ForEach(singleCompoundVials) { v in Button(v.displayName) { applyVial(v) } }
+                                ForEach(vials) { v in Button(v.displayName) { applyVial(v) } }
                             } label: {
                                 Label("Use one of your vials", systemImage: "cross.vial")
                                     .font(.caption.weight(.semibold))
@@ -191,6 +215,8 @@ struct ReconstitutionCalculatorView: View {
     /// with no solvent volume) prefills reconstitute mode. The existing `.onChange`
     /// wiring recalculates automatically.
     private func applyVial(_ v: StoredVial) {
+        // Remember whether this is a blend so the per-compound breakdown shows (cleared for singles).
+        selectedBlendVial = v.apis.count > 1 ? v : nil
         // Open the dose + concentration in the vial's chosen units, so this calc agrees with the
         // vial's Stack row instead of always reading mg/mL.
         model.doseUnit = v.doseUnit
@@ -214,6 +240,11 @@ struct ReconstitutionCalculatorView: View {
             if let vol = v.solventVolumeMilliliters, vol > 0 {
                 model.solventText = Self.numberText(vol)
             }
+        }
+        // Seed the target dose from the vial's per-dose (the anchor compound) so a blend's
+        // per-compound breakdown reads sensibly the moment the vial is chosen.
+        if v.apis.count > 1, let pd = v.perDoseMicrograms, pd > 0 {
+            model.doseText = Self.numberText(Mass(micrograms: pd).value(in: v.doseUnit))
         }
     }
 

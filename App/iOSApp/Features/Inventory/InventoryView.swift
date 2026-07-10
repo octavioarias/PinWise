@@ -68,17 +68,6 @@ struct InventoryList: View {
                 }
             }
 
-            NavigationLink { CompoundsView() } label: {
-                Card(style: .flat) {
-                    HStack {
-                        Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
-                        Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
         }
         .sheet(isPresented: $showBuilder) { VialBuilderView() }
         .sheet(item: $editTarget) { VialBuilderView(editing: $0.vial) }

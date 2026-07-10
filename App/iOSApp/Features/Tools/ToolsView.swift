@@ -14,6 +14,9 @@ struct ToolsView: View {
                     // Grid order groups the domains: rows 1-2 = the blue dose family,
                     // then body (green) + feel (amber), then data (teal).
                     LazyVGrid(columns: columns, spacing: Space.md) {
+                        ToolCard(title: "Compound library", subtitle: "Look up peptides & evidence", systemImage: "books.vertical.fill", hue: BrandColor.data) {
+                            CompoundsView()
+                        }
                         ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill", hue: BrandColor.accentText) {
                             ReconstitutionCalculatorView()
                         }
