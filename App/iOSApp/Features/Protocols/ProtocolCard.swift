@@ -24,6 +24,10 @@ struct ProtocolCard: View {
     /// True when any linked vial is itself a blend (multiple compounds in ONE vial = one injection).
     /// Distinct from `proto.isStack` (multiple vials = multiple injections). Caller resolves it.
     var isBlend: Bool = false
+    /// Every compound this protocol delivers per shot, with its dose (blend vials expanded), e.g.
+    /// "GHK-Cu 5 mg · BPC-157 1.5 mg · TB-500 1.5 mg". Caller resolves it (needs the vials). nil for
+    /// a plain single-compound protocol — there the single "Dose" stat already tells the whole story.
+    var perShot: String?
 
     private var contentsText: String { contents ?? proto.contentsSummary }
     private var doseText: String {
@@ -67,7 +71,7 @@ struct ProtocolCard: View {
     }
 
     private var accessibilityValueText: String {
-        var value = "\(statusLabel), dose \(doseText), \(proto.cadenceText), next pin \(nextPin.text)"
+        var value = "\(statusLabel), \(perShot.map { "per shot \($0)" } ?? "dose \(doseText)"), \(proto.cadenceText), next pin \(nextPin.text)"
         if let supply {
             value += ", \(supply.dosesLeft) of \(supply.total) doses left"
         }
@@ -94,12 +98,21 @@ struct ProtocolCard: View {
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
 
-                // Contents meta — full compound scope (blend vials expanded); omitted when it
-                // would just repeat the name.
-                if contentsText != proto.name {
+                // Contents meta — full compound scope (blend vials expanded); omitted when it would
+                // just repeat the name, or when the per-shot line below already names every compound
+                // (with its dose), which would make this a duplicate.
+                if contentsText != proto.name && perShot == nil {
                     Text(contentsText)
                         .font(.caption)
                         .foregroundStyle(BrandColor.textSecondary)
+                }
+
+                // A blend/stack delivers several compounds per shot — list them all with their
+                // doses, instead of only the anchor's dose in the single "Dose" stat.
+                if let perShot {
+                    Text("Per shot: " + perShot)
+                        .font(.caption)
+                        .foregroundStyle(BrandColor.textPrimary)
                 }
 
                 Rectangle()
@@ -107,8 +120,11 @@ struct ProtocolCard: View {
                     .frame(height: 1)
 
                 HStack(alignment: .top, spacing: Space.md) {
-                    ProtocolStat(label: "Dose", value: doseText,
-                                 tint: BrandColor.accentText)
+                    // The per-shot line above already carries every compound's dose for a
+                    // blend/stack, so only show the single "Dose" stat for a plain protocol.
+                    if perShot == nil {
+                        ProtocolStat(label: "Dose", value: doseText, tint: BrandColor.accentText)
+                    }
                     ProtocolStat(label: "Cadence", value: proto.cadenceText, compresses: true)
                     ProtocolStat(label: "Next pin", value: nextPin.text,
                                  tint: nextPin.isToday ? BrandColor.warning : BrandColor.textPrimary)

@@ -117,8 +117,8 @@ struct VialRow: View {
                     Text(conc).font(.caption2.weight(.medium)).foregroundStyle(BrandColor.textPrimary)
                 }
 
-                if let breakdown = vial.doseBreakdown() {
-                    Text("Per shot: " + breakdown.map { "\($0.name) \(vial.formatDose($0.deliveredDose))" }.joined(separator: " · "))
+                if let perShot = vial.perShotSummary {
+                    Text("Per shot: " + perShot)
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 }
 

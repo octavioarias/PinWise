@@ -399,6 +399,18 @@ extension StoredVial {
         return (p.massMicrograms / vol) / 1_000
     }
 
+    /// The per-shot dose line shown on every vial row, in the vial's chosen unit — a single compound
+    /// reads "BPC-157 250 mcg"; a blend lists each compound the shot delivers "GHK-Cu 5 mg · BPC-157
+    /// 1.5 mg · …". nil only when no per-shot dose is set yet.
+    var perShotSummary: String? {
+        guard perDose.micrograms > 0 else { return nil }
+        if let breakdown = doseBreakdown() {
+            return breakdown.map { "\($0.name) \(formatDose($0.deliveredDose))" }.joined(separator: " · ")
+        }
+        guard let name = primaryAPI?.name, !name.isEmpty else { return nil }
+        return "\(name) \(formatDose(perDose))"
+    }
+
     /// Per-compound strength for the vial row, in the vial's CHOSEN unit (mg or mcg). Single
     /// compound → "BPC-157 5 mg/mL"; a blend lists each API's strength sharing one denominator →
     /// "BPC-157 5 mg / TB-500 3 mg / mL" (or the mcg forms). nil until a solvent volume is known.
