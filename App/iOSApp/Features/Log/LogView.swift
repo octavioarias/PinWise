@@ -228,14 +228,18 @@ struct LogView: View {
                             // the per-compound doses live in the 'Each shot delivers' breakdown below,
                             // so the DOSE metric here would just repeat it — show only DRAW.
                             if deliver == nil || draw != nil {
-                                HStack(alignment: .top, spacing: Space.xl) {
+                                // Balanced columns across the full card width (the app's stat-grid
+                                // idiom) so DRAW TO gets its own column instead of floating next to
+                                // DOSE with dead space on the right.
+                                HStack(alignment: .top, spacing: Space.md) {
                                     if deliver == nil {
                                         doseMetric("DOSE", dose.displayString(in: unit), BrandColor.accentText)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                     if let d = draw {
                                         doseMetric("DRAW TO", drawText(d), BrandColor.success)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
-                                    Spacer(minLength: 0)
                                 }
                             }
                             // A blend is one injection at a fixed mass ratio — show every compound
@@ -268,6 +272,7 @@ struct LogView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
             Text(value).font(Typo.numberMD).foregroundStyle(color)
+                .lineLimit(1).minimumScaleFactor(0.7)
         }
     }
 

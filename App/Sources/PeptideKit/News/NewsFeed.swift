@@ -514,6 +514,169 @@ public extension NewsFeed {
           "popularity": 46,
           "isMajorUpdate": false,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "reta-masld-liver-fat-2024",
+          "headline": "Retatrutide reduced liver fat in Phase 2a study",
+          "summary": "In a Phase 2a substudy (Nature Medicine 2024) of 98 adults in the retatrutide obesity program, 48 weeks of the triple GIP/GLP-1/glucagon agonist reduced MRI-measured liver fat by roughly 43–82% across doses versus a slight increase on placebo, and most people on the higher doses reached a normal liver-fat level. Retatrutide is investigational and not FDA-approved; these are mid-stage results in metabolic dysfunction-associated steatotic liver disease (MASLD), pending Phase 3.",
+          "category": "Trial results",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "Nature Medicine 2024 (Sanyal et al., retatrutide Phase 2a MASLD)", "url": "https://doi.org/10.1038/s41591-024-03018-2", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT04881760", "url": "https://clinicaltrials.gov/study/NCT04881760", "kind": "trial"}
+          ],
+          "publishedAt": "2024-06-10T00:00:00Z",
+          "teaser": "Phase 2a substudy: retatrutide cut liver fat up to ~82% vs placebo. Investigational.",
+          "popularity": 77,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "reta-triumph-phase3-2025",
+          "headline": "Retatrutide's Phase 3 TRIUMPH program is underway",
+          "summary": "Eli Lilly's Phase 3 TRIUMPH program is testing retatrutide across registrational trials in more than 5,800 participants — spanning obesity with sleep apnea and knee osteoarthritis, plus a cardiovascular-kidney outcomes trial — with the program design published in 2025. No Phase 3 weight-loss topline is reported in that source. Retatrutide remains investigational and is not FDA-approved.",
+          "category": "General",
+          "compounds": ["Retatrutide"],
+          "sources": [
+            {"name": "Diabetes Obes Metab 2025 (TRIUMPH program design)", "url": "https://doi.org/10.1111/dom.70209", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT06383390 (TRIUMPH-Outcomes)", "url": "https://clinicaltrials.gov/study/NCT06383390", "kind": "trial"}
+          ],
+          "publishedAt": "2025-10-15T00:00:00Z",
+          "teaser": "Late-stage TRIUMPH trials are testing retatrutide in 5,800+ people. No topline yet.",
+          "popularity": 74,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "tesamorelin-liver-fat-2014",
+          "headline": "Tesamorelin reduced liver fat in a small HIV trial",
+          "summary": "In a 6-month randomized trial of 50 people with HIV (JAMA 2014), the GHRH analog tesamorelin significantly reduced liver fat and visceral fat versus placebo, though the authors called it a preliminary study and noted a transient early rise in fasting glucose. Liver-fat use is off-label and investigational — tesamorelin (Egrifta) is FDA-approved only for excess abdominal fat in HIV-associated lipodystrophy.",
+          "category": "Trial results",
+          "compounds": ["Tesamorelin"],
+          "sources": [
+            {"name": "JAMA 2014 (Stanley et al.)", "url": "https://doi.org/10.1001/jama.2014.8334", "kind": "journal"},
+            {"name": "PubMed 25038357", "url": "https://pubmed.ncbi.nlm.nih.gov/25038357/", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT01263717", "url": "https://clinicaltrials.gov/study/NCT01263717", "kind": "trial"}
+          ],
+          "publishedAt": "2014-07-23T00:00:00Z",
+          "teaser": "Small HIV trial: tesamorelin lowered liver fat and visceral fat over 6 months.",
+          "popularity": 63,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "tesamorelin-cognition-2012",
+          "headline": "GHRH analog showed a cognitive signal in 2012 trial",
+          "summary": "In a 20-week randomized trial of 152 older adults (Archives of Neurology 2012), the GHRH analog tesamorelin produced a modest favorable effect on cognition — driven mainly by executive function — in both healthy adults and those with mild cognitive impairment. The effect was small and short-term, the authors called for longer studies, and this cognitive use is investigational and not FDA-approved.",
+          "category": "Trial results",
+          "compounds": ["Tesamorelin"],
+          "sources": [
+            {"name": "Arch Neurol 2012 (Baker et al.)", "url": "https://doi.org/10.1001/archneurol.2012.1970", "kind": "journal"},
+            {"name": "PubMed 22869065", "url": "https://pubmed.ncbi.nlm.nih.gov/22869065/", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT00257712", "url": "https://clinicaltrials.gov/study/NCT00257712", "kind": "trial"}
+          ],
+          "publishedAt": "2012-11-01T00:00:00Z",
+          "teaser": "20-week trial hinted at an executive-function benefit from GHRH — modest, preliminary.",
+          "popularity": 55,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "healing-blends-no-trials",
+          "headline": "Recovery blends (Wolverine, GLOW) lack human trials",
+          "summary": "Popular compounded recovery blends — Wolverine (BPC-157 + TB-500) and GLOW (which adds GHK-Cu) — have never been tested as combinations in any registered clinical trial. Their individual components are mostly preclinical: BPC-157's human data are minimal, TB-500 (a thymosin beta-4 fragment) is largely animal-stage, and GHK-Cu is best studied as a topical skincare ingredient. None are FDA-approved, and combining unapproved peptides adds unquantified interaction and safety risk.",
+          "category": "General",
+          "compounds": ["BPC-157", "TB-500", "GHK-Cu (injectable)"],
+          "sources": [
+            {"name": "Pharmaceutics 2026 (MDPI, BPC-157 review; doi:10.3390/pharmaceutics18050625)", "url": "https://doi.org/10.3390/pharmaceutics18050625", "kind": "journal"},
+            {"name": "Oxid Med Cell Longev 2012 (Pickart et al., GHK-Cu)", "url": "https://doi.org/10.1155/2012/324832", "kind": "journal"}
+          ],
+          "publishedAt": "2026-05-22T00:00:00Z",
+          "teaser": "Wolverine (BPC-157+TB-500) and GLOW blends have no combination trials in humans.",
+          "popularity": 61,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "cjc-ipamorelin-combo-evidence",
+          "headline": "CJC-1295 + ipamorelin: popular combo, thin human data",
+          "summary": "CJC-1295 and ipamorelin are often stacked to raise growth hormone, but the human evidence is limited. CJC-1295 (the DAC form) raised GH and IGF-1 for days in an early pharmacology study (JCEM 2006), while ipamorelin — a selective GH secretagogue — has little published human data and no efficacy trials for body composition or anti-aging. Neither is FDA-approved, and the specific CJC-1295 + ipamorelin combination has not been tested in controlled human trials.",
+          "category": "General",
+          "compounds": ["CJC-1295 (DAC)", "CJC-1295 (no DAC)", "Ipamorelin"],
+          "sources": [
+            {"name": "JCEM 2006 (Teichman et al., CJC-1295)", "url": "https://doi.org/10.1210/jc.2005-1536", "kind": "journal"},
+            {"name": "PubMed 16352683", "url": "https://pubmed.ncbi.nlm.nih.gov/16352683/", "kind": "journal"}
+          ],
+          "publishedAt": "2006-03-01T00:00:00Z",
+          "teaser": "The CJC-1295 + ipamorelin stack is popular but has no controlled human combo data.",
+          "popularity": 57,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "motsc-exercise-2021",
+          "headline": "MOTS-c acts like an exercise-linked mitochondrial peptide",
+          "summary": "Reviews describe MOTS-c, a mitochondria-derived peptide, as exercise-responsive: intense exercise can raise MOTS-c in human muscle and blood, and in mice MOTS-c improves exercise capacity and insulin sensitivity — an 'exercise-mimetic' or mitohormesis role. The human data are limited and largely associative, and there is no approved MOTS-c therapy; the evidence remains early and preclinical.",
+          "category": "New compound",
+          "compounds": ["MOTS-c"],
+          "sources": [
+            {"name": "BBA General Subjects 2021 (Woodhead & Merry, review)", "url": "https://doi.org/10.1016/j.bbagen.2021.130011", "kind": "journal"},
+            {"name": "PubMed 34520826", "url": "https://pubmed.ncbi.nlm.nih.gov/34520826/", "kind": "journal"}
+          ],
+          "publishedAt": "2021-12-01T00:00:00Z",
+          "teaser": "MOTS-c behaves like an exercise-responsive mitochondrial peptide — still preclinical.",
+          "popularity": 47,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "nmn-insulin-sensitivity-2021",
+          "headline": "NMN improved muscle insulin sensitivity in a trial",
+          "summary": "In a 10-week randomized, placebo-controlled trial (Science 2021) in postmenopausal women with prediabetes and overweight or obesity, the NAD+ precursor nicotinamide mononucleotide (NMN) increased insulin-stimulated glucose disposal and muscle insulin signaling versus placebo. It was a small, single-center study that did not change body weight or liver fat, and other NMN trials have been mixed; NMN is a dietary supplement, not an approved drug.",
+          "category": "Trial results",
+          "compounds": ["NAD+"],
+          "sources": [
+            {"name": "Science 2021 (Yoshino et al., NMN RCT)", "url": "https://doi.org/10.1126/science.abe9985", "kind": "journal"},
+            {"name": "ClinicalTrials.gov NCT03151239", "url": "https://clinicaltrials.gov/study/NCT03151239", "kind": "trial"}
+          ],
+          "publishedAt": "2021-04-22T00:00:00Z",
+          "teaser": "10-week RCT: NMN improved muscle insulin sensitivity in prediabetic women.",
+          "popularity": 57,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "glutathione-iv-skin-safety",
+          "headline": "IV glutathione for skin whitening: unapproved, risky",
+          "summary": "Intravenous and injectable glutathione is widely marketed for skin lightening, but no regulator has approved it for that use and no published clinical trials show it safely and durably lightens skin. The Philippine FDA has formally warned against high-dose IV glutathione for whitening, and the US FDA has flagged contamination risks in compounded glutathione injectables; reported harms include serious allergic reactions and possible liver and kidney effects.",
+          "category": "Safety",
+          "compounds": ["Glutathione"],
+          "sources": [
+            {"name": "Philippine FDA Advisory 2019-182 (IV glutathione for skin whitening)", "url": "https://www.fda.gov.ph/fda-advisory-no-2019-182-unsafe-use-of-glutathione-as-skin-lightening-agent/", "kind": "regulatory"},
+            {"name": "U.S. FDA — compounded glutathione injectables", "url": "https://www.fda.gov/drugs/human-drug-compounding/fda-highlights-concerns-using-dietary-ingredient-glutathione-compound-sterile-injectables", "kind": "regulatory"},
+            {"name": "Cureus 2025 (glutathione review)", "url": "https://doi.org/10.7759/cureus.78045", "kind": "journal"}
+          ],
+          "publishedAt": "2025-01-27T00:00:00Z",
+          "teaser": "Injectable glutathione for lighter skin is unapproved and carries safety warnings.",
+          "popularity": 53,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "glutathione-oral-rct-2015",
+          "headline": "Oral glutathione raised body stores in a 6-month RCT",
+          "summary": "In a 6-month randomized, placebo-controlled trial of 54 healthy adults (European Journal of Nutrition 2015), daily oral glutathione (250 or 1,000 mg) significantly raised glutathione levels in blood and tissues versus placebo, with levels returning to baseline after a one-month washout. The endpoints were body stores and oxidative-stress markers, not a specific clinical or skin benefit; glutathione is a dietary supplement, not an approved drug.",
+          "category": "Trial results",
+          "compounds": ["Glutathione"],
+          "sources": [
+            {"name": "Eur J Nutr 2015 (Richie et al., oral glutathione RCT)", "url": "https://doi.org/10.1007/s00394-014-0706-z", "kind": "journal"},
+            {"name": "PubMed 24791752", "url": "https://pubmed.ncbi.nlm.nih.gov/24791752/", "kind": "journal"}
+          ],
+          "publishedAt": "2015-04-01T00:00:00Z",
+          "teaser": "Small 6-month RCT: oral glutathione raised body glutathione stores vs placebo.",
+          "popularity": 49,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         }
       ]
     }
