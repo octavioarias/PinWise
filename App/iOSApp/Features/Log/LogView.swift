@@ -380,8 +380,12 @@ struct LogView: View {
     private var siteCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.lg) {
-                FieldRow("Where did you inject?", hint: "Front or back, then a spot. These match your injection map.") {
+                FieldRow("Where did you inject?", hint: "Front or back, then a spot. Only doses with a site show on your injection map.") {
                     siteSelector
+                }
+                if site == nil {
+                    Label("Optional — but pick a spot to add this dose to your injection map.", systemImage: "figure.stand")
+                        .font(.caption2).foregroundStyle(BrandColor.warning)
                 }
                 if let suggested = suggestedSite, suggested != site {
                     Button { site = suggested; showBack = suggested.isBack } label: {

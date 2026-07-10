@@ -489,7 +489,7 @@ struct VialBuilderView: View {
                                     FieldRow("Discard by") {
                                         DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
                                     }
-                                    Text("USP recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Extend this only if you have a specific reason to.")
+                                    Text("US Pharmacopeia (USP) recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Extended expiration dates are not advised.")
                                         .font(.caption2)
                                         .foregroundStyle(BrandColor.textSecondary)
                                     Button {
