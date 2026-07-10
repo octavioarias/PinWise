@@ -26,13 +26,20 @@ struct ProtocolCard: View {
     var isBlend: Bool = false
     /// Every compound this protocol delivers per shot, with its dose (blend vials expanded), e.g.
     /// "GHK-Cu 5 mg · BPC-157 1.5 mg · TB-500 1.5 mg". Caller resolves it (needs the vials). nil for
-    /// a plain single-compound protocol — there the single "Dose" stat already tells the whole story.
+    /// a plain single-compound protocol — there the scope line shows the single compound + its dose.
     var perShot: String?
+    /// Whether today's dose is already logged (caller resolves from its `LoggedDose` query) —
+    /// flips a "Due today" card to "Logged today" and advances the next pin downstream.
+    var loggedToday: Bool = false
 
     private var contentsText: String { contents ?? proto.contentsSummary }
     private var doseText: String {
         doseUnit.map { proto.effectiveDose.displayString(in: $0) } ?? proto.effectiveDose.displayString
     }
+    /// The light-gray line naming the injectable compound(s) with their per-shot dose: the full
+    /// per-shot breakdown for a blend/stack, or "compound · dose" for a plain protocol. This is
+    /// where the dose lives — the card no longer shows a standalone "Dose" stat.
+    private var scopeLine: String { perShot ?? "\(contentsText) · \(doseText)" }
 
     /// The caller resolves the protocol's vial linkage into this — the card stays a pure renderer.
     struct SupplyInfo {
@@ -42,12 +49,13 @@ struct ProtocolCard: View {
         let needsReorder: Bool
     }
 
-    private var status: SavedProtocol.DisplayStatus { proto.displayStatus }
+    private var status: SavedProtocol.DisplayStatus { proto.displayStatus(loggedToday: loggedToday) }
 
     private var statusColor: Color {
         switch status {
         case .active: return BrandColor.success
         case .dueToday: return BrandColor.warning
+        case .doneToday: return BrandColor.success
         case .paused: return BrandColor.textSecondary
         }
     }
@@ -56,14 +64,16 @@ struct ProtocolCard: View {
         switch status {
         case .active: return "Active"
         case .dueToday: return "Due today"
+        case .doneToday: return "Logged today"
         case .paused: return "Paused"
         }
     }
 
     /// Next-pin display: "Today" (warning-tinted), "Tomorrow", an abbreviated date, or "—"
-    /// when nothing is scheduled (as-needed protocols / no upcoming date).
+    /// when nothing is scheduled (as-needed / none upcoming). Once today's dose is logged this
+    /// advances past today, so a logged protocol no longer reads "Today".
     private var nextPin: (text: String, isToday: Bool) {
-        guard let next = proto.nextDose() else { return ("—", false) }
+        guard let next = proto.upcomingDose(loggedToday: loggedToday) else { return ("—", false) }
         let calendar = Calendar.current
         if calendar.isDateInToday(next) { return ("Today", true) }
         if calendar.isDateInTomorrow(next) { return ("Tomorrow", false) }
@@ -98,33 +108,19 @@ struct ProtocolCard: View {
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
 
-                // Contents meta — full compound scope (blend vials expanded); omitted when it would
-                // just repeat the name, or when the per-shot line below already names every compound
-                // (with its dose), which would make this a duplicate.
-                if contentsText != proto.name && perShot == nil {
-                    Text(contentsText)
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textSecondary)
-                }
-
-                // A blend/stack delivers several compounds per shot — list them all with their
-                // doses, instead of only the anchor's dose in the single "Dose" stat.
-                if let perShot {
-                    Text("Per shot: " + perShot)
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textPrimary)
-                }
+                // The injectable compound(s) with their per-shot dose — the dose lives here, in
+                // light gray, not in a separate stat. Blend/stack: the full per-shot breakdown;
+                // plain protocol: "compound · dose".
+                Text(scopeLine)
+                    .font(.caption)
+                    .foregroundStyle(BrandColor.textSecondary)
 
                 Rectangle()
                     .fill(BrandColor.stroke.opacity(0.6))
                     .frame(height: 1)
 
+                // Only cadence + next pin as stats now; the dose is on the scope line above.
                 HStack(alignment: .top, spacing: Space.md) {
-                    // The per-shot line above already carries every compound's dose for a
-                    // blend/stack, so only show the single "Dose" stat for a plain protocol.
-                    if perShot == nil {
-                        ProtocolStat(label: "Dose", value: doseText, tint: BrandColor.accentText)
-                    }
                     ProtocolStat(label: "Cadence", value: proto.cadenceText, compresses: true)
                     ProtocolStat(label: "Next pin", value: nextPin.text,
                                  tint: nextPin.isToday ? BrandColor.warning : BrandColor.textPrimary)
@@ -193,14 +189,16 @@ private struct ProtocolSupplyRow: View {
 }
 
 extension SavedProtocol {
-    /// The app-wide status vocabulary for a protocol: paused (inactive), due today, or
-    /// active. Every surface that renders a protocol's status dot derives from this one
-    /// read so the color language never forks between Home and the Stack tab.
-    enum DisplayStatus { case active, dueToday, paused }
+    /// The app-wide status vocabulary for a protocol: paused (inactive), due today, done today
+    /// (today's dose already logged), or active. Every surface that renders a protocol's status
+    /// dot derives from this one read so the color language never forks between Home and Stack.
+    enum DisplayStatus { case active, dueToday, doneToday, paused }
 
-    var displayStatus: DisplayStatus {
+    /// `loggedToday` (from the caller's `LoggedDose` query) turns a "due today" into "done
+    /// today" so a logged pin actually clears downstream. Callers without logs pass `false`.
+    func displayStatus(loggedToday: Bool = false) -> DisplayStatus {
         guard isActive else { return .paused }
-        if let next = nextDose(), Calendar.current.isDateInToday(next) { return .dueToday }
-        return .active
+        guard let next = nextDose(), Calendar.current.isDateInToday(next) else { return .active }
+        return loggedToday ? .doneToday : .dueToday
     }
 }

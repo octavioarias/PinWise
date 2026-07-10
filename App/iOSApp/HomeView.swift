@@ -66,7 +66,9 @@ struct HomeView: View {
     /// ever (longest), over the same grace-aware event basis as the adherence %.
     private var streak: StreakCalculator.Result { StreakCalculator.compute(events: doseEvents) }
 
-    private var nextDoseDate: Date? { activeProtocols.compactMap { $0.nextDose() }.min() }
+    private var nextDoseDate: Date? {
+        activeProtocols.compactMap { $0.upcomingDose(loggedToday: $0.loggedToday(in: recent)) }.min()
+    }
 
     var body: some View {
         NavigationStack {
@@ -261,7 +263,7 @@ struct HomeView: View {
                     ForEach(Array(activeProtocols.prefix(4).enumerated()), id: \.element.id) { i, p in
                         if i > 0 { Divider().frame(height: 1).overlay(BrandColor.stroke.opacity(0.5)) }
                         HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
-                            StatusDot(color: statusTint(p), glows: p.displayStatus == .dueToday)
+                            StatusDot(color: statusTint(p), glows: status(p) == .dueToday)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(p.name).font(.body.weight(.semibold)).foregroundStyle(BrandColor.textPrimary)
                                 (Text("\(p.cadenceText) · ") + nextPinShort(p))
@@ -280,11 +282,17 @@ struct HomeView: View {
         .buttonStyle(PressableStyle())
     }
 
-    /// Status color for a protocol row — the dot's hue IS the information (success = active,
-    /// warning = due today, textSecondary = paused; per the design-system status language).
+    /// The protocol's status, with today's logged dose taken into account (so a logged pin
+    /// reads "done", not "due"). The single read every Home protocol surface derives from.
+    private func status(_ p: SavedProtocol) -> SavedProtocol.DisplayStatus {
+        p.displayStatus(loggedToday: p.loggedToday(in: recent))
+    }
+
+    /// Status color for a protocol row — the dot's hue IS the information (success = active or
+    /// done today, warning = due today, textSecondary = paused; per the status language).
     private func statusTint(_ p: SavedProtocol) -> Color {
-        switch p.displayStatus {
-        case .active: return BrandColor.success
+        switch status(p) {
+        case .active, .doneToday: return BrandColor.success
         case .dueToday: return BrandColor.warning
         case .paused: return BrandColor.textSecondary
         }
@@ -292,9 +300,11 @@ struct HomeView: View {
 
     /// Compact next-pin fragment for stack rows: "Today" carries the warning tint (the one
     /// urgency signal on the card), then "Tomorrow", then an abbreviated date; "—" as-needed.
+    /// Once today's dose is logged the pin advances past today, so it never lingers on "Today".
     private func nextPinShort(_ p: SavedProtocol) -> Text {
-        guard let next = p.nextDose() else { return Text("—") }
-        if Calendar.current.isDateInToday(next) {
+        let logged = p.loggedToday(in: recent)
+        guard let next = p.upcomingDose(loggedToday: logged) else { return Text("—") }
+        if !logged && Calendar.current.isDateInToday(next) {
             return Text("Today").foregroundStyle(BrandColor.warning)
         }
         if Calendar.current.isDateInTomorrow(next) { return Text("Tomorrow") }

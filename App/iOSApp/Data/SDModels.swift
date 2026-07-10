@@ -186,6 +186,27 @@ extension SavedProtocol {
         return AdherenceCalculator.expectedDates(schedule: schedule, start: from, end: end, calendar: calendar).first
     }
 
+    /// Whether a dose for this protocol has already been logged today — matched by the log's
+    /// source protocol when present, else (one-time / legacy logs) by any of its compound names.
+    /// This is what lets "due today" clear downstream once the pin is logged.
+    func loggedToday(in logs: [LoggedDose], calendar: Calendar = .current) -> Bool {
+        logs.contains { log in
+            calendar.isDateInToday(log.timestamp) &&
+                (log.protocolID == id || compoundNames.contains(log.compoundName))
+        }
+    }
+
+    /// Next scheduled dose strictly AFTER today — the "next pin" to show once today's is logged.
+    func nextDoseAfterToday(calendar: Calendar = .current) -> Date? {
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())) ?? Date()
+        return nextDose(after: tomorrow, calendar: calendar)
+    }
+
+    /// Convenience: the next pin to display given whether today's dose is already logged.
+    func upcomingDose(loggedToday: Bool, calendar: Calendar = .current) -> Date? {
+        loggedToday ? nextDoseAfterToday(calendar: calendar) : nextDose(calendar: calendar)
+    }
+
     /// Weekday numbers (1 = Sun … 7 = Sat) reordered so the week starts on MONDAY.
     static func mondayFirst(_ days: [Int]) -> [Int] {
         let order = [2, 3, 4, 5, 6, 7, 1]        // Mon Tue Wed Thu Fri Sat Sun

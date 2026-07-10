@@ -18,17 +18,24 @@ private extension NewsCategory {
     }
 }
 
-/// Formats a feed item's ISO-8601 `publishedAt` as a friendly abbreviated date (falls back to
-/// the raw date substring if parsing ever fails).
-func newsDisplayDate(_ iso: String) -> String {
-    if let d = ISO8601DateFormatter().date(from: iso) {
-        return d.formatted(date: .abbreviated, time: .omitted)
-    }
+/// Parses a feed item's `publishedAt` (ISO-8601, or a bare `yyyy-MM-dd` fallback) into a Date.
+func newsDate(_ iso: String) -> Date? {
+    if let d = ISO8601DateFormatter().date(from: iso) { return d }
     let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = TimeZone(identifier: "UTC")
-    if let d = df.date(from: String(iso.prefix(10))) {
-        return d.formatted(date: .abbreviated, time: .omitted)
-    }
-    return String(iso.prefix(10))
+    return df.date(from: String(iso.prefix(10)))
+}
+
+/// Formats a feed item's `publishedAt` as a friendly abbreviated date (falls back to the raw
+/// date substring if parsing ever fails).
+func newsDisplayDate(_ iso: String) -> String {
+    newsDate(iso).map { $0.formatted(date: .abbreviated, time: .omitted) } ?? String(iso.prefix(10))
+}
+
+/// True when an article was published within the last `days` — drives the "New" tag.
+func isRecentNews(_ iso: String, within days: Int = 7) -> Bool {
+    guard let d = newsDate(iso) else { return false }
+    let age = Date().timeIntervalSince(d)
+    return age >= 0 && age <= Double(days) * 86_400
 }
 
 struct NewsView: View {
@@ -260,6 +267,20 @@ struct NewsView: View {
     }
 }
 
+/// A small "New" tag (red dot + label) flagging a recently-published article.
+private struct NewBadge: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle().fill(BrandColor.danger).frame(width: 6, height: 6)
+            Text("New")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(BrandColor.danger)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("New")
+    }
+}
+
 /// The lead story: a prominent, text-forward card (chips → headline → summary → sources).
 /// Uses theme tokens so it reads correctly in both light and dark mode.
 struct FeaturedNewsCard: View {
@@ -272,6 +293,7 @@ struct FeaturedNewsCard: View {
                     TagChip(text: item.category.rawValue, color: item.category.tint)
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
                     Spacer()
+                    if isRecentNews(item.publishedAt) { NewBadge() }
                     Text(newsDisplayDate(item.publishedAt))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
@@ -312,6 +334,7 @@ struct NewsRow: View {
                     HStack {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
+                        if isRecentNews(item.publishedAt) { NewBadge() }
                         Text(newsDisplayDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)

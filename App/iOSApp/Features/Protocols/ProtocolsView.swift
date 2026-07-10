@@ -8,6 +8,7 @@ struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
+    @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
     @State private var panel: Panel = .inventory   // vials lead — protocols schedule from them
@@ -68,7 +69,7 @@ struct ProtocolsView: View {
             ForEach(Array(active.enumerated()), id: \.element.id) { i, proto in
                 let supplyInfo = supply(for: proto)
                 Button { editTarget = EditTarget(proto: proto) } label: {
-                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials), isBlend: proto.items.contains { item in vials.first(where: { $0.id == item.vialID })?.isBlend == true }, perShot: perShotDetail(proto))
+                    ProtocolCard(proto: proto, supply: supplyInfo, contents: proto.fullContentsSummary(vials: vials), doseUnit: proto.doseUnit(vials: vials), isBlend: proto.items.contains { item in vials.first(where: { $0.id == item.vialID })?.isBlend == true }, perShot: perShotDetail(proto), loggedToday: proto.loggedToday(in: logs))
                 }
                 .buttonStyle(PressableStyle())
                 .contextMenu {
