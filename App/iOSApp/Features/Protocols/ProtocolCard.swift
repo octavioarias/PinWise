@@ -51,6 +51,15 @@ struct ProtocolCard: View {
 
     private var status: SavedProtocol.DisplayStatus { proto.displayStatus(loggedToday: loggedToday) }
 
+    /// Banner copy for a ramp-up protocol: the next scheduled increase, or that it's at its final
+    /// dose. nil when there's no ramp plan.
+    private var rampBannerText: String? {
+        guard proto.hasRampPlan else { return nil }
+        guard let inc = proto.nextRampIncrease() else { return "Ramp-up · at final dose" }
+        let d = doseUnit.map { inc.dose.displayString(in: $0) } ?? inc.dose.displayString
+        return "Ramp-up · next \(d) on \(inc.date.formatted(.dateTime.month().day()))"
+    }
+
     private var statusColor: Color {
         switch status {
         case .active: return BrandColor.success
@@ -99,6 +108,7 @@ struct ProtocolCard: View {
                     // blend. A single vial that is a blend (one shot, several compounds) = "Blend".
                     if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
                     else if isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
+                    if proto.hasRampPlan { TagChip(text: "Ramp-up", color: BrandColor.warning) }
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(BrandColor.textSecondary)
@@ -114,6 +124,13 @@ struct ProtocolCard: View {
                 Text(scopeLine)
                     .font(.caption)
                     .foregroundStyle(BrandColor.textSecondary)
+
+                // Ramp-up banner — flags the auto-advancing plan and the next scheduled increase.
+                if let rampBannerText {
+                    Label(rampBannerText, systemImage: "chart.line.uptrend.xyaxis")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(BrandColor.warning)
+                }
 
                 Rectangle()
                     .fill(BrandColor.stroke.opacity(0.6))

@@ -101,6 +101,14 @@ struct ProtocolItem: Codable, Hashable, Identifiable {
     var doseUnit: MassUnit? { doseUnitRaw.flatMap(MassUnit.init(rawValue:)) }
 }
 
+/// One step of a user-built ramp-up (titration) plan: a dose held for a number of days before
+/// the next step. Attached to a protocol so its primary dose auto-advances as phases elapse.
+struct RampPhase: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var doseMicrograms: Double = 0
+    var durationDays: Int = 7
+}
+
 /// A saved dosing protocol — one shared schedule covering one or more compounds (a stack).
 /// CloudKit-safe like `LoggedDose`.
 @Model
@@ -117,6 +125,11 @@ final class SavedProtocol {
     var remindersOn: Bool = false
     var reminderHour: Int = 9
     var reminderMinute: Int = 0
+    /// User-built ramp-up plan: ordered dose phases. Empty = no ramp (dose is fixed). Additive/
+    /// CloudKit-safe (default empty); paired with `rampStartDate`.
+    var rampPhases: [RampPhase] = []
+    /// Anchor date the ramp phases are measured from. nil = no active ramp.
+    var rampStartDate: Date? = nil
 
     init(
         id: UUID = UUID(), name: String = "", items: [ProtocolItem] = [],
@@ -167,9 +180,41 @@ extension SavedProtocol {
         return names.isEmpty ? "No compounds" : names.joined(separator: " · ")
     }
 
-    /// The dose to show/use — always the dose the user set. The app never auto-advances a dose
-    /// over time; every dose change is an explicit user edit to the protocol (record-keeper posture).
-    var effectiveDose: Mass { dose }
+    /// The dose to show/use. Normally the fixed dose the user set — but when a user-built ramp-up
+    /// plan is attached, it auto-advances to the phase active today, so cards, the draw calc, and
+    /// logging all follow the ramp without any manual edit.
+    var effectiveDose: Mass { rampDose() ?? dose }
+
+    /// True when a ramp-up plan is attached and active.
+    var hasRampPlan: Bool { !rampPhases.isEmpty && rampStartDate != nil }
+
+    /// The ramp dose for `date` (nil when no plan): before start → first phase; inside a phase →
+    /// that phase's dose; past the final phase → hold the last dose.
+    func rampDose(on date: Date = Date(), calendar: Calendar = .current) -> Mass? {
+        guard let start = rampStartDate, let first = rampPhases.first, let last = rampPhases.last else { return nil }
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: start),
+                                           to: calendar.startOfDay(for: date)).day ?? 0
+        if days < 0 { return Mass(micrograms: first.doseMicrograms) }
+        var acc = 0
+        for phase in rampPhases {
+            acc += max(phase.durationDays, 1)
+            if days < acc { return Mass(micrograms: phase.doseMicrograms) }
+        }
+        return Mass(micrograms: last.doseMicrograms)
+    }
+
+    /// The next scheduled dose increase after `date` (date it takes effect + the new dose), or nil
+    /// once the ramp has reached its final phase.
+    func nextRampIncrease(after date: Date = Date(), calendar: Calendar = .current) -> (date: Date, dose: Mass)? {
+        guard hasRampPlan, let start = rampStartDate else { return nil }
+        var boundary = calendar.startOfDay(for: start)
+        let today = calendar.startOfDay(for: date)
+        for (i, phase) in rampPhases.enumerated() where i + 1 < rampPhases.count {
+            boundary = calendar.date(byAdding: .day, value: max(phase.durationDays, 1), to: boundary) ?? boundary
+            if boundary > today { return (boundary, Mass(micrograms: rampPhases[i + 1].doseMicrograms)) }
+        }
+        return nil
+    }
 
     var scheduleKind: DoseSchedule.Kind { DoseSchedule.Kind(rawValue: scheduleKindRaw) ?? .daily }
     var schedule: DoseSchedule { DoseSchedule(kind: scheduleKind, intervalDays: intervalDays, weekdays: weekdays) }

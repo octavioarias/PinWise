@@ -26,8 +26,8 @@ struct ToolsView: View {
                         ToolCard(title: "Blend", subtitle: "Doses in a mixed vial", systemImage: "circle.grid.2x2.fill", hue: BrandColor.accentText) {
                             BlendCalculatorView()
                         }
-                        ToolCard(title: "Ramp-up plan", subtitle: "Typical label ladder (reference)", systemImage: "chart.line.uptrend.xyaxis", hue: BrandColor.accentText) {
-                            TitrationPreviewView()
+                        ToolCard(title: "Ramp-up plan", subtitle: "Build a dose ladder for a protocol", systemImage: "chart.line.uptrend.xyaxis", hue: BrandColor.accentText) {
+                            RampUpPlannerView()
                         }
                         ToolCard(title: "Dose history", subtitle: "Review or undo logged doses", systemImage: "clock.arrow.circlepath", hue: BrandColor.accentText) {
                             DoseHistoryView()
@@ -479,5 +479,204 @@ private struct TitrationLadderBar: View {
             return base + "; starts \(first.startDate.formatted(.dateTime.month().day()))"
         }
         return base
+    }
+}
+
+// MARK: - Ramp-up plan (user-built, attached to a protocol)
+
+/// Build a custom dose ladder for one of your protocols. Each phase is a dose held for a number
+/// of weeks; once saved, the protocol's dose auto-advances to the next phase as time passes, so
+/// logging always uses the current step. Informational planning aid — not a prescription.
+struct RampUpPlannerView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+
+    @State private var selectedID: UUID?
+    @State private var startDate = Date()
+    @State private var phases: [EditablePhase] = []
+
+    private struct EditablePhase: Identifiable {
+        let id = UUID()
+        var doseText: String
+        var unit: MassUnit
+        var weeksText: String
+    }
+
+    private var activeProtocols: [SavedProtocol] { protocols.filter(\.isActive) }
+    private var selected: SavedProtocol? { activeProtocols.first { $0.id == selectedID } }
+
+    private var canSave: Bool {
+        selected != nil && !phases.isEmpty && phases.allSatisfy {
+            ($0.doseText.decimalValue ?? 0) > 0 && (Int($0.weeksText) ?? 0) > 0
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.lg) {
+                Text("Build your own ramp-up. Pick a protocol, set each dose and how long it lasts — your protocol's dose steps up on its own as each phase ends, so logging always uses the right amount.")
+                    .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+
+                if activeProtocols.isEmpty {
+                    Card {
+                        Text("Add an active protocol first, then come back to build its ramp-up plan.")
+                            .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    protocolPickerCard
+                    if selected != nil {
+                        phasesCard
+                        if !phases.isEmpty { previewCard }
+                        PrimaryButton(title: (selected?.hasRampPlan ?? false) ? "Update ramp-up plan" : "Start ramp-up plan",
+                                      systemImage: "chart.line.uptrend.xyaxis") { save() }
+                            .disabled(!canSave).opacity(canSave ? 1 : 0.5)
+                        if selected?.hasRampPlan == true {
+                            Button(role: .destructive) { removePlan() } label: {
+                                Label("Remove ramp-up plan", systemImage: "trash")
+                                    .font(.body.weight(.semibold))
+                                    .frame(maxWidth: .infinity).padding(.vertical, Space.sm)
+                                    .foregroundStyle(BrandColor.danger)
+                            }
+                        }
+                    }
+                }
+
+                Text("Informational planning aid, not medical advice. Discuss any dose change with your clinician.")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+            }
+            .padding(Space.lg)
+        }
+        .heroScreen()
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle("Ramp-up plan")
+        .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: selectedID) { _, _ in loadForSelection() }
+    }
+
+    private var protocolPickerCard: some View {
+        Card {
+            FieldRow("Which protocol?") {
+                Menu {
+                    ForEach(activeProtocols) { p in Button(p.name) { selectedID = p.id } }
+                } label: {
+                    HStack(spacing: Space.xs) {
+                        Text(selected?.name ?? "Select a protocol").lineLimit(1)
+                        Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.semibold))
+                    }
+                    .font(.body.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                }
+            }
+        }
+    }
+
+    private var phasesCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.lg) {
+                FieldRow("Start on") {
+                    DatePicker("", selection: $startDate, displayedComponents: [.date])
+                        .labelsHidden().tint(BrandColor.accentText)
+                }
+                Divider().overlay(BrandColor.stroke)
+                ForEach($phases) { $phase in
+                    HStack(spacing: Space.sm) {
+                        TextField("dose", text: $phase.doseText).keyboardType(.decimalPad).pinwiseField().frame(maxWidth: 84)
+                        MassUnitPicker(selection: $phase.unit)
+                        Text("for").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        TextField("4", text: $phase.weeksText).keyboardType(.numberPad).pinwiseField().frame(maxWidth: 44)
+                        Text("wks").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        Spacer(minLength: 0)
+                        if phases.count > 1 {
+                            Button { phases.removeAll { $0.id == phase.id } } label: {
+                                Image(systemName: "minus.circle.fill").foregroundStyle(BrandColor.textSecondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                Button { addPhase() } label: {
+                    Label("Add a phase", systemImage: "plus.circle.fill")
+                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var previewCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
+                SectionHeader(title: "Preview")
+                ForEach(Array(computedRanges.enumerated()), id: \.offset) { _, r in
+                    HStack {
+                        Text(r.dose).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        Spacer()
+                        Text(r.range).font(.caption).foregroundStyle(BrandColor.textSecondary)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Cumulative date ranges for the phases as currently edited (for the preview).
+    private var computedRanges: [(dose: String, range: String)] {
+        let cal = Calendar.current
+        var cursor = cal.startOfDay(for: startDate)
+        var out: [(String, String)] = []
+        for phase in phases {
+            let weeks = max(Int(phase.weeksText) ?? 0, 0)
+            let end = cal.date(byAdding: .day, value: weeks * 7, to: cursor) ?? cursor
+            let doseStr = phase.doseText.decimalValue.map { Mass($0, phase.unit).displayString(in: phase.unit) } ?? "—"
+            let rangeStr = "\(cursor.formatted(.dateTime.month().day())) – \(end.formatted(.dateTime.month().day()))"
+            out.append((doseStr, rangeStr))
+            cursor = end
+        }
+        return out
+    }
+
+    private func unit(for p: SavedProtocol) -> MassUnit { p.primaryItem?.doseUnit ?? .milligram }
+
+    private func addPhase() {
+        let last = phases.last
+        phases.append(EditablePhase(doseText: last?.doseText ?? "", unit: last?.unit ?? .milligram, weeksText: "4"))
+    }
+
+    private func loadForSelection() {
+        guard let p = selected else { phases = []; return }
+        let u = unit(for: p)
+        if p.hasRampPlan {
+            startDate = p.rampStartDate ?? Date()
+            phases = p.rampPhases.map {
+                EditablePhase(doseText: Self.numText(Mass(micrograms: $0.doseMicrograms).value(in: u)),
+                              unit: u, weeksText: String(max($0.durationDays / 7, 1)))
+            }
+        } else {
+            startDate = Date()
+            phases = [EditablePhase(doseText: Self.numText(p.effectiveDose.value(in: u)), unit: u, weeksText: "4")]
+        }
+    }
+
+    private func save() {
+        guard let p = selected else { return }
+        p.rampPhases = phases.compactMap { ph in
+            guard let d = ph.doseText.decimalValue, d > 0, let w = Int(ph.weeksText), w > 0 else { return nil }
+            return RampPhase(doseMicrograms: Mass(d, ph.unit).micrograms, durationDays: w * 7)
+        }
+        p.rampStartDate = Calendar.current.startOfDay(for: startDate)
+        try? context.save()
+        dismiss()
+    }
+
+    private func removePlan() {
+        guard let p = selected else { return }
+        p.rampPhases = []
+        p.rampStartDate = nil
+        try? context.save()
+        dismiss()
+    }
+
+    private static func numText(_ v: Double) -> String {
+        v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
     }
 }
