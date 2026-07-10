@@ -453,17 +453,18 @@ public extension NewsFeed {
         },
         {
           "id": "ghkcu-topical-vs-injectable",
-          "headline": "GHK-Cu has topical data, no injectable evidence",
-          "summary": "The copper tripeptide GHK-Cu has documented evidence as a topical skincare ingredient — controlled studies report improved skin firmness and reduced fine lines, plus wound-healing activity. That evidence is for topical use; there is no comparable published human trial evidence for injected GHK-Cu, which is unstudied for safety or efficacy by that route. Some of the topical literature comes from authors with a commercial skincare interest.",
+          "headline": "FDA flags injectable GHK-Cu; topical data is stronger",
+          "summary": "The copper tripeptide GHK-Cu has real evidence as a topical skincare ingredient — controlled studies report firmer skin and fewer fine lines — but injected GHK-Cu is unstudied for safety or efficacy. In its compounding review the FDA stated that injectable GHK-Cu 'may pose risk for immunogenicity due to the potential for aggregation and peptide-related impurities,' with limited human data. GHK-Cu is not FDA-approved for injection.",
           "category": "Safety",
           "compounds": ["GHK-Cu (injectable)"],
           "sources": [
-            {"name": "J Biomater Sci Polym Ed 2008 (Pickart)", "url": "https://doi.org/10.1163/156856208784909435", "kind": "journal"},
-            {"name": "Oxid Med Cell Longev 2012 (Pickart et al.)", "url": "https://doi.org/10.1155/2012/324832", "kind": "journal"}
+            {"name": "U.S. FDA — bulk substances that may present significant safety risks", "url": "https://www.fda.gov/drugs/human-drug-compounding/certain-bulk-drug-substances-use-compounding-may-present-significant-safety-risks", "kind": "regulatory"},
+            {"name": "Oxid Med Cell Longev 2012 (Pickart et al. — topical GHK-Cu)", "url": "https://doi.org/10.1155/2012/324832", "kind": "journal"},
+            {"name": "J Biomater Sci Polym Ed 2008 (Pickart — topical GHK-Cu)", "url": "https://doi.org/10.1163/156856208784909435", "kind": "journal"}
           ],
-          "publishedAt": "2012-05-10T00:00:00Z",
-          "teaser": "GHK-Cu has real topical skin data; injectable use has no published human evidence.",
-          "popularity": 52,
+          "publishedAt": "2026-04-22T00:00:00Z",
+          "teaser": "FDA: injectable GHK-Cu may pose an immunogenicity risk; solid data exist only for topical use.",
+          "popularity": 67,
           "isMajorUpdate": false,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         },
@@ -692,6 +693,22 @@ public extension NewsFeed {
           "publishedAt": "2023-06-26T00:00:00Z",
           "teaser": "Phase 2: 72% of prediabetic participants normalized blood sugar on retatrutide vs 22% on placebo.",
           "popularity": 76,
+          "isMajorUpdate": false,
+          "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
+        },
+        {
+          "id": "bpc157-fda-immunogenicity-2026",
+          "headline": "FDA flags immunogenicity risk for injectable BPC-157",
+          "summary": "In its compounding review, the FDA stated that BPC-157 'may pose risk for immunogenicity' — an unwanted immune response — for injectable routes, driven by the potential for peptide aggregation and peptide-related impurities alongside limited human safety data. BPC-157 was placed among bulk substances that may present significant safety risks; the nomination was later withdrawn, and the FDA's advisory committee is set to re-evaluate it on July 23–24, 2026. BPC-157 is not FDA-approved.",
+          "category": "Safety",
+          "compounds": ["BPC-157"],
+          "sources": [
+            {"name": "U.S. FDA — bulk substances that may present significant safety risks", "url": "https://www.fda.gov/drugs/human-drug-compounding/certain-bulk-drug-substances-use-compounding-may-present-significant-safety-risks", "kind": "regulatory"},
+            {"name": "U.S. FDA — Pharmacy Compounding Advisory Committee briefing (July 23–24, 2026)", "url": "https://www.fda.gov/media/193343/download", "kind": "regulatory"}
+          ],
+          "publishedAt": "2026-04-22T00:00:00Z",
+          "teaser": "FDA: injectable BPC-157 'may pose risk for immunogenicity' from aggregation and impurities.",
+          "popularity": 79,
           "isMajorUpdate": false,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         }
