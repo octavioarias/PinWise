@@ -29,7 +29,6 @@ struct HomeView: View {
         let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
         return recent.filter { $0.timestamp >= weekAgo }.count
     }
-    private var sitesInRotation: Int { Set(recent.prefix(30).compactMap { $0.site }).count }
 
     /// Adherence is judged over the last N SCHEDULED DOSES (not a fixed run of calendar days),
     /// so a weekly and a daily protocol are measured on the same footing and one miss is a
@@ -78,10 +77,8 @@ struct HomeView: View {
                     if !activeProtocols.isEmpty {
                         heroActive.entrance(1)
                         stackCard.entrance(2)
-                        bentoGrid.entrance(3)
                     } else if !recent.isEmpty {
                         heroActivity.entrance(1)
-                        bentoGrid.entrance(3)
                     } else {
                         emptyState
                     }
@@ -302,30 +299,6 @@ struct HomeView: View {
         }
         if Calendar.current.isDateInTomorrow(next) { return Text("Tomorrow") }
         return Text(next, format: .dateTime.weekday(.abbreviated).month().day())
-    }
-
-    // MARK: Bento
-
-    private var bentoGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)],
-                  spacing: Space.md) {
-            bentoTile("Sites in rotation", "\(sitesInRotation)", "circle.grid.3x3.fill")
-            // Total doses logged — not shown elsewhere (the hero shows "this week"); the stack
-            // card already lists active protocols, so don't repeat that count here.
-            bentoTile("Doses logged", "\(recent.count)", "syringe.fill")
-        }
-    }
-
-    private func bentoTile(_ label: String, _ value: String, _ icon: String) -> some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Image(systemName: icon).font(.title3).foregroundStyle(BrandColor.accentText)
-                Spacer(minLength: Space.sm)
-                Text(value).font(Typo.numberLG).foregroundStyle(BrandColor.textPrimary)
-                MicroLabel(label)
-            }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
-        }
     }
 
     // MARK: Empty
