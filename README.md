@@ -4,7 +4,7 @@ A privacy-first iOS app for tracking peptide / GLP-1 / multi-injectable dosing p
 and the source of truth for the science around them. This repo holds the **advisory knowledge
 base** (research, strategy, specs) and the **app** (a CI-validated v1).
 
-Repo: `github.com/octavioarias/PinWise` · CI: GitHub Actions (compiles + tests every push).
+Repo: `github.com/TavioTheScientist/PinWise` · CI: GitHub Actions (compiles + tests every push).
 
 ## Layout
 ```
