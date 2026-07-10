@@ -1,0 +1,37 @@
+{
+  "_comment": "Seed config for the News content iteration cycle. `catalogCompounds` mirrors CompoundCatalog.swift names (the strings the app's 'My compounds' filter matches against). `focus` is the flagship + notable set we actively source news for; each entry lists the search terms/aliases to feed PubMed + ClinicalTrials.gov + ChEMBL. `extraCompounds` are newsworthy names intentionally NOT in the on-device catalog (won't match 'My compounds', but still valid in a feed item).",
+  "focus": [
+    { "name": "Semaglutide", "aliases": ["semaglutide", "Ozempic", "Wegovy", "Rybelsus"], "priority": 1 },
+    { "name": "Tirzepatide", "aliases": ["tirzepatide", "Mounjaro", "Zepbound", "LY3298176"], "priority": 1 },
+    { "name": "Retatrutide", "aliases": ["retatrutide", "LY3437943"], "priority": 1 },
+    { "name": "Cagrilintide", "aliases": ["cagrilintide", "CagriSema"], "priority": 2 },
+    { "name": "Survodutide", "aliases": ["survodutide", "BI 456906"], "priority": 2 },
+    { "name": "Mazdutide", "aliases": ["mazdutide", "IBI362", "LY3305677"], "priority": 2 },
+    { "name": "Tesamorelin", "aliases": ["tesamorelin", "Egrifta"], "priority": 2 },
+    { "name": "CJC-1295 (DAC)", "aliases": ["CJC-1295", "CJC 1295", "DAC:GRF"], "priority": 3 },
+    { "name": "Ipamorelin", "aliases": ["ipamorelin"], "priority": 3 },
+    { "name": "Sermorelin", "aliases": ["sermorelin", "Geref"], "priority": 3 },
+    { "name": "MK-677", "aliases": ["MK-677", "MK 677", "ibutamoren"], "priority": 3 },
+    { "name": "BPC-157", "aliases": ["BPC-157", "BPC157", "body protection compound"], "priority": 1 },
+    { "name": "TB-500", "aliases": ["TB-500", "TB500", "thymosin beta-4 fragment"], "priority": 2 },
+    { "name": "Thymosin Beta-4", "aliases": ["thymosin beta-4", "thymosin beta 4", "RGN-259", "Tb4"], "priority": 3 },
+    { "name": "Thymosin Alpha-1", "aliases": ["thymosin alpha-1", "thymalfasin", "Zadaxin"], "priority": 3 },
+    { "name": "KPV", "aliases": ["KPV", "lysine-proline-valine"], "priority": 4 },
+    { "name": "PT-141", "aliases": ["PT-141", "bremelanotide", "Vyleesi"], "priority": 3 },
+    { "name": "GHK-Cu (injectable)", "aliases": ["GHK-Cu", "copper tripeptide", "GHK copper"], "priority": 3 },
+    { "name": "NAD+", "aliases": ["NAD+", "nicotinamide riboside", "NMN", "nicotinamide mononucleotide"], "priority": 3 },
+    { "name": "MOTS-c", "aliases": ["MOTS-c", "MOTS c"], "priority": 4 },
+    { "name": "Epithalon", "aliases": ["epithalon", "epitalon"], "priority": 4 },
+    { "name": "AOD-9604", "aliases": ["AOD-9604", "AOD9604", "hGH fragment 176-191"], "priority": 4 }
+  ],
+  "extraCompounds": ["Orforglipron"],
+  "catalogCompounds": [
+    "Semaglutide", "Tirzepatide", "Retatrutide", "Liraglutide", "Dulaglutide",
+    "Cagrilintide", "Survodutide", "Mazdutide", "Tesamorelin", "CJC-1295 (DAC)",
+    "CJC-1295 (no DAC)", "Ipamorelin", "Sermorelin", "GHRP-2", "GHRP-6",
+    "Hexarelin", "MK-677", "BPC-157", "TB-500", "Thymosin Beta-4",
+    "Thymosin Alpha-1", "KPV", "LL-37", "GHK-Cu (injectable)", "PT-141",
+    "Melanotan II", "Epithalon", "AOD-9604", "MOTS-c", "NAD+",
+    "Glutathione", "DSIP", "Selank", "Semax", "IGF-1 LR3"
+  ]
+}

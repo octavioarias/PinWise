@@ -333,15 +333,26 @@ expectDosingThrow(.nonPositiveConcentration, "rejects zero concentration") {
 section("News feed")
 do {
     let feed = try NewsFeed.decodeSample()
-    check(feed.items.count == 14, "sample feed decodes 14 items")
+    check(feed.items.count == 25, "sample feed decodes 25 items")
     check(feed.trending.first?.popularity == feed.items.map(\.popularity).max(), "trending sorted by popularity")
     check(!feed.items(mentioning: "Retatrutide").isEmpty, "can filter items by compound")
-    check(feed.majorUpdates.count == 3, "3 items flagged as major updates")
+    check(feed.majorUpdates.count == 5, "5 items flagged as major updates")
     // Editorial contract — the transparency guarantees, enforced in code:
     check(feed.items.allSatisfy { !$0.sources.isEmpty }, "EVERY item carries ≥1 source citation")
     check(feed.items.allSatisfy { !$0.disclaimer.isEmpty }, "EVERY item carries a disclaimer")
     check(feed.items.allSatisfy { $0.sources.allSatisfy { !$0.url.isEmpty } }, "every source has a URL")
-    check(feed.items.filter { $0.imageURL != nil }.count == 1, "optional imageURL decodes both when present and absent")
+    check(feed.items.allSatisfy { $0.id.count > 0 }, "every item has a stable id")
+    check(Set(feed.items.map(\.id)).count == feed.items.count, "item ids are unique")
+    // Editorial: every item now ships a crafted, scannable teaser (drives list/card copy).
+    check(feed.items.allSatisfy { $0.teaser != nil }, "EVERY item carries a teaser")
+    check(feed.items.allSatisfy { ($0.teaser?.count ?? 0) <= 110 }, "every teaser is ≤110 chars")
+    // The bundled sample omits imageURL app-wide (branded-gradient fallback is the premium look).
+    check(feed.items.allSatisfy { $0.imageURL == nil }, "sample omits imageURL (uses gradient fallback)")
+
+    // Optional imageURL still round-trips when a live feed DOES provide one.
+    let imgJSON = #"{"id":"i1","headline":"H","summary":"S","category":"General","compounds":[],"sources":[{"name":"n","url":"https://example.com","kind":"news"}],"publishedAt":"2026-07-08T00:00:00Z","popularity":0,"isMajorUpdate":false,"disclaimer":"d","imageURL":"https://example.com/x.jpg"}"#
+    let withImg = try JSONDecoder().decode(NewsItem.self, from: Data(imgJSON.utf8))
+    check(withImg.imageURL == "https://example.com/x.jpg", "optional imageURL decodes when present")
 
     // teaser / listText — additive optional; teaser-less items fall back to summary via listText.
     let withTeaser = NewsItem(
@@ -356,11 +367,6 @@ do {
         popularity: 0, isMajorUpdate: false, disclaimer: "d")
     check(noTeaser.teaser == nil && noTeaser.listText == noTeaser.summary,
           "listText == summary when teaser nil (backward-compatible fallback)")
-    // Exactly one sample item carries a teaser (parallels the imageURL == 1 check).
-    check(feed.items.filter { $0.teaser != nil }.count == 1, "optional teaser decodes both when present and absent")
-    let lead = feed.items.first { $0.imageURL != nil }
-    check(lead?.teaser != nil, "the lead item (with imageURL) has a non-nil teaser")
-    check((lead?.teaser?.count ?? 999) <= 100, "lead item teaser is ≤100 chars")
 } catch {
     check(false, "news feed failed to decode: \(error)")
 }
