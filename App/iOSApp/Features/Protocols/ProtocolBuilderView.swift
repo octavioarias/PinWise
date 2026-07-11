@@ -124,8 +124,8 @@ struct ProtocolBuilderView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            Text("What's in this protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                            Text("Protocols schedule doses from your vials. One vial is a single protocol; add more to build a stack — they share the schedule below.")
+                            Text("Your dose from each vial").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("Set the dose you take from each vial per injection — not the vial's total amount. One vial makes a single protocol; add more to build a stack that shares the schedule below.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
                             ForEach($items) { $item in
