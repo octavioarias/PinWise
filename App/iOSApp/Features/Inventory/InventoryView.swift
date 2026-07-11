@@ -479,10 +479,10 @@ struct VialBuilderView: View {
                     if let editing, editing.dosesTaken > 0 {
                         Card {
                             VStack(alignment: .leading, spacing: Space.sm) {
-                                SectionHeader(title: "Usage")
-                                Text("\(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") already logged from this vial. Changing amounts keeps that count (capped at the new total).")
+                                SectionHeader(title: "Refill")
+                                Text("You've drawn \(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") from this vial. If you've refilled it — or swapped in a fresh vial of the same peptide — turn this on to restart “doses left” from full. Your logged dose history isn't affected; only the remaining-dose count resets.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                                Toggle("This is a fresh vial — reset the count", isOn: $resetDoseCount)
+                                Toggle("I refilled this vial — restart doses left", isOn: $resetDoseCount)
                                     .tint(BrandColor.accent)
                                     .font(.footnote)
                                     .foregroundStyle(BrandColor.textPrimary)
@@ -752,8 +752,9 @@ struct VialBuilderView: View {
         // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing
         // date across edits; clear it if the vial isn't a reconstituted powder (premixed / no water).
         target.dateReconstituted = (!isPremixed && vol > 0) ? (target.dateReconstituted ?? .now) : nil
-        // Keep inventory math coherent after an edit: never more doses taken than the vial
-        // now holds, and "fresh vial" resets the count entirely.
+        // Keep inventory math coherent after an edit: never more doses taken than the vial now
+        // holds, and a "refilled" vial restarts the drawn-down count from zero (logged doses are
+        // untouched — this is only the vial's remaining-dose counter).
         target.dosesTaken = resetDoseCount ? 0 : min(target.dosesTaken, target.totalDoses)
         if editing == nil { context.insert(target) }
         try? context.save()
