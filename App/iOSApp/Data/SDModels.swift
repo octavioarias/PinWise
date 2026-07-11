@@ -374,6 +374,12 @@ final class StoredVial {
     /// The user chooses this for pre-mixed vials (whose label states a strength directly); nil for
     /// powder vials, which fall back to the dose unit via `concentrationUnit`. Additive/CloudKit-safe.
     var concentrationUnitRaw: String? = nil
+    /// Certificate-of-Analysis percentages — assay / net content / purity. Any subset may be set
+    /// (nil = not provided). Used to correct the vial to its true active concentration so doses
+    /// aren't computed off the (higher) label amount. Additive/CloudKit-safe.
+    var coaAssayPercent: Double? = nil
+    var coaContentPercent: Double? = nil
+    var coaPurityPercent: Double? = nil
 
     init(
         id: UUID = UUID(), label: String = "", apis: [VialAPI] = [], solventVolumeMilliliters: Double? = nil,
@@ -460,9 +466,22 @@ extension StoredVial {
         return apis.isEmpty ? "Vial" : apis.map(\.name).joined(separator: " + ")
     }
 
+    /// True active fraction (0–1) from the COA — 1.0 when none provided (label taken at face value).
+    /// Applies only to powder vials the user reconstitutes; a pre-mixed pharmacy vial already
+    /// states a corrected strength, so it's never COA-corrected here.
+    var coaFactor: Double {
+        guard !isPremixed else { return 1.0 }
+        return COACorrection.factor(assayPercent: coaAssayPercent, contentPercent: coaContentPercent, purityPercent: coaPurityPercent)
+    }
+    /// Whether any COA correction is in effect (powder vial with at least one percentage entered).
+    var hasCOACorrection: Bool {
+        !isPremixed && (coaAssayPercent != nil || coaContentPercent != nil || coaPurityPercent != nil)
+    }
+
+    /// True active concentration (COA-corrected). Doses/draws use this, not the label amount.
     var primaryConcentrationMgPerMl: Double? {
         guard let p = primaryAPI, let vol = solventVolumeMilliliters, vol > 0 else { return nil }
-        return (p.massMicrograms / vol) / 1_000
+        return (p.massMicrograms * coaFactor / vol) / 1_000
     }
 
     /// The per-shot dose line shown on every vial row, in the vial's chosen unit — a single compound
@@ -489,28 +508,29 @@ extension StoredVial {
             return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%g", rounded)
         }
         if apis.count == 1, let a = apis.first {
-            return "\(a.name) \(fmt((a.massMicrograms / perUnit) / vol)) \(unit.rawValue)/mL"
+            return "\(a.name) \(fmt((a.massMicrograms * coaFactor / perUnit) / vol)) \(unit.rawValue)/mL"
         }
-        let parts = apis.map { "\($0.name) \(fmt(($0.massMicrograms / perUnit) / vol)) \(unit.rawValue)" }
+        let parts = apis.map { "\($0.name) \(fmt(($0.massMicrograms * coaFactor / perUnit) / vol)) \(unit.rawValue)" }
         return parts.joined(separator: " / ") + " / mL"
     }
 
     var totalDoses: Int {
         guard let p = primaryAPI, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
-        return Int((p.massMicrograms / perDose).rounded(.down))
+        return Int((p.massMicrograms * coaFactor / perDose).rounded(.down))
     }
 
     var fractionRemaining: Double {
         guard let p = primaryAPI, p.massMicrograms > 0, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
-        let remaining = max(0, p.massMicrograms - Double(dosesTaken) * perDose)
-        return remaining / p.massMicrograms
+        let total = p.massMicrograms * coaFactor
+        guard total > 0 else { return 0 }
+        return max(0, total - Double(dosesTaken) * perDose) / total
     }
 
     /// Run-out/cost projection (anchored on the primary API) via the verified estimator.
     func projection(schedule: DoseSchedule, referenceDate: Date = Date()) -> InventoryEstimator.Projection {
         let vial = Vial(
             compoundID: UUID(),
-            mass: primaryMass,
+            mass: Mass(micrograms: primaryMass.micrograms * coaFactor),   // COA-corrected active mass
             solventVolumeMilliliters: isReconstituted ? solventVolumeMilliliters : nil,
             cost: cost
         )
@@ -534,7 +554,7 @@ extension StoredVial {
             BlendComponentDose(
                 id: api.id,
                 name: api.name,
-                concentrationMcgPerMl: vol > 0 ? api.massMicrograms / vol : 0,
+                concentrationMcgPerMl: vol > 0 ? api.massMicrograms * coaFactor / vol : 0,
                 deliveredDose: Mass(micrograms: api.massMicrograms * ratio)
             )
         }
@@ -546,7 +566,7 @@ extension StoredVial {
     func draw(forDose dose: Mass, syringe: SyringeScale = .u100) -> (milliliters: Double, units: Double)? {
         guard let p = primaryAPI, p.massMicrograms > 0,
               let vol = solventVolumeMilliliters, vol > 0, dose.micrograms > 0 else { return nil }
-        let concMcgPerMl = p.massMicrograms / vol
+        let concMcgPerMl = p.massMicrograms * coaFactor / vol   // COA-corrected active concentration
         guard concMcgPerMl > 0 else { return nil }
         let ml = dose.micrograms / concMcgPerMl
         return (ml, ml * syringe.unitsPerMilliliter)

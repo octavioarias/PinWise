@@ -169,6 +169,9 @@ struct VialBuilderView: View {
     @State private var hasExpiration: Bool
     @State private var expiration: Date
     @State private var expandExtras: Bool
+    @State private var coaAssayText: String
+    @State private var coaContentText: String
+    @State private var coaPurityText: String
     @State private var showScanner = false
     @State private var resetDoseCount = false
     /// The ingredient the user "doses by" in a blend — its dose is the number they type, and every
@@ -200,6 +203,9 @@ struct VialBuilderView: View {
             _hasExpiration = State(initialValue: true)
             _expiration = State(initialValue: Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date())
             _expandExtras = State(initialValue: true)
+            _coaAssayText = State(initialValue: "")
+            _coaContentText = State(initialValue: "")
+            _coaPurityText = State(initialValue: "")
             return
         }
         let vol = v.solventVolumeMilliliters ?? 0
@@ -234,6 +240,9 @@ struct VialBuilderView: View {
         _hasExpiration = State(initialValue: v.expirationDate != nil)
         _expiration = State(initialValue: v.expirationDate ?? Date())
         _expandExtras = State(initialValue: v.expirationDate != nil)
+        _coaAssayText = State(initialValue: v.coaAssayPercent.map(Self.fmt) ?? "")
+        _coaContentText = State(initialValue: v.coaContentPercent.map(Self.fmt) ?? "")
+        _coaPurityText = State(initialValue: v.coaPurityPercent.map(Self.fmt) ?? "")
     }
 
     /// Catalog + the user's own compounds, one alphabetical list for the ingredient picker.
@@ -481,6 +490,10 @@ struct VialBuilderView: View {
                         }
                     }
 
+                    // COA correction is only for powder you reconstitute — a pre-mixed vial's
+                    // stated strength is already corrected by the pharmacy.
+                    if !isPremixed { coaCard }
+
                     Card {
                         DisclosureGroup(isExpanded: $expandExtras) {
                             VStack(alignment: .leading, spacing: Space.lg) {
@@ -654,6 +667,53 @@ struct VialBuilderView: View {
         }
     }
 
+    /// Live COA correction factor from the entered fields (1.0 when none) — for the editor readout.
+    private var coaFactorPreview: Double {
+        COACorrection.factor(assayPercent: coaAssayText.decimalValue,
+                             contentPercent: coaContentText.decimalValue,
+                             purityPercent: coaPurityText.decimalValue)
+    }
+    private var hasAnyCOAEntered: Bool {
+        [coaAssayText, coaContentText, coaPurityText].contains { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+
+    /// COA card — enter assay / content / purity (any subset) to correct the vial's true active
+    /// concentration, so doses aren't computed off the (higher) label amount. Shown for every vial.
+    private var coaCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
+                Text("Certificate of Analysis (COA)")
+                    .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Text("A peptide vial is labeled by total powder weight — but only part of that is active peptide. The rest is salt and water left over from how peptides are made and freeze-dried, so a “10 mg” vial is often only about 7–9 mg of actual peptide. If you dose off the label, you take a little less than you intend. Your COA reports the true fraction; enter whatever it lists and PinWise doses off the corrected amount — the most accurate way to reconstitute.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                FieldRow("Assay %") {
+                    HStack { TextField("e.g. 99.5", text: $coaAssayText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                FieldRow("Content %") {
+                    HStack { TextField("e.g. 88", text: $coaContentText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                FieldRow("Purity %") {
+                    HStack { TextField("e.g. 99.8", text: $coaPurityText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                Text("Enter any your COA lists. Content = how much is peptide vs. salt/water (the one that changes your dose most). Purity = the right peptide vs. related impurities. Assay = a potency check (labs define it differently).")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                if hasAnyCOAEntered {
+                    Label("True active peptide ≈ \(pctText(coaFactorPreview)) of the label weight — your concentration and doses are corrected to match.",
+                          systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.success)
+                } else {
+                    Label("No COA entered — doses will use the full label weight. A peptide vial is typically only ~70–90% active peptide, so that likely means dosing a little low.",
+                          systemImage: "info.circle.fill")
+                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                }
+            }
+        }
+    }
+    private func pctText(_ f: Double) -> String { String(format: "%.1f%%", f * 100) }
+
     private func save() {
         let vol = solventText.decimalValue ?? 0
         // Store the "dose by" anchor FIRST so it becomes the primary API — `perDoseMicrograms` is
@@ -682,6 +742,11 @@ struct VialBuilderView: View {
         // nil so their concentration display follows the dose unit.
         target.concentrationUnitRaw = isPremixed ? concentrationUnit.rawValue : nil
         target.cost = costText.decimalValue.map { Decimal($0) }
+        // COA correction applies only to powder vials — a pre-mixed vial's strength is already
+        // corrected, so clear any COA values when the vial is pre-mixed.
+        target.coaAssayPercent = isPremixed ? nil : coaAssayText.decimalValue
+        target.coaContentPercent = isPremixed ? nil : coaContentText.decimalValue
+        target.coaPurityPercent = isPremixed ? nil : coaPurityText.decimalValue
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
         // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing

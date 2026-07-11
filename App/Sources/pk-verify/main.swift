@@ -371,6 +371,20 @@ do {
     check(false, "news feed failed to decode: \(error)")
 }
 
+// MARK: - COA correction (label → true active content)
+section("COA correction")
+do {
+    check(COACorrection.factor() == 1.0, "no COA ⇒ factor 1.0 (label at face value)")
+    check(approx(COACorrection.factor(contentPercent: 88), 0.88), "content 88% ⇒ 0.88")
+    check(approx(COACorrection.factor(purityPercent: 99.8), 0.998), "purity 99.8% ⇒ 0.998")
+    // The founder's worked example: 10 mg label, assay 99.5% · content 88% · purity 99.8%.
+    let f = COACorrection.factor(assayPercent: 99.5, contentPercent: 88, purityPercent: 99.8)
+    check(abs(f - 0.8738) < 0.0005, "full stack (99.5/88/99.8) ⇒ ≈0.874")
+    let corrected = COACorrection.correctedMass(.mg(10), assayPercent: 99.5, contentPercent: 88, purityPercent: 99.8)
+    check(abs(corrected.micrograms - 8738) < 10, "10 mg label ⇒ ≈8.74 mg active")
+    check(approx(COACorrection.factor(assayPercent: 100, contentPercent: 100), 1.0), "100% values ⇒ no change")
+}
+
 // MARK: - Subjective metric quick-reports
 section("Subjective metric quick-reports")
 do {
