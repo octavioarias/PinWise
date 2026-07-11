@@ -11,6 +11,10 @@ struct PhysiqueView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var viewing: PhysiquePhoto?
+    // Multi-select: tap toggles selection instead of opening the viewer; bulk-delete the set.
+    @State private var selecting = false
+    @State private var selection: Set<PhysiquePhoto.ID> = []
+    @State private var showBulkDeleteConfirm = false
 
     private let columns = [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)]
 
@@ -20,7 +24,7 @@ struct PhysiqueView: View {
                 Text("Snap a progress photo on the same day you dose, in similar lighting and pose, to see real change over time. Photos stay on this device.")
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
-                addBar
+                if selecting { selectionBar } else { addBar }
 
                 if photos.isEmpty {
                     ContentUnavailableView("No progress photos yet",
@@ -40,6 +44,24 @@ struct PhysiqueView: View {
         .heroScreen()
         .navigationTitle("Progress photos")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !photos.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(selecting ? "Done" : "Select") {
+                        withAnimation(.snappy) {
+                            selecting.toggle()
+                            if !selecting { selection.removeAll() }
+                        }
+                    }
+                    .tint(BrandColor.accentText)
+                }
+            }
+        }
+        .confirmationDialog("Delete \(selection.count) photo\(selection.count == 1 ? "" : "s")? This can't be undone.",
+                            isPresented: $showBulkDeleteConfirm, titleVisibility: .visible) {
+            Button("Delete \(selection.count) photo\(selection.count == 1 ? "" : "s")", role: .destructive) { deleteSelected() }
+            Button("Cancel", role: .cancel) {}
+        }
         .sheet(isPresented: $showCamera) {
             CameraPicker(isPresented: $showCamera) { image in add(image) }
                 .ignoresSafeArea()
@@ -84,8 +106,29 @@ struct PhysiqueView: View {
         }
     }
 
+    /// Selection-mode action bar: select-all toggle, live count, and bulk delete.
+    private var selectionBar: some View {
+        HStack(spacing: Space.md) {
+            Button(selection.count == photos.count ? "Deselect all" : "Select all") {
+                selection = selection.count == photos.count ? [] : Set(photos.map(\.id))
+            }
+            .font(.subheadline.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+            Spacer()
+            Text("\(selection.count) selected").font(.caption).foregroundStyle(BrandColor.textSecondary)
+            Spacer()
+            Button(role: .destructive) { showBulkDeleteConfirm = true } label: {
+                Label("Delete", systemImage: "trash").font(.subheadline.weight(.semibold))
+            }
+            .disabled(selection.isEmpty)
+            .foregroundStyle(selection.isEmpty ? BrandColor.textSecondary : BrandColor.danger)
+        }
+    }
+
     private func thumbnail(_ photo: PhysiquePhoto) -> some View {
-        Button { viewing = photo } label: {
+        let isSelected = selection.contains(photo.id)
+        return Button {
+            if selecting { toggleSelection(photo) } else { viewing = photo }
+        } label: {
             ZStack(alignment: .bottomLeading) {
                 if let image = PhysiquePhotoStore.image(named: photo.filename) {
                     Image(uiImage: image)
@@ -106,10 +149,34 @@ struct PhysiqueView: View {
                     .padding(Space.sm)
             }
             .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                if selecting {
+                    Group {
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, BrandColor.accent)
+                        } else {
+                            Image(systemName: "circle").foregroundStyle(.white)
+                        }
+                    }
+                    .font(.title2)
+                    .padding(Space.sm)
+                    .shadow(radius: 2)
+                }
+            }
+            .overlay {
+                if selecting && isSelected {
+                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                        .strokeBorder(BrandColor.accent, lineWidth: 3)
+                }
+            }
         }
         .buttonStyle(.plain)
         .contextMenu {
-            Button(role: .destructive) { delete(photo) } label: { Label("Delete", systemImage: "trash") }
+            if !selecting {
+                Button(role: .destructive) { delete(photo) } label: { Label("Delete", systemImage: "trash") }
+            }
         }
     }
 
@@ -124,6 +191,21 @@ struct PhysiqueView: View {
         context.delete(photo)
         try? context.save()
         if viewing?.id == photo.id { viewing = nil }
+    }
+
+    private func toggleSelection(_ photo: PhysiquePhoto) {
+        if selection.contains(photo.id) { selection.remove(photo.id) } else { selection.insert(photo.id) }
+    }
+
+    /// Delete every selected photo (file + record) at once, then exit selection mode.
+    private func deleteSelected() {
+        for photo in photos where selection.contains(photo.id) {
+            PhysiquePhotoStore.delete(named: photo.filename)
+            context.delete(photo)
+        }
+        try? context.save()
+        selection.removeAll()
+        withAnimation(.snappy) { selecting = false }
     }
 }
 
