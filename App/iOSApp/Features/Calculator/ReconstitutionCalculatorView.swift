@@ -195,7 +195,7 @@ struct ReconstitutionCalculatorView: View {
         .sensoryFeedback(.selection, trigger: model.doseUnit)
         .sensoryFeedback(.selection, trigger: model.syringe)
         .heroScreen()
-        .navigationTitle("How much to draw")
+        .navigationTitle("Dose calculator")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.recalculate() }
         .onChange(of: model.mode) { _, _ in model.recalculate() }

@@ -17,7 +17,7 @@ struct ToolsView: View {
                         ToolCard(title: "Compound library", subtitle: "Look up peptides & evidence", systemImage: "books.vertical.fill", hue: BrandColor.data) {
                             CompoundsView()
                         }
-                        ToolCard(title: "How much to draw", subtitle: "Get your syringe amount", systemImage: "syringe.fill", hue: BrandColor.accentText) {
+                        ToolCard(title: "Dose calculator", subtitle: "How much to draw into your syringe", systemImage: "syringe.fill", hue: BrandColor.accentText) {
                             ReconstitutionCalculatorView()
                         }
                         ToolCard(title: "Check a dose", subtitle: "What a draw equals", systemImage: "arrow.uturn.backward", hue: BrandColor.accentText) {
