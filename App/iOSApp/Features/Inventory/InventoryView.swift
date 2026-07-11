@@ -676,6 +676,17 @@ struct VialBuilderView: View {
     private var hasAnyCOAEntered: Bool {
         [coaAssayText, coaContentText, coaPurityText].contains { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
     }
+    /// Concrete correction readout: shows the entered label amount → true active amount (so the
+    /// correction is visible right here), falling back to the percentage before an amount exists.
+    private var coaCorrectedReadout: String {
+        let pct = pctText(coaFactorPreview)
+        if let first = entries.first, let amt = first.amountText.decimalValue, amt > 0 {
+            let label = Mass(amt, first.unit)
+            let corrected = Mass(micrograms: label.micrograms * coaFactorPreview)
+            return "Label \(label.displayString(in: first.unit)) → true active ≈ \(corrected.displayString(in: first.unit)) (\(pct))."
+        }
+        return "True active ≈ \(pct) of the label weight."
+    }
 
     /// COA card — enter assay / content / purity (any subset) to correct the vial's true active
     /// concentration, so doses aren't computed off the (higher) label amount. Shown for every vial.
@@ -701,7 +712,7 @@ struct VialBuilderView: View {
                 Text("Enter any your COA lists. Content = how much is peptide vs. salt/water (the one that changes your dose most). Purity = the right peptide vs. related impurities. Assay = a potency check (labs define it differently).")
                     .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 if hasAnyCOAEntered {
-                    Label("True active peptide ≈ \(pctText(coaFactorPreview)) of the label weight — your concentration and doses are corrected to match.",
+                    Label("\(coaCorrectedReadout) Your doses are calculated from this corrected amount, not the label.",
                           systemImage: "checkmark.seal.fill")
                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.success)
                 } else {
