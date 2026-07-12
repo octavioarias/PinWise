@@ -50,6 +50,10 @@ targets:
         # AuthManager and require a backend + Google client ID to complete.
         com.apple.developer.applesignin:
           - Default
+        # Time Sensitive notifications: dose reminders are marked .timeSensitive so they
+        # pierce Focus / Do Not Disturb / silent mode and surface prominently on the lock
+        # screen. Without this entitlement, .timeSensitive silently degrades to .active.
+        com.apple.developer.usernotifications.time-sensitive: true
     dependencies:
       - package: PeptideKit
         product: PeptideKit

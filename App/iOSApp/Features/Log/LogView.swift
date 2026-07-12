@@ -25,9 +25,6 @@ struct LogView: View {
     @State private var showBack = false
     @State private var timestamp: Date = Date()
     @State private var notes: String = ""
-    @State private var showMetrics = false
-    @State private var energy: Double = 5
-    @State private var sideEffect: Double = 0
     @State private var savedCount = 0
     /// One-time mode: the vial the user chose to log from (nil = pick any compound).
     @State private var selectedVialID: UUID?
@@ -166,13 +163,12 @@ struct LogView: View {
         }
     }
 
-    /// Site + feelings + the log button — the "fill out the dose" section that appears once a
-    /// protocol is picked (or immediately in one-time-pin mode). Grouped so the parent VStack's
-    /// spacing flows through.
+    /// Site + the log button — the "fill out the dose" section that appears once a protocol is
+    /// picked (or immediately in one-time-pin mode). Grouped so the parent VStack's spacing flows
+    /// through. How-you-feel capture lives in the Side Effect Tracker tool, not here.
     private var entrySection: some View {
         Group {
             siteCard
-            feelCard
             PrimaryButton(title: saveTitle, systemImage: "plus") { save() }
                 .disabled(!canSave)
                 .opacity(canSave ? 1 : 0.5)
@@ -444,34 +440,6 @@ struct LogView: View {
         InjectionSite.allCases.filter { $0.isBack == showBack && $0.region == region }
     }
 
-    // MARK: Feel
-
-    private var feelCard: some View {
-        Card {
-            DisclosureGroup(isExpanded: $showMetrics) {
-                VStack(alignment: .leading, spacing: Space.md) {
-                    labeledSlider("Energy", value: $energy)
-                    labeledSlider("Side effects", value: $sideEffect)
-                }
-                .padding(.top, Space.sm)
-            } label: {
-                Text("How do you feel? (optional)").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-            }
-            .tint(BrandColor.accentText)
-        }
-    }
-
-    private func labeledSlider(_ title: String, value: Binding<Double>) -> some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            HStack {
-                Text(title).font(.caption).foregroundStyle(BrandColor.textSecondary)
-                Spacer()
-                Text("\(Int(value.wrappedValue)) / 10").font(.caption).foregroundStyle(BrandColor.textPrimary)
-            }
-            Slider(value: value, in: 0...10, step: 1).tint(BrandColor.accent)
-        }
-    }
-
     // MARK: Save
 
     private func save() {
@@ -525,8 +493,6 @@ struct LogView: View {
             notes: notes,
             vialID: vial?.id,
             didDecrement: willDecrement,
-            energy: showMetrics ? energy : nil,
-            sideEffectSeverity: showMetrics ? sideEffect : nil,
             protocolID: protocolID
         )
         context.insert(entry)

@@ -18,6 +18,7 @@ struct SideMenuDrawer: View {
         GeometryReader { geo in
             let width = geo.size.width * 0.85
             let topInset = geo.safeAreaInsets.top
+            let bottomInset = geo.safeAreaInsets.bottom
             // Nothing renders while closed — the drawer is fully absent until opened, then it
             // slides in from the left and stops at 85% width, leaving the dimmed page beyond it.
             ZStack(alignment: .leading) {
@@ -28,7 +29,7 @@ struct SideMenuDrawer: View {
                         .onTapGesture { isOpen = false }
                         .transition(.opacity)
 
-                    panel(topInset: topInset)
+                    panel(topInset: topInset, bottomInset: bottomInset)
                         .frame(width: width, alignment: .topLeading)
                         .frame(maxHeight: .infinity, alignment: .top)
                         // Tinted glass over the dimmed app content — the 0.55 scrim also dims what
@@ -52,7 +53,7 @@ struct SideMenuDrawer: View {
         .sheet(item: $route) { $0.view }
     }
 
-    private func panel(topInset: CGFloat) -> some View {
+    private func panel(topInset: CGFloat, bottomInset: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("PinWise")
@@ -117,7 +118,8 @@ struct SideMenuDrawer: View {
                 }
                 .padding(.horizontal, Space.lg)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: Space.md)
+            socialFooter(bottomInset: bottomInset)
         }
         .confirmationDialog("Sign out?", isPresented: $showSignOut, titleVisibility: .visible) {
             Button("Sign out", role: .destructive) {
@@ -150,6 +152,50 @@ struct SideMenuDrawer: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+
+    /// Pinned to the bottom of the drawer: follow / community outlets. Brand logo to the LEFT of
+    /// each handle. Pure outbound `Link`s (no in-app browser, no tracking) — consistent with the
+    /// local-first, no-analytics posture; these inform/point out, they don't advise.
+    private func socialFooter(bottomInset: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            Divider().overlay(BrandColor.stroke)
+            Text("Follow along")
+                .font(Typo.caption).fontWeight(.semibold).tracking(1.2)
+                .foregroundStyle(BrandColor.textSecondary)
+            socialLink("SocialX", "@PinWiseApp", "https://x.com/PinWiseApp")
+            socialLink("SocialInstagram", "@PinWiseApp", "https://instagram.com/PinWiseApp")
+            socialLink("SocialTikTok", "@PinWiseApp", "https://tiktok.com/@PinWiseApp")
+            socialLink("SocialReddit", "u/TavioTheScientist", "https://reddit.com/user/TavioTheScientist")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Space.xl)
+        .padding(.top, Space.sm)
+        // Panel ignores the safe area, so pad the bottom inset manually (mirrors the top).
+        .padding(.bottom, bottomInset + Space.md)
+    }
+
+    @ViewBuilder
+    private func socialLink(_ asset: String, _ handle: String, _ urlString: String) -> some View {
+        if let url = URL(string: urlString) {
+            Link(destination: url) {
+                HStack(spacing: Space.md) {
+                    Image(asset)
+                        .resizable().interpolation(.high).scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    Text(handle).font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(BrandColor.textSecondary)
+                }
+                .padding(.vertical, Space.xs)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(handle) on \(asset.replacingOccurrences(of: "Social", with: ""))")
+        }
     }
 
     private func row(_ icon: String, _ title: String, _ dest: MenuRoute) -> some View {
@@ -217,7 +263,7 @@ struct HealthConnectionsView: View {
 
     var body: some View {
         MenuSheet(title: "Connections") {
-            Text("PinWise reads from Apple Health. Connect once and it shows your weight, resting heart rate, HRV, sleep, and steps — including whatever your Oura Ring, Whoop, Apple Fitness, or Garmin write into Apple Health. No separate logins.")
+            Text("PinWise reads your data from Apple Health — it never connects to your ring or watch directly. Your Oura, Whoop, Apple Watch, or Garmin writes into Apple Health, and PinWise reads it back out. Both sides need Apple Health sharing turned on, or nothing flows. You'll see standard metrics — weight, resting heart rate, HRV, sleep, steps — not app-specific scores like Oura Readiness. No separate logins.")
                 .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
             HealthWidget()
             Card {

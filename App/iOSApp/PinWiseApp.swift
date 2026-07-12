@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import UIKit
+import UserNotifications
 import PeptideKit
 
 // App entry point for the iOS target. Add this file (and the rest of App/iOSApp/)
@@ -7,6 +9,9 @@ import PeptideKit
 // Fastest setup: `cd App && xcodegen generate` (see App/iOSApp/README.md).
 @main
 struct PinWiseApp: App {
+    // Owns the notification-center delegate so dose reminders show even when PinWise is open.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -15,6 +20,23 @@ struct PinWiseApp: App {
         // + CloudKit capability and a ModelConfiguration(cloudKitDatabase:) — the model is
         // already CloudKit-safe (see LoggedDose).
         .modelContainer(for: [LoggedDose.self, SavedProtocol.self, StoredVial.self, SymptomEntry.self, BiomarkerEntry.self, CustomCompound.self, PhysiquePhoto.self])
+    }
+}
+
+/// Registers as the notification-center delegate so scheduled dose reminders present while
+/// PinWise is in the foreground — iOS suppresses them by default, which makes an in-app dose
+/// reminder useless (people often have the app open around dose time).
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    // Foreground presentation: banner + sound + Notification Center entry, same as when closed.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound]
     }
 }
 

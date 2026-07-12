@@ -58,6 +58,10 @@ enum NotificationManager {
                 // mentions BPC-157 invites logging half the injection.
                 content.body = "\(p.name): \(p.effectiveDose.displayString(in: p.doseUnit(vials: vials))) — \(p.fullContentsSummary(vials: vials))"
                 content.sound = .default
+                // Time Sensitive: a dose reminder should break through Focus / Do Not Disturb /
+                // silent and surface on the locked screen (paired with the time-sensitive
+                // entitlement in project.yml). Without the entitlement iOS degrades this to .active.
+                content.interruptionLevel = .timeSensitive
 
                 let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
                 let request = UNNotificationRequest(

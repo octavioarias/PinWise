@@ -88,6 +88,51 @@ public struct NewsFeed: Codable, Hashable, Sendable {
     /// "Popular" view — items ranked by editorial score, high to low.
     public var trending: [NewsItem] { items.sorted { $0.popularity > $1.popularity } }
 
+    /// The default feed order: newest first, with the editorial popularity score boosting the
+    /// top so a story that's both *recent* and *popular* leads. Recency is a bounded, gently
+    /// decaying signal (180-day half-life) rather than a raw age subtraction — so a landmark
+    /// trial from years ago isn't buried purely by date, but among fresh stories the more
+    /// popular one wins, and among old stories popularity fully decides the order. Ties break on
+    /// the raw `publishedAt` string so the ordering is always deterministic.
+    ///
+    /// `asOf` is injectable for deterministic testing; callers in the app pass the default.
+    func rankScore(_ item: NewsItem, asOf now: Date) -> Double {
+        let recency: Double
+        if let published = NewsFeed.parseDate(item.publishedAt) {
+            let ageDays = Swift.max(0, now.timeIntervalSince(published) / 86_400)
+            recency = 100 * pow(0.5, ageDays / 180)   // ~100 when fresh, ~50 at 6 months, →0 when old
+        } else {
+            recency = 0
+        }
+        // Both signals live on a comparable 0–100 scale and are summed with equal footing:
+        // recency leads for genuinely new stories; popularity carries the rest.
+        return recency + Double(item.popularity)
+    }
+
+    /// Items in the blended recency+popularity order (see `rankScore`). Scores each item ONCE
+    /// (decorate–sort–undecorate) rather than re-scoring inside the sort comparator — the old
+    /// version re-parsed dates O(n log n) times, which froze the News tab.
+    public func ranked(asOf now: Date = Date()) -> [NewsItem] {
+        items
+            .map { (item: $0, score: rankScore($0, asOf: now)) }
+            .sorted { $0.score != $1.score ? $0.score > $1.score : $0.item.publishedAt > $1.item.publishedAt }
+            .map(\.item)
+    }
+
+    /// Parses a feed item's `publishedAt` into a Date. Reads the leading `yyyy-MM-dd` directly
+    /// instead of allocating an `ISO8601DateFormatter`/`DateFormatter` per call — formatter
+    /// allocation is far too slow to do on a hot path (it pegged the main thread and froze the
+    /// News tab). Day granularity is all the recency ranking and date display need.
+    public static func parseDate(_ iso: String) -> Date? {
+        let parts = iso.prefix(10).split(separator: "-")
+        guard parts.count == 3,
+              let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) else { return nil }
+        var comps = DateComponents()
+        comps.year = y; comps.month = m; comps.day = d
+        comps.timeZone = TimeZone(identifier: "UTC")
+        return Calendar(identifier: .gregorian).date(from: comps)
+    }
+
     /// Items mentioning a given compound (for the per-compound news filter).
     public func items(mentioning compound: String) -> [NewsItem] {
         items.filter { $0.compounds.contains(compound) }

@@ -335,6 +335,15 @@ do {
     let feed = try NewsFeed.decodeSample()
     check(feed.items.count == 37, "sample feed decodes 37 items")
     check(feed.trending.first?.popularity == feed.items.map(\.popularity).max(), "trending sorted by popularity")
+    // Default feed order = blended recency + popularity (fixed asOf for determinism).
+    let rankAsOf = ISO8601DateFormatter().date(from: "2026-07-11T00:00:00Z")!
+    let ranked = feed.ranked(asOf: rankAsOf)
+    check(ranked.count == feed.items.count, "ranked returns every item")
+    check(ranked.first?.id == "fda-bpc157-pcac-2026-07", "ranked leads with the recent + popular story")
+    // Recency boost: a recent, lower-popularity item outranks an old, higher-popularity one.
+    let recentIdx = ranked.firstIndex { $0.id == "bpc157-evidence-review-2026" }   // pop 70, 2026-05
+    let oldPopularIdx = ranked.firstIndex { $0.id == "reta-phase2-obesity-2023" }  // pop 96, 2023-06
+    check((recentIdx ?? .max) < (oldPopularIdx ?? .min), "recency lifts a newer story above an older, more-popular one")
     check(!feed.items(mentioning: "Retatrutide").isEmpty, "can filter items by compound")
     check(feed.majorUpdates.count == 5, "5 items flagged as major updates")
     // Editorial contract — the transparency guarantees, enforced in code:

@@ -18,12 +18,10 @@ private extension NewsCategory {
     }
 }
 
-/// Parses a feed item's `publishedAt` (ISO-8601, or a bare `yyyy-MM-dd` fallback) into a Date.
-func newsDate(_ iso: String) -> Date? {
-    if let d = ISO8601DateFormatter().date(from: iso) { return d }
-    let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = TimeZone(identifier: "UTC")
-    return df.date(from: String(iso.prefix(10)))
-}
+/// Parses a feed item's `publishedAt` into a Date. Delegates to `NewsFeed.parseDate`, which
+/// reads `yyyy-MM-dd` directly — NEVER allocate an `ISO8601DateFormatter` here: this runs per
+/// row, per render, and on every scroll-visibility change, and formatter allocation froze the tab.
+func newsDate(_ iso: String) -> Date? { NewsFeed.parseDate(iso) }
 
 /// Formats a feed item's `publishedAt` as a friendly abbreviated date (falls back to the raw
 /// date substring if parsing ever fails).
@@ -109,7 +107,9 @@ struct NewsView: View {
         }
     }
 
-    private var items: [NewsItem] { feed.trending }
+    // Blended recency + popularity order (see NewsFeed.rankScore): the top stories are the ones
+    // that are both recently published and popular; everything flows newest-leaning from there.
+    private var items: [NewsItem] { feed.ranked() }
     private var isFiltering: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil || myStack
     }
@@ -126,9 +126,9 @@ struct NewsView: View {
         guard let featured, !userCompounds.isEmpty else { return false }
         return matchesStack(featured)
     }
-    /// "Latest" = everything else, newest first.
+    /// "Latest" = everything else, kept in the feed's blended recency+popularity order.
     private var latest: [NewsItem] {
-        items.filter { $0.id != featured?.id }.sorted { $0.publishedAt > $1.publishedAt }
+        items.filter { $0.id != featured?.id }
     }
     private var results: [NewsItem] {
         items.filter { item in

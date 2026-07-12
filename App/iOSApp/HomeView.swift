@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 import PeptideKit
 
 /// The dashboard — a personalized overview of *your* setup: how on-track you are, the stack
@@ -383,6 +384,79 @@ struct HomeHealthCard: View {
         return Array(out.prefix(6))
     }
 
+    // MARK: - Inline weight plot
+
+    private struct WeightPoint: Identifiable { let date: Date; let value: Double; var id: Date { date } }
+
+    /// Logged weight readings, oldest→newest, normalized to the current display unit so a
+    /// mixed lb/kg history plots on one scale. Legacy rows (no stored unit) are assumed to
+    /// already be in the active preference. HealthKit exposes only the latest weight, not a
+    /// series, so the plot is drawn from the user's logged biomarker entries.
+    private var weightPoints: [WeightPoint] {
+        biomarkers
+            .filter { $0.typeRaw == BiomarkerType.weight.rawValue }
+            .sorted { $0.timestamp < $1.timestamp }
+            .map { e in
+                let kg: Double
+                switch e.unitRaw {
+                case "lb": kg = e.value / 2.20462
+                case "kg": kg = e.value
+                default: return WeightPoint(date: e.timestamp, value: e.value)
+                }
+                return WeightPoint(date: e.timestamp, value: pounds ? kg * 2.20462 : kg)
+            }
+    }
+
+    /// A compact weight sparkline with its latest value and a neutral delta — direction only,
+    /// no status color (weight down is a GLP-1 goal but a bulking-phase loss; never judged).
+    @ViewBuilder
+    private var weightTrend: some View {
+        let pts = weightPoints
+        let values = pts.map(\.value)
+        let latest = values.last ?? 0
+        let lo = values.min() ?? 0
+        let hi = values.max() ?? 1
+        let pad = (hi - lo) > 0 ? (hi - lo) * 0.15 : Swift.max(hi * 0.05, 1)
+        let base = Swift.max(0, lo - pad)
+        let delta = pts.count >= 2 ? latest - values[values.count - 2] : nil
+
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                MicroLabel("Weight")
+                Spacer()
+                Text(String(format: pounds ? "%.0f" : "%.1f", latest))
+                    .font(Typo.statValue).foregroundStyle(BrandColor.textPrimary)
+                Text(pounds ? "lb" : "kg")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                if let delta {
+                    HStack(spacing: 2) {
+                        Image(systemName: delta < 0 ? "arrow.down" : "arrow.up")
+                            .font(.system(size: 8, weight: .bold))
+                        Text(String(format: pounds ? "%.0f" : "%.1f", abs(delta)))
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(BrandColor.textSecondary)
+                }
+            }
+            Chart {
+                ForEach(pts) { p in
+                    AreaMark(x: .value("Date", p.date), yStart: .value("Base", base), yEnd: .value("Weight", p.value))
+                        .foregroundStyle(LinearGradient(colors: [BrandColor.data.opacity(0.18), BrandColor.data.opacity(0)], startPoint: .top, endPoint: .bottom))
+                        .interpolationMethod(.monotone)
+                    LineMark(x: .value("Date", p.date), y: .value("Weight", p.value))
+                        .foregroundStyle(BrandColor.data)
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .interpolationMethod(.monotone)
+                }
+            }
+            .chartYScale(domain: base...(hi + pad))
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartLegend(.hidden)
+            .frame(height: 48)
+        }
+    }
+
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.md) {
@@ -434,7 +508,11 @@ struct HomeHealthCard: View {
                     }
                 } else {
                     NavigationLink { BiomarkersView() } label: {
-                        HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: Space.md) {
+                            // A weight plot lives right in the card when there's a logged trend —
+                            // the headline metric people watch on a GLP-1/peptide protocol.
+                            if weightPoints.count >= 2 { weightTrend }
+
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
                                 ForEach(metrics) { m in
                                     VStack(alignment: .leading, spacing: 2) {
@@ -444,7 +522,15 @@ struct HomeHealthCard: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
-                            Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+
+                            // Quiet "see all" affordance instead of a bare chevron floating mid-card.
+                            HStack(spacing: 4) {
+                                Spacer()
+                                Text("View all metrics")
+                                Image(systemName: "chevron.right").font(.caption2.weight(.bold))
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BrandColor.accentText)
                         }
                     }
                     .buttonStyle(PressableStyle())
