@@ -1,83 +1,83 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-11T16:13:00.040Z",
+  "generatedAt": "2026-07-12T16:16:20.375Z",
   "items": [
     {
-      "id": "pm-42433615",
-      "headline": "Auditable large language model curation of clinical notes refines glucagon-like peptide-1…",
-      "summary": "Published in Biol Methods Protoc (2026). See the source for details.",
+      "id": "pm-42328738",
+      "headline": "Rapid and harmonized analytical workflow for the determination of peptidic and non-peptid…",
+      "summary": "Published in Analyst (2026 Jun 22). See the source for details.",
       "category": "General",
       "compounds": [
-        "Tirzepatide"
+        "BPC-157"
       ],
       "sources": [
         {
-          "name": "PubMed (42433615)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42433615/",
+          "name": "PubMed (42328738)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42328738/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-11T16:12:59.488Z",
+      "publishedAt": "2026-07-12T16:16:20.375Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 100,
       "isMajorUpdate": true
     },
     {
-      "id": "pm-42433852",
-      "headline": "Off-label GLP-1 receptor agonist and tirzepatide use for weight loss: patient safety and…",
-      "summary": "Published in Ann Med Surg (Lond) (2026 Jul). See the source for details.",
+      "id": "pm-42356491",
+      "headline": "Unilateral Adrenalectomy, and the Stable Pentadecapeptide BPC 157 as Therapy in Rats-A Cy…",
+      "summary": "Published in Pharmaceuticals (Basel) (2026 May 30). See the source for details.",
       "category": "General",
       "compounds": [
-        "Tirzepatide"
+        "BPC-157"
       ],
       "sources": [
         {
-          "name": "PubMed (42433852)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42433852/",
+          "name": "PubMed (42356491)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42356491/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-11T16:12:59.488Z",
+      "publishedAt": "2026-07-12T16:16:20.375Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 95,
       "isMajorUpdate": true
     },
     {
-      "id": "pm-42433972",
-      "headline": "Déjà vu! A Case of Recurrent Metabolic Dysfunction-Associated Steatohepatitis 70 Days Aft…",
-      "summary": "Published in ACG Case Rep J (2026 Jul). See the source for details.",
+      "id": "pm-42436546",
+      "headline": "Semaglutide alters behaviour and nucleus accumbens oscillatory activity in healthy mice",
+      "summary": "Published in Mol Brain (2026 Jul 11). See the source for details.",
       "category": "General",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "PubMed (42433972)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42433972/",
+          "name": "PubMed (42436546)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42436546/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-11T16:12:59.109Z",
+      "publishedAt": "2026-07-12T16:16:18.954Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 90,
       "isMajorUpdate": false
     },
     {
-      "id": "pm-42434480",
-      "headline": "Direct effects of glucagon-like Peptide-1 receptor agonists on mitochondrial function in…",
-      "summary": "Published in Metabol Open (2026 Sep). See the source for details.",
+      "id": "pm-42436850",
+      "headline": "Understanding reasons for initiation and experience with tirzepatide among individuals wi…",
+      "summary": "Published in Obes Pillars (2026 Sep). See the source for details.",
       "category": "General",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "PubMed (42434480)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42434480/",
+          "name": "PubMed (42436850)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42436850/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-11T16:12:59.109Z",
+      "publishedAt": "2026-07-12T16:16:18.953Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 85,
       "isMajorUpdate": false
