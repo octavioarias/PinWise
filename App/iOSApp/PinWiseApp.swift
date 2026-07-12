@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import StoreKit
 import UserNotifications
 import PeptideKit
 
@@ -55,7 +56,6 @@ struct RootView: View {
     @AppStorage("firstLaunchAt") private var firstLaunchAt: Double = 0
     @AppStorage("reviewLastMilestone") private var reviewLastMilestone: Int = 0
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.requestReview) private var requestReview
     @State private var auth = AuthManager.shared
 
     /// The app starts the week on MONDAY — so every calendar/date-picker grid lays out
@@ -78,10 +78,12 @@ struct RootView: View {
     @MainActor private func maybeRequestReview() {
         guard gatesClear, firstLaunchAt > 0 else { return }
         let days = Int((Date().timeIntervalSinceReferenceDate - firstLaunchAt) / 86_400)
-        if let milestone = ReviewPrompt.due(daysSinceInstall: days, lastFired: reviewLastMilestone) {
-            reviewLastMilestone = milestone   // record first, so it never double-fires
-            requestReview()
-        }
+        guard let milestone = ReviewPrompt.due(daysSinceInstall: days, lastFired: reviewLastMilestone),
+              let scene = UIApplication.shared.connectedScenes
+                  .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+        else { return }
+        reviewLastMilestone = milestone   // record only once we actually request, so it never repeats
+        AppStore.requestReview(in: scene)
     }
 
     var body: some View {
