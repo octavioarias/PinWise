@@ -458,6 +458,19 @@ do {
     check(false, "DoseDrawResult section threw: \(error)")
 }
 
+// MARK: - Review-prompt milestones
+section("Review prompt milestones")
+do {
+    check(ReviewPrompt.milestones == [8, 30, 60], "milestones are day 8, 30, 60")
+    check(ReviewPrompt.due(daysSinceInstall: 7, lastFired: 0) == nil, "day 7 ⇒ no prompt yet")
+    check(ReviewPrompt.due(daysSinceInstall: 8, lastFired: 0) == 8, "day 8 ⇒ prompt (milestone 8)")
+    check(ReviewPrompt.due(daysSinceInstall: 8, lastFired: 8) == nil, "day 8 already fired ⇒ no re-prompt")
+    check(ReviewPrompt.due(daysSinceInstall: 30, lastFired: 8) == 30, "day 30 after day-8 fired ⇒ milestone 30")
+    check(ReviewPrompt.due(daysSinceInstall: 40, lastFired: 0) == 30, "opened at day 40 cold ⇒ one prompt (30), not a backlog")
+    check(ReviewPrompt.due(daysSinceInstall: 65, lastFired: 30) == 60, "day 65 after day-30 fired ⇒ milestone 60")
+    check(ReviewPrompt.due(daysSinceInstall: 100, lastFired: 60) == nil, "past day 60 ⇒ no further prompts")
+}
+
 // MARK: - Summary
 print("\n\(failures == 0 ? "✅ PASS" : "❌ FAIL") — \(checks - failures)/\(checks) checks passed")
 exit(failures == 0 ? 0 : 1)
