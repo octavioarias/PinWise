@@ -340,6 +340,9 @@ struct HomeView: View {
 
     private var nextDoseText: String {
         guard let d = nextDoseDate else { return "—" }
+        let cal = Calendar.current
+        if cal.isDateInToday(d) { return "Today" }
+        if cal.isDateInTomorrow(d) { return "Tomorrow" }
         return d.formatted(.dateTime.weekday(.abbreviated).month().day())
     }
 }
