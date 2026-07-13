@@ -75,7 +75,7 @@ struct WelcomeView: View {
                         Text("Have an account?")
                             .foregroundStyle(BrandColor.textSecondary)
                         Button { auth.startEmailSignIn() } label: {
-                            Text("Log in").fontWeight(.semibold).foregroundStyle(BrandColor.accentText)
+                            Text("Log in").fontWeight(.semibold).foregroundStyle(Color(hex: 0x18E39A))
                         }
                         .buttonStyle(.plain)
                     }
