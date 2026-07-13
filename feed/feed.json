@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-12T16:16:20.375Z",
+  "generatedAt": "2026-07-13T18:51:05.289Z",
   "items": [
     {
       "id": "pm-42328738",
@@ -17,7 +17,7 @@
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-12T16:16:20.375Z",
+      "publishedAt": "2026-07-13T18:51:05.289Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 100,
       "isMajorUpdate": true
@@ -37,89 +37,109 @@
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-12T16:16:20.375Z",
+      "publishedAt": "2026-07-13T18:51:05.289Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 95,
       "isMajorUpdate": true
     },
     {
-      "id": "pm-42436546",
-      "headline": "Semaglutide alters behaviour and nucleus accumbens oscillatory activity in healthy mice",
-      "summary": "Published in Mol Brain (2026 Jul 11). See the source for details.",
+      "id": "pm-42439433",
+      "headline": "Severe Perioperative Lactic Acidosis and Hyperglycemia Responsive to Thiamine in a Patien…",
+      "summary": "Published in A A Pract (2026 Jul 1). See the source for details.",
       "category": "General",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "PubMed (42436546)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42436546/",
+          "name": "PubMed (42439433)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42439433/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-12T16:16:18.954Z",
+      "publishedAt": "2026-07-13T18:51:04.180Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 90,
       "isMajorUpdate": false
     },
     {
-      "id": "pm-42436850",
-      "headline": "Understanding reasons for initiation and experience with tirzepatide among individuals wi…",
-      "summary": "Published in Obes Pillars (2026 Sep). See the source for details.",
+      "id": "pm-42440093",
+      "headline": "Sustained metabolic control in latent autoimmune diabetes in adults (LADA) with semagluti…",
+      "summary": "Published in Acta Diabetol (2026 Jul 13). See the source for details.",
       "category": "General",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "PubMed (42436850)",
-          "url": "https://pubmed.ncbi.nlm.nih.gov/42436850/",
+          "name": "PubMed (42440093)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/42440093/",
           "kind": "journal"
         }
       ],
-      "publishedAt": "2026-07-12T16:16:18.953Z",
+      "publishedAt": "2026-07-13T18:51:04.179Z",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 85,
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT03884075",
-      "headline": "Non-Alcoholic Fatty Liver Disease, the HEpatic Response to Oral Glucose, and the Effect o…",
-      "summary": "PHASE2 trial for Non-Alcoholic Steatohepatitis, Non-Alcoholic Fatty Liver Disease. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-07-10.",
+      "id": "ct-NCT07700030",
+      "headline": "High-protein plUs reSistance Training in gLucagon-like pEptide 1 Receptor Agonist Users (…",
+      "summary": "NA trial for Weight Loss. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-13.",
       "category": "Trial results",
       "compounds": [
-        "Semaglutide"
+        "Tirzepatide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT03884075)",
-          "url": "https://clinicaltrials.gov/study/NCT03884075",
+          "name": "ClinicalTrials.gov (NCT07700030)",
+          "url": "https://clinicaltrials.gov/study/NCT07700030",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-10",
+      "publishedAt": "2026-07-13",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 80,
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT07653412",
-      "headline": "Precision Obesity Medicine: Genetic Prediction of Response to GLP-1/GIP Agonists.",
-      "summary": "trial for Obesity (Disorder), Anti-obesity Agents. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-07-10.",
+      "id": "ct-NCT07697391",
+      "headline": "AI-Assisted Lifestyle Intervention Versus Tirzepatide for Obesity and Newly Diagnosed Typ…",
+      "summary": "PHASE4 trial for Obesity, Diabetes Mellitus, Type 2. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-13.",
+      "category": "Trial results",
+      "compounds": [
+        "Tirzepatide"
+      ],
+      "sources": [
+        {
+          "name": "ClinicalTrials.gov (NCT07697391)",
+          "url": "https://clinicaltrials.gov/study/NCT07697391",
+          "kind": "trial"
+        }
+      ],
+      "publishedAt": "2026-07-13",
+      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
+      "popularity": 75,
+      "isMajorUpdate": false
+    },
+    {
+      "id": "ct-NCT07249554",
+      "headline": "Combination Therapy for Alcohol Use Disorder",
+      "summary": "PHASE2 trial for Alcohol Use Disorder. According to ClinicalTrials.gov, its status is NOT_YET_RECRUITING, last updated 2026-07-13.",
       "category": "Trial results",
       "compounds": [
         "Semaglutide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT07653412)",
-          "url": "https://clinicaltrials.gov/study/NCT07653412",
+          "name": "ClinicalTrials.gov (NCT07249554)",
+          "url": "https://clinicaltrials.gov/study/NCT07249554",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-10",
+      "publishedAt": "2026-07-13",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
-      "popularity": 75,
+      "popularity": 70,
       "isMajorUpdate": false
     },
     {
@@ -139,45 +159,25 @@
       ],
       "publishedAt": "2026-07-10",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
-      "popularity": 70,
-      "isMajorUpdate": false
-    },
-    {
-      "id": "ct-NCT07417618",
-      "headline": "INcreTin-based thERapies for Cardiovascular Event PrevenTion in Patients With and Without…",
-      "summary": "trial for Type 2 Diabetes, Overweight. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-07-09.",
-      "category": "Trial results",
-      "compounds": [
-        "Tirzepatide"
-      ],
-      "sources": [
-        {
-          "name": "ClinicalTrials.gov (NCT07417618)",
-          "url": "https://clinicaltrials.gov/study/NCT07417618",
-          "kind": "trial"
-        }
-      ],
-      "publishedAt": "2026-07-09",
-      "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 65,
       "isMajorUpdate": false
     },
     {
-      "id": "ct-NCT07619508",
-      "headline": "Tirzepatide vs Semaglutide in Individuals at Cardiovascular Risk But Without Diabetes.",
-      "summary": "trial for Obesity, Overweight. According to ClinicalTrials.gov, its status is COMPLETED, last updated 2026-07-09.",
+      "id": "ct-NCT07653412",
+      "headline": "Precision Obesity Medicine: Genetic Prediction of Response to GLP-1/GIP Agonists.",
+      "summary": "trial for Obesity (Disorder), Anti-obesity Agents. According to ClinicalTrials.gov, its status is RECRUITING, last updated 2026-07-10.",
       "category": "Trial results",
       "compounds": [
-        "Tirzepatide"
+        "Semaglutide"
       ],
       "sources": [
         {
-          "name": "ClinicalTrials.gov (NCT07619508)",
-          "url": "https://clinicaltrials.gov/study/NCT07619508",
+          "name": "ClinicalTrials.gov (NCT07653412)",
+          "url": "https://clinicaltrials.gov/study/NCT07653412",
           "kind": "trial"
         }
       ],
-      "publishedAt": "2026-07-09",
+      "publishedAt": "2026-07-10",
       "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician.",
       "popularity": 60,
       "isMajorUpdate": false
