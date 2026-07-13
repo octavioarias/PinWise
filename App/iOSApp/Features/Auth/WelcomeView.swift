@@ -5,7 +5,8 @@ import PeptideKit
 /// First-launch sign-in gate. Cinematic hero: two stainless-steel vials (Retatrutide + GLOW)
 /// over a teal→blue glow on pitch black, then the PinWise mark, tagline, and auth. Sign in with
 /// Apple works on-device; "Continue as guest" keeps the app usable locally; "Log in" routes to
-/// the (backend-pending) email path. Terms/Privacy reachable before authenticating.
+/// the (backend-pending) email path. Terms/Privacy reachable before authenticating. The whole
+/// block is vertically centered.
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
     @State private var showLegal = false
@@ -16,24 +17,23 @@ struct WelcomeView: View {
 
             // Teal → blue glow, strictly behind the vials.
             RadialGradient(
-                colors: [Color(hex: 0x22E0B0).opacity(0.34), Color(hex: 0x1E9CC8).opacity(0.22), .clear],
-                center: .center, startRadius: 0, endRadius: 260
+                colors: [Color(hex: 0x22E0B0).opacity(0.32), Color(hex: 0x1E9CC8).opacity(0.20), .clear],
+                center: .center, startRadius: 0, endRadius: 220
             )
-            .frame(width: 440, height: 440)
-            .blur(radius: 75)
-            .offset(y: -220)
+            .frame(width: 380, height: 380)
+            .blur(radius: 72)
+            .offset(y: -150)
             .ignoresSafeArea()
             .accessibilityHidden(true)
 
             VStack(spacing: 0) {
+                Spacer(minLength: 0)
+
                 Image("VialsHero")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 330)
-                    .padding(.top, 24)
+                    .frame(maxWidth: 231)
                     .accessibilityHidden(true)
-
-                Spacer(minLength: 4)
 
                 VStack(spacing: Space.md) {
                     Text("PinWise")
@@ -83,9 +83,11 @@ struct WelcomeView: View {
                     .buttonStyle(.plain)
                     .padding(.top, 2)
                 }
-                .padding(.horizontal, Space.xl)
-                .padding(.bottom, Space.lg)
+                .padding(.top, Space.xl)
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, Space.xl)
         }
         .tint(BrandColor.accent)
         .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
