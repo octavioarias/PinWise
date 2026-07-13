@@ -19,9 +19,9 @@ struct WelcomeView: View {
                 colors: [Color(hex: 0x22E0B0).opacity(0.34), Color(hex: 0x1E9CC8).opacity(0.22), .clear],
                 center: .center, startRadius: 0, endRadius: 260
             )
-            .frame(width: 460, height: 460)
+            .frame(width: 440, height: 440)
             .blur(radius: 75)
-            .offset(y: -160)
+            .offset(y: -220)
             .ignoresSafeArea()
             .accessibilityHidden(true)
 
@@ -29,9 +29,8 @@ struct WelcomeView: View {
                 Image("VialsHero")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 8)
-                    .padding(.top, 20)
+                    .frame(maxWidth: 330)
+                    .padding(.top, 24)
                     .accessibilityHidden(true)
 
                 Spacer(minLength: 4)
