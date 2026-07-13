@@ -3,10 +3,10 @@ import AuthenticationServices
 import PeptideKit
 
 /// First-launch sign-in gate. Cinematic hero: two stainless-steel vials (Retatrutide + GLOW)
-/// over a teal→blue glow on pitch black, then the PinWise mark, tagline, and auth. Sign in with
+/// over a teal→blue glow on pitch black, then the PinWise mark + tagline, then auth — three
+/// groups with generous vertical spacing, the whole block vertically centered. Sign in with
 /// Apple works on-device; "Continue as guest" keeps the app usable locally; "Log in" routes to
-/// the (backend-pending) email path. Terms/Privacy reachable before authenticating. The whole
-/// block is vertically centered.
+/// the (backend-pending) email path. Terms/Privacy reachable before authenticating.
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
     @State private var showLegal = false
@@ -22,30 +22,37 @@ struct WelcomeView: View {
             )
             .frame(width: 380, height: 380)
             .blur(radius: 72)
-            .offset(y: -150)
+            .offset(y: -170)
             .ignoresSafeArea()
             .accessibilityHidden(true)
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
+                // 1 — Vials
                 Image("VialsHero")
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: 231)
                     .accessibilityHidden(true)
 
-                VStack(spacing: Space.md) {
+                Spacer().frame(height: 52)
+
+                // 2 — Name + description
+                VStack(spacing: 10) {
                     Text("PinWise")
                         .font(.system(size: 33, weight: .bold))
                         .foregroundStyle(.white)
-
                     Text("Real science for peptides.\nThe source of truth for dose tracking.")
                         .font(.system(size: 15))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(BrandColor.textSecondary)
-                        .padding(.bottom, Space.xs)
+                }
 
+                Spacer().frame(height: 48)
+
+                // 3 — Auth
+                VStack(spacing: Space.md) {
                     SignInWithAppleButton(.continue) { request in
                         request.requestedScopes = [.fullName, .email]
                     } onCompletion: { auth.completeAppleSignIn($0) }
@@ -83,7 +90,6 @@ struct WelcomeView: View {
                     .buttonStyle(.plain)
                     .padding(.top, 2)
                 }
-                .padding(.top, Space.xl)
 
                 Spacer(minLength: 0)
             }
