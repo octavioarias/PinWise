@@ -31,10 +31,10 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        # Launch: metallic PW icon tile over a teal/green glow on PURE BLACK (mirrors the login
-        # glow) + PinWise wordmark. Config must live HERE — xcodegen regenerates Info.plist.
-        # Bumping the storyboard filename (V11 = black bg + smooth hi-res glow) is a fresh launch-snapshot cache key.
-        UILaunchStoryboardName: LaunchScreenV11
+        # Launch: metallic PW icon tile on PURE BLACK + PinWise wordmark (no glow — founder removed it).
+        # Config must live HERE — xcodegen regenerates Info.plist. Bumping the storyboard filename
+        # (V12 = black bg, no glow) is a fresh launch-snapshot cache key.
+        UILaunchStoryboardName: LaunchScreenV12
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false

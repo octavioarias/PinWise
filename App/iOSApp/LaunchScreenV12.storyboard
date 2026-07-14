@@ -8,10 +8,9 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!-- Launch: PURE-BLACK bg + a soft teal/green glow behind the app-icon tile (mirrors the login /
-             onboarding "Continue with Apple" glow), muted footnote wordmark at the bottom. V10 filename =
-             fresh launch-snapshot cache key; launch is ALWAYS dark by founder direction. Glow/icon/wordmark
-             are PIL/CoreGraphics renders in the asset catalog. -->
+        <!-- Launch: PURE-BLACK bg, metallic app-icon tile centered, muted footnote wordmark at the bottom.
+             No glow (founder removed it — a subtle radial reads as low-res/banded on the launch snapshot).
+             V12 filename = fresh launch-snapshot cache key; launch is ALWAYS dark by founder direction. -->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -19,13 +18,6 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchGlow" translatesAutoresizingMaskIntoConstraints="NO" id="glo-01">
-                                <rect key="frame" x="-53.5" y="176" width="500" height="500"/>
-                                <constraints>
-                                    <constraint firstAttribute="width" constant="500" id="glo-w"/>
-                                    <constraint firstAttribute="height" constant="500" id="glo-h"/>
-                                </constraints>
-                            </imageView>
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="icn-01">
                                 <rect key="frame" x="130.5" y="360" width="132" height="132"/>
                                 <constraints>
@@ -44,8 +36,6 @@
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <constraint firstItem="glo-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-g1"/>
-                            <constraint firstItem="glo-01" firstAttribute="centerY" secondItem="icn-01" secondAttribute="centerY" id="cst-g2"/>
                             <constraint firstItem="icn-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-1"/>
                             <constraint firstItem="icn-01" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cst-2"/>
                             <constraint firstItem="wrd-01" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cst-3"/>
@@ -59,7 +49,6 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchGlow" width="400" height="400"/>
         <image name="LaunchIcon" width="132" height="132"/>
         <image name="LaunchWordmark" width="120" height="27"/>
         <namedColor name="LaunchBackground">
