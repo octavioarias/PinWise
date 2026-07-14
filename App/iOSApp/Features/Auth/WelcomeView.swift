@@ -33,7 +33,7 @@ struct WelcomeView: View {
                 Image("VialsHero")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 306)
+                    .frame(maxWidth: 288)
                     .accessibilityHidden(true)
 
                 Spacer().frame(height: 52)
