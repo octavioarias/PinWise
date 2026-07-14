@@ -78,6 +78,9 @@ struct WelcomeView: View {
                             Text("Log in").fontWeight(.semibold).foregroundStyle(Color(hex: 0x18E39A))
                         }
                         .buttonStyle(.plain)
+                        // Raise "Log in" by its descender so its visible bottom lines up with
+                        // "Have an account?" (which has no descender) rather than dipping below.
+                        .offset(y: -3)
                     }
                     .font(.system(size: 14))
                     .padding(.top, Space.xs)
