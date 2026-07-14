@@ -31,9 +31,10 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        # Launch: gradient PinWise wordmark centered on brand black. Config must live HERE —
-        # xcodegen regenerates Info.plist. V6 filename = fresh launch-snapshot cache key.
-        UILaunchStoryboardName: LaunchScreenV8
+        # Launch: metallic PW icon tile + PinWise wordmark, centered on brand black. Config
+        # must live HERE — xcodegen regenerates Info.plist. Bumping the storyboard filename
+        # (V9 = new metallic app-icon tile) is a fresh launch-snapshot cache key.
+        UILaunchStoryboardName: LaunchScreenV9
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
