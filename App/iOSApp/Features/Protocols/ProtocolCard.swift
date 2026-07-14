@@ -14,6 +14,32 @@ struct ProtocolCard: View {
     let proto: SavedProtocol
     /// Vial-linked supply readout; nil when the protocol has no linked vial (row omitted).
     var supply: SupplyInfo?
+    /// Full compound scope for the contents line — expands blend vials to every compound they
+    /// hold. Caller resolves it (it needs the vials); nil falls back to the primary-only
+    /// `proto.contentsSummary` so any caller without vials still renders.
+    var contents: String?
+    /// The unit to show the dose in — follows the linked vial's choice (caller resolves it). nil
+    /// falls back to the auto mg/mcg display for callers without vials.
+    var doseUnit: MassUnit?
+    /// True when any linked vial is itself a blend (multiple compounds in ONE vial = one injection).
+    /// Distinct from `proto.isStack` (multiple vials = multiple injections). Caller resolves it.
+    var isBlend: Bool = false
+    /// Every compound this protocol delivers per shot, with its dose (blend vials expanded), e.g.
+    /// "GHK-Cu 5 mg · BPC-157 1.5 mg · TB-500 1.5 mg". Caller resolves it (needs the vials). nil for
+    /// a plain single-compound protocol — there the scope line shows the single compound + its dose.
+    var perShot: String?
+    /// Whether today's dose is already logged (caller resolves from its `LoggedDose` query) —
+    /// flips a "Due today" card to "Logged today" and advances the next pin downstream.
+    var loggedToday: Bool = false
+
+    private var contentsText: String { contents ?? proto.contentsSummary }
+    private var doseText: String {
+        doseUnit.map { proto.effectiveDose.displayString(in: $0) } ?? proto.effectiveDose.displayString
+    }
+    /// The light-gray line naming the injectable compound(s) with their per-shot dose: the full
+    /// per-shot breakdown for a blend/stack, or "compound · dose" for a plain protocol. This is
+    /// where the dose lives — the card no longer shows a standalone "Dose" stat.
+    private var scopeLine: String { perShot ?? "\(contentsText) · \(doseText)" }
 
     /// The caller resolves the protocol's vial linkage into this — the card stays a pure renderer.
     struct SupplyInfo {
@@ -23,12 +49,22 @@ struct ProtocolCard: View {
         let needsReorder: Bool
     }
 
-    private var status: SavedProtocol.DisplayStatus { proto.displayStatus }
+    private var status: SavedProtocol.DisplayStatus { proto.displayStatus(loggedToday: loggedToday) }
+
+    /// Banner copy for a ramp-up protocol: the next scheduled increase, or that it's at its final
+    /// dose. nil when there's no ramp plan.
+    private var rampBannerText: String? {
+        guard proto.hasRampPlan else { return nil }
+        guard let inc = proto.nextRampIncrease() else { return "Ramp-up · at final dose" }
+        let d = doseUnit.map { inc.dose.displayString(in: $0) } ?? inc.dose.displayString
+        return "Ramp-up · next \(d) on \(inc.date.formatted(.dateTime.month().day()))"
+    }
 
     private var statusColor: Color {
         switch status {
         case .active: return BrandColor.success
         case .dueToday: return BrandColor.warning
+        case .doneToday: return BrandColor.success
         case .paused: return BrandColor.textSecondary
         }
     }
@@ -37,14 +73,16 @@ struct ProtocolCard: View {
         switch status {
         case .active: return "Active"
         case .dueToday: return "Due today"
+        case .doneToday: return "Logged today"
         case .paused: return "Paused"
         }
     }
 
     /// Next-pin display: "Today" (warning-tinted), "Tomorrow", an abbreviated date, or "—"
-    /// when nothing is scheduled (as-needed protocols / no upcoming date).
+    /// when nothing is scheduled (as-needed / none upcoming). Once today's dose is logged this
+    /// advances past today, so a logged protocol no longer reads "Today".
     private var nextPin: (text: String, isToday: Bool) {
-        guard let next = proto.nextDose() else { return ("—", false) }
+        guard let next = proto.upcomingDose(loggedToday: loggedToday) else { return ("—", false) }
         let calendar = Calendar.current
         if calendar.isDateInToday(next) { return ("Today", true) }
         if calendar.isDateInTomorrow(next) { return ("Tomorrow", false) }
@@ -52,7 +90,7 @@ struct ProtocolCard: View {
     }
 
     private var accessibilityValueText: String {
-        var value = "\(statusLabel), dose \(proto.effectiveDose.displayString), \(proto.cadenceText), next pin \(nextPin.text)"
+        var value = "\(statusLabel), \(perShot.map { "per shot \($0)" } ?? "dose \(doseText)"), \(proto.cadenceText), next pin \(nextPin.text)"
         if let supply {
             value += ", \(supply.dosesLeft) of \(supply.total) doses left"
         }
@@ -66,7 +104,11 @@ struct ProtocolCard: View {
                     StatusDot(color: statusColor, glows: status != .paused)
                     MicroLabel(statusLabel, color: statusColor)
                     Spacer()
-                    if proto.isStack { TagChip(text: "Blend", color: BrandColor.accentText) }
+                    // Several vials (several injections) = "Stack" — even if one of them is itself a
+                    // blend. A single vial that is a blend (one shot, several compounds) = "Blend".
+                    if proto.isStack { TagChip(text: "Stack", color: BrandColor.accentText) }
+                    else if isBlend { TagChip(text: "Blend", color: BrandColor.accentText) }
+                    if proto.hasRampPlan { TagChip(text: "Ramp-up", color: BrandColor.warning) }
                     Image(systemName: "chevron.right")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(BrandColor.textSecondary)
@@ -76,20 +118,26 @@ struct ProtocolCard: View {
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
 
-                // Contents meta — omitted when it would just repeat the name.
-                if proto.contentsSummary != proto.name {
-                    Text(proto.contentsSummary)
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textSecondary)
+                // The injectable compound(s) with their per-shot dose — the dose lives here, in
+                // light gray, not in a separate stat. Blend/stack: the full per-shot breakdown;
+                // plain protocol: "compound · dose".
+                Text(scopeLine)
+                    .font(.caption)
+                    .foregroundStyle(BrandColor.textSecondary)
+
+                // Ramp-up banner — flags the auto-advancing plan and the next scheduled increase.
+                if let rampBannerText {
+                    Label(rampBannerText, systemImage: "chart.line.uptrend.xyaxis")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(BrandColor.warning)
                 }
 
                 Rectangle()
                     .fill(BrandColor.stroke.opacity(0.6))
                     .frame(height: 1)
 
+                // Only cadence + next pin as stats now; the dose is on the scope line above.
                 HStack(alignment: .top, spacing: Space.md) {
-                    ProtocolStat(label: "Dose", value: proto.effectiveDose.displayString,
-                                 tint: BrandColor.accentText)
                     ProtocolStat(label: "Cadence", value: proto.cadenceText, compresses: true)
                     ProtocolStat(label: "Next pin", value: nextPin.text,
                                  tint: nextPin.isToday ? BrandColor.warning : BrandColor.textPrimary)
@@ -102,7 +150,7 @@ struct ProtocolCard: View {
             .opacity(status == .paused ? 0.55 : 1)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(proto.isStack ? "\(proto.name), blend" : proto.name)
+        .accessibilityLabel(proto.isStack ? "\(proto.name), stack" : isBlend ? "\(proto.name), blend" : proto.name)
         .accessibilityValue(accessibilityValueText)
     }
 }
@@ -112,7 +160,9 @@ private struct ProtocolStat: View {
     let label: String
     let value: String
     var tint: Color = BrandColor.textPrimary
-    /// Cadence strings ("Mon, Wed, Fri") can run long — let them shrink instead of wrap.
+    /// Cadence can run long (a run of weekday letters, or "Every 3 days"). Let it wrap to a
+    /// second line at full size — fitting the days — and only shrink as a last resort, rather
+    /// than truncating on one line. The grid's `.top` alignment absorbs the taller column.
     var compresses: Bool = false
 
     var body: some View {
@@ -121,8 +171,9 @@ private struct ProtocolStat: View {
             Text(value)
                 .font(Typo.statValue)
                 .foregroundStyle(tint)
-                .lineLimit(compresses ? 1 : nil)
+                .lineLimit(compresses ? 2 : nil)
                 .minimumScaleFactor(compresses ? 0.8 : 1)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -155,14 +206,16 @@ private struct ProtocolSupplyRow: View {
 }
 
 extension SavedProtocol {
-    /// The app-wide status vocabulary for a protocol: paused (inactive), due today, or
-    /// active. Every surface that renders a protocol's status dot derives from this one
-    /// read so the color language never forks between Home and the Stack tab.
-    enum DisplayStatus { case active, dueToday, paused }
+    /// The app-wide status vocabulary for a protocol: paused (inactive), due today, done today
+    /// (today's dose already logged), or active. Every surface that renders a protocol's status
+    /// dot derives from this one read so the color language never forks between Home and Stack.
+    enum DisplayStatus { case active, dueToday, doneToday, paused }
 
-    var displayStatus: DisplayStatus {
+    /// `loggedToday` (from the caller's `LoggedDose` query) turns a "due today" into "done
+    /// today" so a logged pin actually clears downstream. Callers without logs pass `false`.
+    func displayStatus(loggedToday: Bool = false) -> DisplayStatus {
         guard isActive else { return .paused }
-        if let next = nextDose(), Calendar.current.isDateInToday(next) { return .dueToday }
-        return .active
+        guard let next = nextDose(), Calendar.current.isDateInToday(next) else { return .active }
+        return loggedToday ? .doneToday : .dueToday
     }
 }

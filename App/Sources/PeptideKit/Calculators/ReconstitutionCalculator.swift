@@ -32,6 +32,19 @@ public struct ReconstitutionInput: Codable, Hashable, Sendable {
     }
 }
 
+/// A common interface over the two dose-draw result types (``ReconstitutionResult`` and
+/// ``PreparedDoseResult``) so UI can present either without a view-local wrapper struct.
+public protocol DoseDrawResult {
+    /// The mark to draw to on the insulin syringe.
+    var syringeUnits: Double { get }
+    /// Volume to draw for one dose, in milliliters.
+    var drawVolumeMilliliters: Double { get }
+    /// Resulting/known solution strength in micrograms per milliliter.
+    var concentrationMcgPerMl: Double { get }
+    /// Exact (fractional) doses per vial when derivable; `nil` when unknown.
+    var exactDosesPerVialOrNil: Double? { get }
+}
+
 /// The full set of derived values a user needs to draw and dose accurately.
 public struct ReconstitutionResult: Codable, Hashable, Sendable {
     /// Resulting solution strength in micrograms per milliliter.
@@ -46,6 +59,11 @@ public struct ReconstitutionResult: Codable, Hashable, Sendable {
     public let dosesPerVial: Int
     /// Exact (fractional) doses per vial, before flooring — useful for cost-per-dose.
     public let exactDosesPerVial: Double
+}
+
+extension ReconstitutionResult: DoseDrawResult {
+    /// Reconstitution always derives exact doses per vial, so this is never `nil`.
+    public var exactDosesPerVialOrNil: Double? { exactDosesPerVial }
 }
 
 /// Computes reconstitution math for lyophilized peptides.

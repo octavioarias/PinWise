@@ -190,7 +190,6 @@ struct ProfileView: View {
             header
             accountCard
             personalizationCard
-            privacyCard
         }
         .onAppear {
             let f = ProfileFields.heightFields(fromCm: heightCm)
@@ -319,24 +318,6 @@ struct ProfileView: View {
                 FieldRow("Height") {
                     HeightField(feetText: $heightFeetText, inchesText: $heightInchesText,
                                 cmText: $heightText, imperial: weightInPounds)
-                }
-            }
-        }
-    }
-
-    private var privacyCard: some View {
-        Card {
-            HStack(alignment: .top, spacing: Space.md) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.title3)
-                    .foregroundStyle(BrandColor.success)
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    Text("Private by design")
-                        .font(Typo.headline)
-                        .foregroundStyle(BrandColor.textPrimary)
-                    Text("Your profile, photo, and dose history live on this device. Nothing is uploaded or shared.")
-                        .font(.caption)
-                        .foregroundStyle(BrandColor.textSecondary)
                 }
             }
         }

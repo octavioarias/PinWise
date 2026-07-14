@@ -12,9 +12,11 @@ enum AppTab: Hashable {
 /// button): larger, crested above the capsule's top edge, and the only color in the chrome.
 struct RootTabView: View {
     @State private var selected: AppTab = .home
+    @State private var scrollCoordinator = TabScrollCoordinator()
     @State private var showMenu = false
     @State private var showAssistant = false
     @Query(sort: \SavedProtocol.startDate) private var protocols: [SavedProtocol]
+    @Query private var vials: [StoredVial]
 
     /// Changes whenever a reminder-relevant field changes, re-triggering scheduling.
     private var reminderSignature: String {
@@ -26,7 +28,7 @@ struct RootTabView: View {
             switch selected {
             case .home: HomeView(selected: $selected, showMenu: $showMenu, showAssistant: $showAssistant)
             case .tools: ToolsView()
-            case .log: LogView(selected: $selected)
+            case .log: LogView()
             case .protocols: ProtocolsView()
             case .news: NewsView()
             }
@@ -43,8 +45,44 @@ struct RootTabView: View {
         }
         .tint(BrandColor.accent)
         .task(id: reminderSignature) {
-            await NotificationManager.reschedule(protocols: protocols)
+            await NotificationManager.reschedule(protocols: protocols, vials: vials)
         }
+        // Available to every screen AND the tab bar (overlay) so a re-tap can request a scroll.
+        .environment(scrollCoordinator)
+    }
+}
+
+/// Lets a re-tap on the already-selected tab tell that tab's screen to scroll to the top.
+/// The tab bar bumps `token` (and records `target`); each screen's `scrollsToTopOnReselect`
+/// modifier watches the token and scrolls when it's the target.
+@MainActor
+@Observable
+final class TabScrollCoordinator {
+    private(set) var target: AppTab?
+    private(set) var token = 0
+    func scrollToTop(_ tab: AppTab) { target = tab; token += 1 }
+}
+
+private struct ScrollToTopOnReselect: ViewModifier {
+    let tab: AppTab
+    @Environment(TabScrollCoordinator.self) private var coordinator
+    @State private var position = ScrollPosition(edge: .top)
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onChange(of: coordinator.token) {
+                guard coordinator.target == tab else { return }
+                withAnimation(.easeInOut) { position.scrollTo(edge: .top) }
+            }
+    }
+}
+
+extension View {
+    /// Scrolls this screen's scroll view to the top when its tab icon is re-tapped. Apply
+    /// directly to the screen's main vertical `ScrollView`.
+    func scrollsToTopOnReselect(_ tab: AppTab) -> some View {
+        modifier(ScrollToTopOnReselect(tab: tab))
     }
 }
 
@@ -55,6 +93,7 @@ struct RootTabView: View {
 /// visual emphasis only.
 private struct PinWiseTabBar: View {
     @Binding var selected: AppTab
+    @Environment(TabScrollCoordinator.self) private var scrollCoordinator
 
     // A fixed icon-row height keeps every tab (including the Log chip) on one baseline.
     private let iconRow: CGFloat = 30
@@ -106,7 +145,12 @@ private struct PinWiseTabBar: View {
     private func tab(_ item: AppTab, icon: String, label: String, prominent: Bool = false) -> some View {
         let isSelected = selected == item
         Button {
-            selected = item
+            // Re-tapping the current tab scrolls it to the top; otherwise switch tabs.
+            if selected == item {
+                scrollCoordinator.scrollToTop(item)
+            } else {
+                selected = item
+            }
             tapCount += 1
         } label: {
             VStack(spacing: 3) {

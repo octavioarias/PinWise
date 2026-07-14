@@ -23,7 +23,7 @@ struct ProtocolBuilderView: View {
     @State private var items: [ItemEntry] = []
     @State private var kind: DoseSchedule.Kind = .specificWeekdays
     @State private var intervalDays: Int = 2
-    @State private var weekdays: Set<Int> = [1]
+    @State private var weekdays: Set<Int> = [2]   // default Monday (week starts Monday)
     @State private var startDate: Date = Date()
     @State private var isActive: Bool = true
     @State private var notes: String = ""
@@ -41,7 +41,8 @@ struct ProtocolBuilderView: View {
             // and custom-compound protocols editable (the name is all that's persisted).
             let comp = CompoundCatalog.all.first { $0.name == item.compoundName }
                 ?? Compound(name: item.compoundName, category: .metabolic, regulatoryStatus: .researchOnly, evidenceTier: .preclinicalOrFailed)
-            let unit = comp.preferredDoseUnit
+            // Reopen the line in the unit the user saved it in (falls back to the compound default).
+            let unit = item.doseUnit ?? comp.preferredDoseUnit
             let val = Mass(micrograms: item.doseMicrograms).value(in: unit)
             return ItemEntry(compound: comp, doseText: val == val.rounded() ? String(Int(val)) : String(val), doseUnit: unit, vialID: item.vialID)
         }
@@ -69,16 +70,46 @@ struct ProtocolBuilderView: View {
     }
 
     /// Add a line from one of the user's vials — carrying its nickname link, compound, and
-    /// per-shot dose. Protocols always reference vials, never raw catalog compounds.
+    /// per-shot dose. Protocols always reference vials, never raw catalog compounds. For a
+    /// blend the line's compound/dose anchor on the PRIMARY API; every other compound in the
+    /// vial rides along at a fixed mass ratio (see `blendBreakdown`) and is shown in the row.
     private func addVial(_ vial: StoredVial) {
         let comp = resolveCompound(vial.primaryAPI?.name ?? "")
-        let unit = comp.preferredDoseUnit
+        // Default the line to the vial's own unit so the protocol inherits it (user can change it).
+        let unit = vial.doseUnit
         let v = vial.perDose.value(in: unit)
         let entry = ItemEntry(compound: comp,
                               doseText: v > 0 ? (v == v.rounded() ? String(Int(v)) : String(v)) : "",
                               doseUnit: unit, vialID: vial.id)
         items.append(entry)
         if trimmedName.isEmpty { name = vial.displayName }
+    }
+
+    /// One compound delivered by a blend line, with its per-shot dose.
+    private struct BlendLine: Identifiable { let name: String; let dose: Mass; var id: String { name } }
+
+    /// The full compound scope a vial-backed line delivers per shot. A blend vial draws all its
+    /// APIs together in one shot, so each rides along at `apiMass / primaryMass × primaryDose`
+    /// (the solvent volume cancels — the ratio is purely mass-based). Returns nil for a
+    /// non-vial line or a single-compound vial (nothing extra to break out).
+    private func blendBreakdown(for item: ItemEntry) -> [BlendLine]? {
+        guard let vid = item.vialID, let vial = vials.first(where: { $0.id == vid }),
+              vial.isBlend, let primary = vial.primaryAPI, primary.massMicrograms > 0,
+              let entered = item.doseText.decimalValue, entered > 0 else { return nil }
+        let primaryDose = Mass(entered, item.doseUnit).micrograms
+        return vial.apis.map { api in
+            BlendLine(name: api.name,
+                      dose: Mass(micrograms: api.massMicrograms / primary.massMicrograms * primaryDose))
+        }
+    }
+
+    /// The full-scope title for a line: every compound in the linked vial (a blend shows all of
+    /// them), falling back to the single compound name for non-vial lines.
+    private func lineTitle(for item: ItemEntry) -> String {
+        if let vid = item.vialID, let vial = vials.first(where: { $0.id == vid }), !vial.apiNames.isEmpty {
+            return vial.apiNames.joined(separator: " + ")
+        }
+        return item.compound.name
     }
 
     var body: some View {
@@ -93,15 +124,17 @@ struct ProtocolBuilderView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
-                            Text("What's in this protocol?").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
-                            Text("Protocols schedule doses from your vials. One vial is a single protocol; add more to build a stack — they share the schedule below.")
+                            Text("Your dose from each vial").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("Set the dose you take from each vial per injection — not the vial's total amount. One vial makes a single protocol; add more to build a stack that shares the schedule below.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
                             ForEach($items) { $item in
                                 VStack(alignment: .leading, spacing: Space.sm) {
                                     HStack(alignment: .firstTextBaseline) {
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(item.compound.name)
+                                            // Full scope: a blend vial shows every compound it holds,
+                                            // not just the primary.
+                                            Text(lineTitle(for: item))
                                                 .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
                                             if let vid = item.vialID, let v = vials.first(where: { $0.id == vid }) {
                                                 Label("From \(v.displayName)", systemImage: "cross.vial.fill")
@@ -113,14 +146,34 @@ struct ProtocolBuilderView: View {
                                             Image(systemName: "minus.circle").foregroundStyle(BrandColor.textSecondary)
                                         }
                                         .buttonStyle(.plain)
-                                        .accessibilityLabel("Remove \(item.compound.name)")
+                                        .accessibilityLabel("Remove \(lineTitle(for: item))")
                                     }
                                     HStack {
-                                        TextField("Dose per shot", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
+                                        // For a blend the typed value sets the PRIMARY; name it so the
+                                        // single field isn't read as "the dose of all compounds".
+                                        TextField("Dose of \(item.compound.name)", text: $item.doseText).keyboardType(.decimalPad).pinwiseField()
                                         Picker("", selection: $item.doseUnit) {
                                             ForEach(MassUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                                         }
                                         .pickerStyle(.segmented).frame(width: 120)
+                                    }
+                                    // For a blend, break out what each compound delivers per shot — the
+                                    // dose above sets the primary; the rest scale by their vial mass ratio.
+                                    if let breakdown = blendBreakdown(for: item) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Each shot delivers")
+                                                .font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
+                                            ForEach(breakdown) { line in
+                                                HStack {
+                                                    Text(line.name).font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                                    Spacer()
+                                                    Text(line.dose.displayString(in: item.doseUnit))
+                                                        .font(.caption2).foregroundStyle(BrandColor.textPrimary)
+                                                }
+                                            }
+                                        }
+                                        .padding(Space.sm)
+                                        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                                     }
                                 }
                                 .padding(.bottom, Space.xs)
@@ -130,12 +183,16 @@ struct ProtocolBuilderView: View {
                                 Text("No vials yet — add one under My Vials first. Protocols schedule doses from the vials you own.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
                             } else {
+                                // Exclude vials already on the protocol — adding the same physical
+                                // vial twice would double-count one injection.
+                                let available = vials.filter { v in !items.contains { $0.vialID == v.id } }
                                 Menu {
-                                    ForEach(vials) { v in Button(v.displayName) { addVial(v) } }
+                                    ForEach(available) { v in Button(v.displayName) { addVial(v) } }
                                 } label: {
                                     Label(items.isEmpty ? "Choose a vial" : "Add another vial", systemImage: "plus")
                                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
                                 }
+                                .disabled(available.isEmpty)
                             }
                         }
                     }
@@ -205,9 +262,20 @@ struct ProtocolBuilderView: View {
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
             // Custom compounds aren't queryable in init — swap placeholders for the real thing.
             .onAppear {
-                items = items.map { e in
-                    var e = e
+                items = items.enumerated().map { idx, entry in
+                    var e = entry
                     e.compound = resolveCompound(e.compound.name)
+                    // Align the picker to what Home/Stack display for this line (the linked vial's
+                    // unit for a legacy line that never stored its own), AND recompute the NUMBER in
+                    // that unit from the stored micrograms so the mass is preserved. Setting the unit
+                    // WITHOUT recomputing would leave a number formatted for the old unit under the
+                    // new one, and Save would corrupt the dose (e.g. 500 mcg → "0.5" + mcg → 0.5 mcg).
+                    if let editing, editing.items.indices.contains(idx) {
+                        let u = editing.doseUnit(forItemAt: idx, vials: vials)
+                        let val = Mass(micrograms: editing.items[idx].doseMicrograms).value(in: u)
+                        e.doseUnit = u
+                        e.doseText = val == val.rounded() ? String(Int(val)) : String(val)
+                    }
                     return e
                 }
             }
@@ -216,8 +284,9 @@ struct ProtocolBuilderView: View {
 
     private var weekdayPicker: some View {
         HStack(spacing: 6) {
-            ForEach(1...7, id: \.self) { d in
-                SelectableChip(title: weekdaySymbol(d),
+            // Monday-first order; labels match the cadence display (Su M T W Th F S).
+            ForEach(SavedProtocol.mondayFirst([1, 2, 3, 4, 5, 6, 7]), id: \.self) { d in
+                SelectableChip(title: SavedProtocol.shortWeekdayLabel(d),
                                isSelected: weekdays.contains(d),
                                shape: .rounded(8),
                                fillWidth: true) {
@@ -228,15 +297,11 @@ struct ProtocolBuilderView: View {
         .sensoryFeedback(.selection, trigger: weekdays)
     }
 
-    private func weekdaySymbol(_ d: Int) -> String {
-        let s = Calendar.current.shortWeekdaySymbols
-        return (1...7).contains(d) ? String(s[d - 1].prefix(1)) : "?"
-    }
-
     private func save() {
         let built = items.compactMap { e -> ProtocolItem? in
             guard let d = e.doseText.decimalValue, d > 0 else { return nil }
-            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms, vialID: e.vialID)
+            return ProtocolItem(compoundName: e.compound.name, doseMicrograms: Mass(d, e.doseUnit).micrograms,
+                                vialID: e.vialID, doseUnitRaw: e.doseUnit.rawValue)
         }
         guard !built.isEmpty else { return }
         let usesWeekdays = (kind == .specificWeekdays || kind == .weekly)

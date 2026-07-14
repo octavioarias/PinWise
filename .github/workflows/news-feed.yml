@@ -1,15 +1,18 @@
 name: News feed
 
-# Regenerates feed/feed.json daily from ClinicalTrials.gov + PubMed (cheap Linux runner).
-# Publish this file to a public host (Pages/CDN) and point AppConfig.newsFeedURL at it to
-# switch the app from the bundled sample to the live feed.
+# Regenerates the News feed daily and publishes it to the PUBLIC PinWise-NewsFeed repo, which
+# the app fetches (AppConfig.newsFeedURL). This private repo only READS its own source; the
+# publish step writes to the separate public repo using the FEED_REPO_TOKEN secret — so no
+# push to this repo's protected branches, and none of this repo's code is exposed.
+#
+# Published URL: https://raw.githubusercontent.com/TavioTheScientist/PinWise-NewsFeed/main/feed.json
 on:
   schedule:
     - cron: "0 13 * * *"   # daily 13:00 UTC
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-feed:
@@ -21,10 +24,26 @@ jobs:
           node-version: "20"
       - name: Build feed
         run: node scripts/build-feed.mjs
-      - name: Commit if changed
+      - name: Validate feed (gate — never publish a broken feed)
+        run: node scripts/news-content/validate-feed.mjs feed/feed.json
+      - name: Publish to PinWise-NewsFeed
+        env:
+          FEED_REPO_TOKEN: ${{ secrets.FEED_REPO_TOKEN }}
         run: |
+          set -euo pipefail
+          if [ -z "${FEED_REPO_TOKEN}" ]; then
+            echo "FEED_REPO_TOKEN is not set — add it as an Actions secret."; exit 1
+          fi
+          git clone --depth 1 \
+            "https://x-access-token:${FEED_REPO_TOKEN}@github.com/TavioTheScientist/PinWise-NewsFeed.git" out
+          cp feed/feed.json out/feed.json
+          cd out
           git config user.name "pinwise-bot"
           git config user.email "pinwise-bot@users.noreply.github.com"
-          git add feed/feed.json
-          git diff --staged --quiet || git commit -m "chore: update news feed [skip ci]"
-          git push
+          git add feed.json
+          if git diff --staged --quiet; then
+            echo "No feed changes."
+          else
+            git commit -m "chore: update news feed"
+            git push
+          fi

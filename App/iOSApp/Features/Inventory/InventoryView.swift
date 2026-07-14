@@ -8,6 +8,8 @@ struct InventoryList: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \StoredVial.dateAcquired, order: .reverse) private var vials: [StoredVial]
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
+    // Needed so a vial delete can null the soft `vialID` links on every dose that drew from it.
+    @Query(sort: \LoggedDose.timestamp, order: .reverse) private var logs: [LoggedDose]
     @State private var showBuilder = false
     @State private var editTarget: EditTarget?
     /// Identifiable wrapper so a tapped vial can drive `.sheet(item:)` (same pattern as protocols).
@@ -45,13 +47,13 @@ struct InventoryList: View {
                             Button { editTarget = EditTarget(vial: vial) } label: {
                                 Label("Edit", systemImage: "pencil")
                             }
-                            Button(role: .destructive) { context.delete(vial) } label: {
+                            Button(role: .destructive) { vial.reconcileDelete(in: context, doses: logs, protocols: protocols) } label: {
                                 Label("Depleted — remove", systemImage: "trash.slash")
                             }
                         }
                         // Empty (or expired) vials get a one-tap way out of the inventory.
                         if projection.wholeDosesRemaining == 0 || (vial.expiryState?.isError ?? false) {
-                            Button(role: .destructive) { context.delete(vial) } label: {
+                            Button(role: .destructive) { vial.reconcileDelete(in: context, doses: logs, protocols: protocols) } label: {
                                 Label(projection.wholeDosesRemaining == 0 ? "Depleted — remove from inventory"
                                                                           : "Expired — remove from inventory",
                                       systemImage: "trash.slash")
@@ -66,17 +68,6 @@ struct InventoryList: View {
                 }
             }
 
-            NavigationLink { CompoundsView() } label: {
-                Card(style: .flat) {
-                    HStack {
-                        Image(systemName: "books.vertical.fill").foregroundStyle(BrandColor.accentText)
-                        Text("Compound library").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption).foregroundStyle(BrandColor.textSecondary)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
         }
         .sheet(isPresented: $showBuilder) { VialBuilderView() }
         .sheet(item: $editTarget) { VialBuilderView(editing: $0.vial) }
@@ -111,8 +102,12 @@ struct VialRow: View {
                 Text("\(projection.wholeDosesRemaining) of \(vial.totalDoses) doses left · log a dose to draw down")
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
-                if let breakdown = vial.doseBreakdown() {
-                    Text("Per shot: " + breakdown.map { "\($0.name) \($0.deliveredDose.displayString)" }.joined(separator: " · "))
+                if let conc = vial.concentrationSummary {
+                    Text(conc).font(.caption2.weight(.medium)).foregroundStyle(BrandColor.textPrimary)
+                }
+
+                if let perShot = vial.perShotSummary {
+                    Text("Per shot: " + perShot)
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 }
 
@@ -123,9 +118,6 @@ struct VialRow: View {
 
     private var metaLine: some View {
         HStack(spacing: Space.md) {
-            if let mgml = vial.primaryConcentrationMgPerMl {
-                Label(String(format: "%.2f mg/mL", mgml), systemImage: "drop")
-            }
             if let days = projection.daysOfSupply, let out = projection.projectedRunOutDate {
                 Label("~\(Int(days.rounded()))d · out \(out.formatted(.dateTime.month().day()))", systemImage: "calendar")
             }
@@ -150,6 +142,10 @@ struct VialBuilderView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \CustomCompound.name) private var customCompounds: [CustomCompound]
+    // Needed to detach any logs/protocols that reference this vial before deleting it.
+    @Query private var logs: [LoggedDose]
+    @Query private var protocols: [SavedProtocol]
+    @State private var showDeleteConfirm = false
 
     private struct APIEntry: Identifiable {
         let id = UUID()
@@ -167,15 +163,30 @@ struct VialBuilderView: View {
     @State private var isPremixed: Bool
     @State private var doseText: String
     @State private var doseUnit: MassUnit
+    /// Strength unit for a pre-mixed vial: mg ⇒ mg/mL, mcg ⇒ mcg/mL.
+    @State private var concentrationUnit: MassUnit
     @State private var costText: String
     @State private var hasExpiration: Bool
     @State private var expiration: Date
+    @State private var expandExtras: Bool
+    @State private var coaAssayText: String
+    @State private var coaContentText: String
+    @State private var coaPurityText: String
     @State private var showScanner = false
     @State private var resetDoseCount = false
+    /// The ingredient the user "doses by" in a blend — its dose is the number they type, and every
+    /// other compound scales to it. nil = the first ingredient. Tracked by id so it survives
+    /// add/remove/reorder.
+    @State private var anchorID: UUID? = nil
     /// Set when a blend preset autofilled the nickname: the name it wrote + the formula it
     /// described. If the ingredients later diverge, the autofill is cleared (a "GLOW" label
     /// on a hand-rolled formula would be wrong) — unless the user typed their own name over it.
     @State private var appliedPreset: (label: String, names: [String])?
+
+    /// USP guidance for multi-dose injectables: discard ~28 days after opening/reconstitution to
+    /// limit bacterial or fungal growth. New vials default to this recommended beyond-use date
+    /// (pre-filled and on); users can extend it.
+    static let recommendedBeyondUseDays = 28
 
     init(editing: StoredVial? = nil) {
         self.editing = editing
@@ -186,35 +197,52 @@ struct VialBuilderView: View {
             _isPremixed = State(initialValue: false)
             _doseText = State(initialValue: "")
             _doseUnit = State(initialValue: .milligram)
+            _concentrationUnit = State(initialValue: .milligram)
             _costText = State(initialValue: "")
-            _hasExpiration = State(initialValue: false)
-            _expiration = State(initialValue: Date())
+            // Default a new vial to the USP 28-day beyond-use date (recommended), pre-filled and on.
+            _hasExpiration = State(initialValue: true)
+            _expiration = State(initialValue: Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date())
+            _expandExtras = State(initialValue: true)
+            _coaAssayText = State(initialValue: "")
+            _coaContentText = State(initialValue: "")
+            _coaPurityText = State(initialValue: "")
             return
         }
-        let vol = v.solventVolumeMilliliters
+        let vol = v.solventVolumeMilliliters ?? 0
         _label = State(initialValue: v.label)
         // A pre-mixed vial saved without a volume (older builds allowed it) has no derivable
         // strength — open it in powder mode so its total mass round-trips unchanged.
         _isPremixed = State(initialValue: v.isPremixed && vol > 0)
         _solventText = State(initialValue: vol > 0 ? Self.fmt(vol) : "")
+        // Reopen a pre-mixed vial's strength in the unit it was entered in.
+        let cu: MassUnit = v.concentrationUnit
+        _concentrationUnit = State(initialValue: cu)
         _entries = State(initialValue: v.apis.map { api in
             if v.isPremixed && vol > 0 {
-                // Back out the label strength from the stored total mass.
+                // Back out the label strength (in the vial's concentration unit) from stored mass.
                 return APIEntry(compound: Self.resolve(api.name),
-                                amountText: Self.fmt((api.massMicrograms / 1_000) / vol),
-                                unit: .milligram)
+                                amountText: Self.fmt((api.massMicrograms / cu.microgramsPerUnit) / vol),
+                                unit: cu)
             }
             let unit: MassUnit = api.massMicrograms >= 1_000 ? .milligram : .microgram
             return APIEntry(compound: Self.resolve(api.name),
                             amountText: Self.fmt(Mass(micrograms: api.massMicrograms).value(in: unit)),
                             unit: unit)
         })
-        let du: MassUnit = v.perDoseMicrograms >= 1_000 ? .milligram : .microgram
+        let perDoseMcg = v.perDoseMicrograms ?? 0
+        // Reopen the vial in the unit it was saved in (falls back to the magnitude heuristic for
+        // legacy vials with no stored choice).
+        let du: MassUnit = v.doseUnit
         _doseUnit = State(initialValue: du)
-        _doseText = State(initialValue: v.perDoseMicrograms > 0 ? Self.fmt(v.perDose.value(in: du)) : "")
-        _costText = State(initialValue: v.cost > 0 ? Self.fmt(v.cost) : "")
+        _doseText = State(initialValue: perDoseMcg > 0 ? Self.fmt(v.perDose.value(in: du)) : "")
+        // nil cost = unknown → empty field; a stored 0 = a genuine free/comped vial → shows "0".
+        _costText = State(initialValue: v.cost.map { Self.fmt(NSDecimalNumber(decimal: $0).doubleValue) } ?? "")
         _hasExpiration = State(initialValue: v.expirationDate != nil)
         _expiration = State(initialValue: v.expirationDate ?? Date())
+        _expandExtras = State(initialValue: v.expirationDate != nil)
+        _coaAssayText = State(initialValue: v.coaAssayPercent.map(Self.fmt) ?? "")
+        _coaContentText = State(initialValue: v.coaContentPercent.map(Self.fmt) ?? "")
+        _coaPurityText = State(initialValue: v.coaPurityPercent.map(Self.fmt) ?? "")
     }
 
     /// Catalog + the user's own compounds, one alphabetical list for the ingredient picker.
@@ -237,6 +265,84 @@ struct VialBuilderView: View {
         return !isPremixed || (solventText.decimalValue ?? 0) > 0
     }
     private var primaryName: String { entries.first?.compound.name ?? "" }
+
+    /// The id that actually anchors the dose right now — the tapped one, or the first ingredient
+    /// when unset / the anchored ingredient was removed.
+    private var effectiveAnchorID: UUID? { (entries.first { $0.id == anchorID }?.id) ?? entries.first?.id }
+    private var anchorEntry: APIEntry? { entries.first { $0.id == effectiveAnchorID } }
+    /// The compound whose dose the user types ("dose by"); the rest scale to it.
+    private var anchorName: String { anchorEntry?.compound.name ?? "" }
+
+    /// For a multi-compound (blend) vial, what a single shot delivers of EACH compound. They share
+    /// one solution, so the ANCHOR's dose fixes the rest by the mass ratio (the solvent cancels —
+    /// no volume needed). Recomputed live as ingredients/dose/anchor change. nil unless there are
+    /// 2+ ingredients with amounts and an anchor dose entered.
+    private var liveBlendBreakdown: [(name: String, dose: Mass)]? {
+        guard entries.count > 1, let pd = doseText.decimalValue, pd > 0 else { return nil }
+        guard let anchor = anchorEntry, let anchorMass = relativeMass(anchor), anchorMass > 0 else { return nil }
+        let anchorDose = Mass(pd, doseUnit).micrograms
+        return entries.compactMap { e in
+            relativeMass(e).map { (e.compound.name, Mass(micrograms: $0 / anchorMass * anchorDose)) }
+        }
+    }
+
+    /// Relative mass of an ingredient for ratio math — the solvent cancels, so for a pre-mixed
+    /// vial the per-mL strength stands in for mass. nil when the amount isn't a positive number.
+    private func relativeMass(_ e: APIEntry) -> Double? {
+        guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
+        return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
+    }
+
+    /// The escape hatch for a blend, in the app's own vocabulary (Stack ▸ My Vials / My Protocols).
+    /// A pre-mixed vial can't be separated — its compounds arrive combined from the pharmacy — so
+    /// the advice differs from a powder you mix yourself.
+    private var separateVialsSuggestion: String {
+        isPremixed
+        ? "A pre-mixed vial can't be split — these compounds come combined from the pharmacy. To dose each on its own, you'd need a separate pre-mixed vial for each one."
+        : "Want to dose each compound on its own? Add them as separate vials (Stack ▸ My Vials), then run them together as a protocol (Stack ▸ My Protocols)."
+    }
+
+    /// The blend "hero": what one shot actually delivers of every compound (live), the anchor
+    /// highlighted, plus the ratio explanation and the separate-vials escape hatch.
+    private var blendHero: some View {
+        VStack(alignment: .leading, spacing: Space.sm) {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "syringe.fill").font(.caption).foregroundStyle(BrandColor.accent)
+                Text("This shot delivers").font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+            }
+            if let breakdown = liveBlendBreakdown {
+                ForEach(breakdown, id: \.name) { line in
+                    let isAnchor = line.name == anchorName
+                    HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
+                        Text(line.name).font(.subheadline).foregroundStyle(BrandColor.textPrimary)
+                        if isAnchor {
+                            Text("you set this").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                        }
+                        Spacer()
+                        Text(line.dose.displayString(in: doseUnit))
+                            .font(Typo.numberMD)
+                            .foregroundStyle(isAnchor ? BrandColor.accentText : BrandColor.textPrimary)
+                    }
+                }
+            } else {
+                Text("Enter each ingredient's amount and a dose to see the split.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            }
+            Divider().overlay(BrandColor.stroke)
+            Text("Everything is mixed in one vial, so a shot always pulls this exact ratio. Choose which compound to dose by above — the rest follow.")
+                .font(.caption).foregroundStyle(BrandColor.textSecondary)
+            Label {
+                Text(separateVialsSuggestion)
+            } icon: {
+                Image(systemName: isPremixed ? "info.circle" : "square.stack.3d.up")
+            }
+            .font(.caption).foregroundStyle(BrandColor.accentText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Space.md)
+        .background(BrandColor.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(BrandColor.accent.opacity(0.3), lineWidth: 1))
+    }
 
     var body: some View {
         NavigationStack {
@@ -277,9 +383,30 @@ struct VialBuilderView: View {
                                  : "One ingredient = a single-compound vial. Add more to make a blend.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
+                            if isPremixed {
+                                HStack {
+                                    Text("Strength unit").font(.caption).foregroundStyle(BrandColor.textSecondary)
+                                    Spacer()
+                                    concentrationUnitPicker
+                                }
+                            }
+
+                            if entries.count > 1 {
+                                Text("Tap a circle to choose which compound you dose by — the rest scale to it.")
+                                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                            }
                             ForEach($entries) { $entry in
                                 VStack(spacing: Space.sm) {
                                     HStack {
+                                        if entries.count > 1 {
+                                            let isAnchor = entry.id == effectiveAnchorID
+                                            Button { anchorID = entry.id } label: {
+                                                Image(systemName: isAnchor ? "largecircle.fill.circle" : "circle")
+                                                    .foregroundStyle(isAnchor ? BrandColor.accent : BrandColor.textSecondary)
+                                            }
+                                            .buttonStyle(.plain)
+                                            .accessibilityLabel(isAnchor ? "Dosing by \(entry.compound.name)" : "Dose by \(entry.compound.name)")
+                                        }
                                         CompoundMenu(selection: $entry.compound,
                                                      options: pickerOptions(including: entry.compound))
                                         Spacer(minLength: Space.sm)
@@ -293,7 +420,7 @@ struct VialBuilderView: View {
                                     if isPremixed {
                                         HStack {
                                             TextField("Strength", text: $entry.amountText).keyboardType(.decimalPad).pinwiseField()
-                                            Text("mg/mL").foregroundStyle(BrandColor.textSecondary)
+                                            Text("\(concentrationUnit.rawValue)/mL").foregroundStyle(BrandColor.textSecondary)
                                         }
                                     } else {
                                         HStack {
@@ -333,23 +460,29 @@ struct VialBuilderView: View {
                                     Text("mL").foregroundStyle(BrandColor.textSecondary)
                                 }
                             }
-                            FieldRow(primaryName.isEmpty ? "Dose per shot" : "Dose of \(primaryName) per shot",
-                                     hint: entries.count > 1 ? "The rest of the blend scales with this." : "The dose you intend to inject each time.") {
+                            FieldRow(entries.count > 1
+                                     ? (anchorName.isEmpty ? "Dose per shot" : "Dose of \(anchorName) per shot")
+                                     : (primaryName.isEmpty ? "Dose per shot" : "Dose of \(primaryName) per shot"),
+                                     hint: entries.count > 1 ? "You set \(anchorName)'s dose — everything else scales to it." : "The dose you intend to inject each time.") {
                                 HStack {
                                     TextField("e.g. 2.5", text: $doseText).keyboardType(.decimalPad).pinwiseField()
                                     unitPicker($doseUnit)
                                 }
                             }
+
+                            // HERO: for a blend, the numbers do the explaining (extracted to keep
+                            // this large view's body within the type-checker's reach).
+                            if entries.count > 1 { blendHero }
                         }
                     }
 
                     if let editing, editing.dosesTaken > 0 {
                         Card {
                             VStack(alignment: .leading, spacing: Space.sm) {
-                                SectionHeader(title: "Usage")
-                                Text("\(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") already logged from this vial. Changing amounts keeps that count (capped at the new total).")
+                                SectionHeader(title: "Refill")
+                                Text("You've drawn \(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") from this vial. If you've refilled it — or swapped in a fresh vial of the same peptide — turn this on to restart “doses left” from full. Your logged dose history isn't affected; only the remaining-dose count resets.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                                Toggle("This is a fresh vial — reset the count", isOn: $resetDoseCount)
+                                Toggle("I refilled this vial — restart doses left", isOn: $resetDoseCount)
                                     .tint(BrandColor.accent)
                                     .font(.footnote)
                                     .foregroundStyle(BrandColor.textPrimary)
@@ -357,14 +490,29 @@ struct VialBuilderView: View {
                         }
                     }
 
+                    // COA correction is only for powder you reconstitute — a pre-mixed vial's
+                    // stated strength is already corrected by the pharmacy.
+                    if !isPremixed { coaCard }
+
                     Card {
-                        DisclosureGroup {
+                        DisclosureGroup(isExpanded: $expandExtras) {
                             VStack(alignment: .leading, spacing: Space.lg) {
-                                Toggle("Add an expiration date", isOn: $hasExpiration).tint(BrandColor.accent)
+                                Toggle("Set a discard (beyond-use) date", isOn: $hasExpiration).tint(BrandColor.accent)
                                 if hasExpiration {
-                                    FieldRow("Expires") {
+                                    FieldRow("Discard by") {
                                         DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
                                     }
+                                    Text("US Pharmacopeia (USP) recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Extended expiration dates are not advised.")
+                                        .font(.caption2)
+                                        .foregroundStyle(BrandColor.textSecondary)
+                                    Button {
+                                        expiration = Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date()
+                                    } label: {
+                                        Label("Use recommended 28-day date", systemImage: "arrow.counterclockwise")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(BrandColor.accentText)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                                 FieldRow("Cost", hint: "Optional — shows cost per dose.") {
                                     HStack {
@@ -375,13 +523,23 @@ struct VialBuilderView: View {
                             }
                             .padding(.top, Space.sm)
                         } label: {
-                            Text("Optional — expiry & cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                            Text("Discard date & cost").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                         }
                         .tint(BrandColor.accentText)
                     }
 
                     PrimaryButton(title: editing == nil ? "Add vial" : "Save changes", systemImage: "checkmark") { save() }
                         .disabled(!canSave).opacity(canSave ? 1 : 0.5)
+
+                    if editing != nil {
+                        Button(role: .destructive) { showDeleteConfirm = true } label: {
+                            Label("Delete vial", systemImage: "trash")
+                                .font(.body.weight(.semibold))
+                                .frame(maxWidth: .infinity).padding(.vertical, Space.sm)
+                                .foregroundStyle(BrandColor.danger)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(Space.lg)
             }
@@ -389,6 +547,18 @@ struct VialBuilderView: View {
             .navigationTitle(editing == nil ? "New vial" : "Edit vial")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .confirmationDialog("Delete this vial?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete vial", role: .destructive) {
+                    if let editing {
+                        editing.reconcileDelete(in: context, doses: logs, protocols: protocols)
+                        try? context.save()
+                    }
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes the vial from your Stack. Doses you've already logged are kept, and any protocol using it keeps its schedule but loses the vial link.")
+            }
             // A preset-autofilled nickname is only honest while the formula still matches the
             // preset — drop it the moment the ingredient list diverges.
             .onChange(of: entries.map(\.compound.name)) { _, names in
@@ -405,11 +575,13 @@ struct VialBuilderView: View {
                     var e = e
                     guard let amt = e.amountText.decimalValue, amt > 0 else { return e }
                     if premixed {
-                        e.amountText = vol > 0 ? Self.fmt(Mass(amt, e.unit).milligrams / vol) : ""
+                        // total mass (in the entry's unit) → per-mL strength in the chosen conc. unit
+                        e.amountText = vol > 0 ? Self.fmt(Mass(amt, e.unit).value(in: concentrationUnit) / vol) : ""
                     } else {
-                        e.amountText = vol > 0 ? Self.fmt(amt * vol) : ""
+                        // per-mL strength (in concentrationUnit) → total mass, shown in mg
+                        e.amountText = vol > 0 ? Self.fmt(Mass(amt, concentrationUnit).micrograms * vol / 1_000) : ""
+                        e.unit = .milligram
                     }
-                    e.unit = .milligram
                     return e
                 }
             }
@@ -437,11 +609,31 @@ struct VialBuilderView: View {
             entries[0].compound = c
         }
         if let conc = r.concentrationMgPerMl {
+            // Scanned strength is mg/mL — force the strength unit so the value is read correctly.
+            concentrationUnit = .milligram
             entries[0].amountText = Self.fmt(conc)
             entries[0].unit = .milligram
         }
         if let vol = r.volumeMl { solventText = Self.fmt(vol) }
         if let exp = r.expiration { hasExpiration = true; expiration = exp }
+    }
+
+    /// Strength-unit chooser for pre-mixed vials: "mcg/mL" | "mg/mL".
+    private var concentrationUnitPicker: some View {
+        HStack(spacing: 4) {
+            ForEach(MassUnit.allCases, id: \.self) { u in
+                Button { concentrationUnit = u } label: {
+                    Text("\(u.rawValue)/mL")
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
+                        .frame(minWidth: 60)
+                        .background(concentrationUnit == u ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
+                        .foregroundStyle(concentrationUnit == u ? BrandColor.onAccent : BrandColor.textSecondary)
+                        .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: concentrationUnit == u ? 0 : 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     /// Bold unit chooser — the selected unit is accent-filled so the mg default is obvious.
@@ -475,25 +667,105 @@ struct VialBuilderView: View {
         }
     }
 
+    /// Live COA correction factor from the entered fields (1.0 when none) — for the editor readout.
+    private var coaFactorPreview: Double {
+        COACorrection.factor(assayPercent: coaAssayText.decimalValue,
+                             contentPercent: coaContentText.decimalValue,
+                             purityPercent: coaPurityText.decimalValue)
+    }
+    private var hasAnyCOAEntered: Bool {
+        [coaAssayText, coaContentText, coaPurityText].contains { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+    }
+    /// Concrete correction readout: shows the entered label amount → true active amount (so the
+    /// correction is visible right here), falling back to the percentage before an amount exists.
+    private var coaCorrectedReadout: String {
+        let pct = pctText(coaFactorPreview)
+        if let first = entries.first, let amt = first.amountText.decimalValue, amt > 0 {
+            let label = Mass(amt, first.unit)
+            let corrected = Mass(micrograms: label.micrograms * coaFactorPreview)
+            return "Label \(label.displayString(in: first.unit)) → true active ≈ \(corrected.displayString(in: first.unit)) (\(pct))."
+        }
+        return "True active ≈ \(pct) of the label weight."
+    }
+
+    /// COA card — enter assay / content / purity (any subset) to correct the vial's true active
+    /// concentration, so doses aren't computed off the (higher) label amount. Shown for every vial.
+    private var coaCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.md) {
+                Text("Certificate of Analysis (COA)")
+                    .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                Text("A peptide vial is labeled by total powder weight — but only part of that is active peptide. The rest is salt and water left over from how peptides are made and freeze-dried, so a “10 mg” vial is often only about 7–9 mg of actual peptide. If you dose off the label, you take a little less than you intend. Your COA reports the true fraction; enter whatever it lists and PinWise doses off the corrected amount — the most accurate way to reconstitute.")
+                    .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                FieldRow("Assay %") {
+                    HStack { TextField("e.g. 99.5", text: $coaAssayText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                FieldRow("Content %") {
+                    HStack { TextField("e.g. 88", text: $coaContentText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                FieldRow("Purity %") {
+                    HStack { TextField("e.g. 99.8", text: $coaPurityText).keyboardType(.decimalPad).pinwiseField()
+                             Text("%").foregroundStyle(BrandColor.textSecondary) }
+                }
+                Text("Enter any your COA lists. Content = how much is peptide vs. salt/water (the one that changes your dose most). Purity = the right peptide vs. related impurities. Assay = a potency check (labs define it differently).")
+                    .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                if hasAnyCOAEntered {
+                    Label("\(coaCorrectedReadout) Your doses are calculated from this corrected amount, not the label.",
+                          systemImage: "checkmark.seal.fill")
+                        .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.success)
+                } else {
+                    Label("No COA entered — doses will use the full label weight. A peptide vial is typically only ~70–90% active peptide, so that likely means dosing a little low.",
+                          systemImage: "info.circle.fill")
+                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                }
+            }
+        }
+    }
+    private func pctText(_ f: Double) -> String { String(format: "%.1f%%", f * 100) }
+
     private func save() {
         let vol = solventText.decimalValue ?? 0
-        let apis = entries.compactMap { e -> VialAPI? in
+        // Store the "dose by" anchor FIRST so it becomes the primary API — `perDoseMicrograms` is
+        // defined as the primary's dose, and every downstream breakdown scales off apis.first.
+        var ordered = entries
+        if let idx = ordered.firstIndex(where: { $0.id == effectiveAnchorID }), idx != 0 {
+            ordered.insert(ordered.remove(at: idx), at: 0)
+        }
+        let apis = ordered.compactMap { e -> VialAPI? in
             guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
-            // Pre-mixed entries are label strength (mg/mL): total content = strength × volume.
-            let micrograms = isPremixed ? amt * vol * 1_000 : Mass(amt, e.unit).micrograms
+            // Pre-mixed entries are a label strength in `concentrationUnit` per mL: total content
+            // = strength × volume. Powder entries are a total mass in the entry's own unit.
+            let micrograms = isPremixed ? Mass(amt, concentrationUnit).micrograms * vol : Mass(amt, e.unit).micrograms
             return VialAPI(name: e.compound.name, massMicrograms: micrograms)
         }
         guard !apis.isEmpty, let pd = doseText.decimalValue, pd > 0, !isPremixed || vol > 0 else { return }
         let target = editing ?? StoredVial()
         target.label = label
         target.apis = apis
-        target.solventVolumeMilliliters = vol
+        target.solventVolumeMilliliters = vol > 0 ? vol : nil
         target.perDoseMicrograms = Mass(pd, doseUnit).micrograms
-        target.cost = costText.decimalValue ?? 0
+        // Remember the unit the user dosed in so every display of this vial (and any protocol
+        // drawing from it) shows the same unit rather than auto-switching by magnitude.
+        target.doseUnitRaw = doseUnit.rawValue
+        // Pre-mixed vials carry an explicit strength unit (mg/mL vs mcg/mL); powder vials leave it
+        // nil so their concentration display follows the dose unit.
+        target.concentrationUnitRaw = isPremixed ? concentrationUnit.rawValue : nil
+        target.cost = costText.decimalValue.map { Decimal($0) }
+        // COA correction applies only to powder vials — a pre-mixed vial's strength is already
+        // corrected, so clear any COA values when the vial is pre-mixed.
+        target.coaAssayPercent = isPremixed ? nil : coaAssayText.decimalValue
+        target.coaContentPercent = isPremixed ? nil : coaContentText.decimalValue
+        target.coaPurityPercent = isPremixed ? nil : coaPurityText.decimalValue
         target.expirationDate = hasExpiration ? expiration : nil
         target.isPremixed = isPremixed
-        // Keep inventory math coherent after an edit: never more doses taken than the vial
-        // now holds, and "fresh vial" resets the count entirely.
+        // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing
+        // date across edits; clear it if the vial isn't a reconstituted powder (premixed / no water).
+        target.dateReconstituted = (!isPremixed && vol > 0) ? (target.dateReconstituted ?? .now) : nil
+        // Keep inventory math coherent after an edit: never more doses taken than the vial now
+        // holds, and a "refilled" vial restarts the drawn-down count from zero (logged doses are
+        // untouched — this is only the vial's remaining-dose counter).
         target.dosesTaken = resetDoseCount ? 0 : min(target.dosesTaken, target.totalDoses)
         if editing == nil { context.insert(target) }
         try? context.save()

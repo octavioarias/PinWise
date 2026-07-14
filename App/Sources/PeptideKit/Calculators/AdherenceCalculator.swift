@@ -19,21 +19,46 @@ public enum AdherenceCalculator {
     ///   - start: window start (inclusive, day granularity).
     ///   - end: window end (inclusive, day granularity).
     ///   - logDates: timestamps of logged doses for this protocol.
+    ///   - graceDays: how many days late a dose may be logged and still count for its scheduled
+    ///     day (0 = same calendar day only, the original behavior). Matching is two-pass so an
+    ///     on-time dose is never consumed to cover an earlier miss, and each log counts once.
     ///   - calendar: injected for deterministic testing (use a fixed UTC calendar in tests).
     public static func evaluate(
         schedule: DoseSchedule,
         start: Date,
         end: Date,
         logDates: [Date],
+        graceDays: Int = 0,
         calendar: Calendar = .current
     ) -> Result {
         let expected = expectedDates(schedule: schedule, start: start, end: end, calendar: calendar)
-        let takenDays = Set(logDates.map { calendar.startOfDay(for: $0) })
+        // Consumable pool of logged days; each log can satisfy at most one scheduled day.
+        var available = logDates.map { calendar.startOfDay(for: $0) }.sorted()
+        var takenFlags = [Bool](repeating: false, count: expected.count)
+
+        // Pass 1 — exact same-day matches first, so a dose taken on time is credited to its own
+        // day and can't be stolen to backfill a previous miss.
+        for (i, day) in expected.enumerated() {
+            if let idx = available.firstIndex(of: day) {
+                takenFlags[i] = true
+                available.remove(at: idx)
+            }
+        }
+        // Pass 2 — a still-missed day may be covered by a dose logged up to `graceDays` LATE.
+        if graceDays > 0 {
+            for (i, day) in expected.enumerated() where !takenFlags[i] {
+                let upper = calendar.date(byAdding: .day, value: graceDays, to: day) ?? day
+                if let idx = available.firstIndex(where: { $0 > day && $0 <= upper }) {
+                    takenFlags[i] = true
+                    available.remove(at: idx)
+                }
+            }
+        }
 
         var taken: [Date] = []
         var missed: [Date] = []
-        for day in expected {
-            if takenDays.contains(day) { taken.append(day) } else { missed.append(day) }
+        for (i, day) in expected.enumerated() {
+            if takenFlags[i] { taken.append(day) } else { missed.append(day) }
         }
         let adherence = expected.isEmpty ? 1.0 : Double(taken.count) / Double(expected.count)
 

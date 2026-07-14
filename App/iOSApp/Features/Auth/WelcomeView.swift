@@ -2,66 +2,98 @@ import SwiftUI
 import AuthenticationServices
 import PeptideKit
 
-/// First-launch sign-in gate. Sign in with Apple works on-device; Google & Email are marked
-/// "Soon" (pending backend). "Continue without an account" keeps the app usable locally.
-/// On-brand: dark, hero mesh. Terms/Privacy are reachable before authenticating.
+/// First-launch sign-in gate. Cinematic hero: two stainless-steel vials (Retatrutide + GLOW)
+/// over a teal→blue glow on pitch black, then the PinWise mark + tagline, then auth — three
+/// groups with generous vertical spacing, the whole block vertically centered. Sign in with
+/// Apple works on-device; "Continue as guest" keeps the app usable locally; "Log in" routes to
+/// the (backend-pending) email path. Terms/Privacy reachable before authenticating.
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
     @State private var showLegal = false
 
     var body: some View {
         ZStack {
-            BrandColor.background.ignoresSafeArea()
-            HeroMesh()
-                .frame(height: 440)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .mask(LinearGradient(colors: [.black, .black.opacity(0.15), .clear], startPoint: .top, endPoint: .bottom))
-                .ignoresSafeArea()
-                .accessibilityHidden(true)
+            Color.black.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: Space.lg) {
-                Spacer()
-                VStack(alignment: .leading, spacing: Space.sm) {
-                    Text("Welcome to PinWise")
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(BrandColor.textPrimary)
-                    Text("Sign in to save your protocols, doses, and progress — or continue as a guest.")
-                        .font(Typo.body)
+            // Teal → blue glow, strictly behind the vials.
+            RadialGradient(
+                colors: [Color(hex: 0x22E0B0).opacity(0.32), Color(hex: 0x1E9CC8).opacity(0.20), .clear],
+                center: .center, startRadius: 0, endRadius: 220
+            )
+            .frame(width: 380, height: 380)
+            .blur(radius: 72)
+            .offset(y: -170)
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+
+                // 1 — Vials
+                Image("VialsHero")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 231)
+                    .accessibilityHidden(true)
+
+                Spacer().frame(height: 52)
+
+                // 2 — Name + description
+                VStack(spacing: 10) {
+                    Text("PinWise")
+                        .font(.system(size: 33, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Real science for peptides.\nThe source of truth for dose tracking.")
+                        .font(.system(size: 15))
+                        .multilineTextAlignment(.center)
                         .foregroundStyle(BrandColor.textSecondary)
                 }
-                Spacer()
 
+                Spacer().frame(height: 48)
+
+                // 3 — Auth
                 VStack(spacing: Space.md) {
                     SignInWithAppleButton(.continue) { request in
                         request.requestedScopes = [.fullName, .email]
                     } onCompletion: { auth.completeAppleSignIn($0) }
                     .signInWithAppleButtonStyle(.white)
                     .frame(height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-
-                    providerButton("Continue with Google", systemImage: "globe", soon: true) { auth.signInWithGoogle() }
-                    providerButton("Continue with email", systemImage: "envelope.fill", soon: true) { auth.startEmailSignIn() }
+                    .clipShape(Capsule())
 
                     Button { auth.continueAsGuest() } label: {
-                        Text("Continue without an account")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(BrandColor.textSecondary)
+                        Text("Continue as guest")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, Space.sm)
+                            .frame(height: 52)
+                            .background(Color.white.opacity(0.06), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
+
+                    HStack(spacing: 5) {
+                        Text("Have an account?")
+                            .foregroundStyle(BrandColor.textSecondary)
+                        Button { auth.startEmailSignIn() } label: {
+                            Text("Log in").fontWeight(.semibold).foregroundStyle(Color(hex: 0x18E39A))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .font(.system(size: 14))
+                    .padding(.top, Space.xs)
+
+                    Button { showLegal = true } label: {
+                        Text("Terms & Privacy")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(BrandColor.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
                 }
 
-                VStack(spacing: 3) {
-                    Button { showLegal = true } label: {
-                        Text("Terms & Privacy").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.accentText)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(maxWidth: .infinity)
+                Spacer(minLength: 0)
             }
-            .padding(Space.xl)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(.horizontal, Space.xl)
         }
         .tint(BrandColor.accent)
         .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
@@ -69,28 +101,4 @@ struct WelcomeView: View {
         } message: { Text(auth.notice ?? "") }
         .sheet(isPresented: $showLegal) { LegalDocumentView() }
     }
-
-    private func providerButton(_ title: String, systemImage: String, soon: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: Space.sm) {
-                Image(systemName: systemImage)
-                Text(title).fontWeight(.semibold)
-                if soon {
-                    Text("SOON").font(.caption2.weight(.bold))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(BrandColor.textSecondary.opacity(0.22), in: Capsule())
-                }
-            }
-            .foregroundStyle(soon ? BrandColor.textSecondary : BrandColor.textPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                    .strokeBorder(BrandColor.stroke, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
 }
-

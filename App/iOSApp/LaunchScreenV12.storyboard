@@ -8,8 +8,9 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!-- Launch: app-icon tile centered, muted footnote wordmark at the bottom (research: one hero mark per screen).
-             V8 filename = fresh snapshot-cache key; launch is ALWAYS dark by founder direction. Assets are CoreGraphics renders, scan-verified. -->
+        <!-- Launch: PURE-BLACK bg, metallic app-icon tile centered, muted footnote wordmark at the bottom.
+             No glow (founder removed it — a subtle radial reads as low-res/banded on the launch snapshot).
+             V12 filename = fresh launch-snapshot cache key; launch is ALWAYS dark by founder direction. -->
         <scene sceneID="EHf-IW-A2E">
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
@@ -51,7 +52,7 @@
         <image name="LaunchIcon" width="132" height="132"/>
         <image name="LaunchWordmark" width="120" height="27"/>
         <namedColor name="LaunchBackground">
-            <color red="0.0157" green="0.0196" blue="0.0431" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+            <color red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>

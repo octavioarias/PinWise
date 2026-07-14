@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "social-tiktok.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

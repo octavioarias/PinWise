@@ -15,6 +15,24 @@ public struct SubjectiveMetric: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
+public extension SubjectiveMetric {
+    /// Canonical display name for the energy self-report metric.
+    static let energyName = "Energy"
+    /// Canonical display name for the side-effect self-report metric.
+    static let sideEffectName = "Side effects"
+
+    /// Build subjective metrics from PinWise's two optional 0–10 quick self-reports.
+    /// `nil` inputs are omitted; values are clamped to 0…10 by `SubjectiveMetric.init`.
+    static func quickReports(energy: Double?, sideEffectSeverity: Double?) -> [SubjectiveMetric] {
+        var metrics: [SubjectiveMetric] = []
+        if let energy { metrics.append(SubjectiveMetric(name: energyName, value: energy)) }
+        if let sideEffectSeverity {
+            metrics.append(SubjectiveMetric(name: sideEffectName, value: sideEffectSeverity))
+        }
+        return metrics
+    }
+}
+
 /// A recorded injection event — the atomic unit of the log.
 public struct DoseLog: Identifiable, Codable, Hashable, Sendable {
     public var id: UUID

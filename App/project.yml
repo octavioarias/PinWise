@@ -31,14 +31,15 @@ targets:
       path: iOSApp/Info.plist
       properties:
         CFBundleDisplayName: PinWise
-        # Launch: gradient PinWise wordmark centered on brand black. Config must live HERE —
-        # xcodegen regenerates Info.plist. V6 filename = fresh launch-snapshot cache key.
-        UILaunchStoryboardName: LaunchScreenV8
+        # Launch: metallic PW icon tile on PURE BLACK + PinWise wordmark (no glow — founder removed it).
+        # Config must live HERE — xcodegen regenerates Info.plist. Bumping the storyboard filename
+        # (V12 = black bg, no glow) is a fresh launch-snapshot cache key.
+        UILaunchStoryboardName: LaunchScreenV12
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         NSHealthShareUsageDescription: "PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs."
-        NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label. The photo is read on your device to fill in the details."
+        NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label or take a progress photo. Photos stay on your device."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
     entitlements:
@@ -50,6 +51,10 @@ targets:
         # AuthManager and require a backend + Google client ID to complete.
         com.apple.developer.applesignin:
           - Default
+        # Time Sensitive notifications: dose reminders are marked .timeSensitive so they
+        # pierce Focus / Do Not Disturb / silent mode and surface prominently on the lock
+        # screen. Without this entitlement, .timeSensitive silently degrades to .active.
+        com.apple.developer.usernotifications.time-sensitive: true
     dependencies:
       - package: PeptideKit
         product: PeptideKit

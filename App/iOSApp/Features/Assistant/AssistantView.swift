@@ -166,8 +166,20 @@ struct AssistantView: View {
         if !activeProtocols.isEmpty {
             lines.append("ACTIVE PROTOCOLS:")
             for p in activeProtocols {
-                let s = "- \(p.name): " + p.items.map { "\($0.compoundName) \(Mass(micrograms: $0.doseMicrograms).displayString)" }.joined(separator: " + ") + " · \(p.cadenceText)"
-                lines.append(s)
+                let parts = p.items.enumerated().map { idx, item -> String in
+                    let unit = p.doseUnit(forItemAt: idx, vials: vials)
+                    let dose = Mass(micrograms: item.doseMicrograms)
+                    // A blend vial is one injection delivering every compound at a fixed mass ratio —
+                    // give the assistant the full breakdown, not just the primary.
+                    if let v = vials.first(where: { $0.id == item.vialID }), v.isBlend,
+                       let primary = v.primaryAPI, primary.massMicrograms > 0 {
+                        let deliver = v.apis.map { "\($0.name) \(Mass(micrograms: $0.massMicrograms / primary.massMicrograms * dose.micrograms).displayString(in: unit))" }
+                            .joined(separator: " + ")
+                        return "\(v.displayName) (blend, one shot: \(deliver))"
+                    }
+                    return "\(item.compoundName) \(dose.displayString(in: unit))"
+                }
+                lines.append("- \(p.name): " + parts.joined(separator: " + ") + " · \(p.cadenceText)")
             }
         }
         if !vials.isEmpty {
@@ -179,7 +191,8 @@ struct AssistantView: View {
         if !recent.isEmpty {
             lines.append("RECENT DOSES (\(thisWeek) this week):")
             for d in recent.prefix(8) {
-                lines.append("- \(day(d.timestamp)): \(d.compoundName) \(d.dose.displayString)" + (d.site.map { " @ \($0.displayName)" } ?? ""))
+                let unit = vials.first { $0.id == d.vialID }?.doseUnit ?? MassUnit.auto(forMicrograms: d.dose.micrograms)
+                lines.append("- \(day(d.timestamp)): \(d.compoundName) \(d.dose.displayString(in: unit))" + (d.site.map { " @ \($0.displayName)" } ?? ""))
             }
             if let m = mostUsedSite { lines.append("Most-used site: \(m.displayName).") }
         }

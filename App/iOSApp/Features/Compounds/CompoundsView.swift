@@ -155,7 +155,14 @@ struct CompoundLegendView: View {
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.sm) {
-                            SectionHeader(title: "Half-life (t½)")
+                            // Not SectionHeader: it uppercases the whole title, which would turn the
+                            // t½ symbol into "T½". Half-life is conventionally lowercase-t, so the
+                            // header keeps that while matching the section-header type treatment.
+                            Text("HALF-LIFE (t½)")
+                                .font(Typo.caption)
+                                .fontWeight(.semibold)
+                                .tracking(1.2)
+                                .foregroundStyle(BrandColor.textSecondary)
                             Text("The time it takes for half of a dose to clear your body. A short t½ (minutes or hours) means it acts and leaves quickly; a long t½ (days) means it lingers and can build up with repeat doses. It's a rough guide to how often something is typically taken — not a dose recommendation.")
                                 .font(.caption).foregroundStyle(BrandColor.textSecondary)
                         }
@@ -277,7 +284,7 @@ struct CompoundDetailView: View {
     }
 
     /// The one place a strong warning stays by design: compounds the user added themselves.
-    static let customCompoundNote = "You added this compound yourself — PinWise has no verified data on it. Confirm identity, purity, and handling with your supplier's certificate of analysis. PinWise provides no information or assurances for user-added compounds and takes no responsibility for them."
+    static let customCompoundNote = "You are choosing to add this compound yourself — PinWise has no verified data on it. Confirm identity, purity, and handling with your supplier's certificate of analysis. PinWise provides no information or assurances for user-added compounds and takes no responsibility for them."
 
     private var regulatoryLabel: String {
         switch compound.regulatoryStatus {

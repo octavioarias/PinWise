@@ -18,21 +18,67 @@ private extension NewsCategory {
     }
 }
 
-/// Formats a feed item's ISO-8601 `publishedAt` as a friendly abbreviated date (falls back to
-/// the raw date substring if parsing ever fails).
+/// Parses a feed item's `publishedAt` into a Date. Delegates to `NewsFeed.parseDate`, which
+/// reads `yyyy-MM-dd` directly — NEVER allocate an `ISO8601DateFormatter` here: this runs per
+/// row, per render, and on every scroll-visibility change, and formatter allocation froze the tab.
+func newsDate(_ iso: String) -> Date? { NewsFeed.parseDate(iso) }
+
+/// Formats a feed item's `publishedAt` as a friendly abbreviated date (falls back to the raw
+/// date substring if parsing ever fails).
 func newsDisplayDate(_ iso: String) -> String {
-    if let d = ISO8601DateFormatter().date(from: iso) {
-        return d.formatted(date: .abbreviated, time: .omitted)
+    newsDate(iso).map { $0.formatted(date: .abbreviated, time: .omitted) } ?? String(iso.prefix(10))
+}
+
+/// True when an article was published within the last `days` — the eligibility window for the
+/// "New" tag (keeps old/evergreen items from ever being flagged, and avoids a wall of "New" on
+/// first launch). Whether it *actually* shows also depends on the reader's seen state.
+func isRecentNews(_ iso: String, within days: Int = 7) -> Bool {
+    guard let d = newsDate(iso) else { return false }
+    let age = Date().timeIntervalSince(d)
+    return age >= 0 && age <= Double(days) * 86_400
+}
+
+/// Tracks which News articles the reader has scrolled into view, by first-seen calendar day, so
+/// the "New" tag behaves like an unread badge: a recent article stays flagged until it's scrolled
+/// past, an article seen today stays flagged for the rest of that day, and it clears the next day.
+/// Local-only (UserDefaults), self-pruning past 30 days so it can't grow without bound.
+@MainActor @Observable
+final class NewsSeenStore {
+    private static let key = "newsSeenDays"      // [articleID: "yyyy-MM-dd" first-seen day]
+    private var seen: [String: String]
+
+    private static func dayString(_ date: Date = Date()) -> String {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        df.calendar = Calendar(identifier: .gregorian)
+        df.dateFormat = "yyyy-MM-dd"
+        return df.string(from: date)
     }
-    let df = DateFormatter(); df.dateFormat = "yyyy-MM-dd"; df.timeZone = TimeZone(identifier: "UTC")
-    if let d = df.date(from: String(iso.prefix(10))) {
-        return d.formatted(date: .abbreviated, time: .omitted)
+
+    init() {
+        let raw = (UserDefaults.standard.dictionary(forKey: Self.key) as? [String: String]) ?? [:]
+        let cutoff = Self.dayString(Date().addingTimeInterval(-30 * 86_400))
+        seen = raw.filter { $0.value >= cutoff }   // lexical == chronological for yyyy-MM-dd
+        if seen.count != raw.count { UserDefaults.standard.set(seen, forKey: Self.key) }
     }
-    return String(iso.prefix(10))
+
+    /// Record that an article was scrolled into view (first sighting only).
+    func markSeen(_ id: String) {
+        guard seen[id] == nil else { return }
+        seen[id] = Self.dayString()
+        UserDefaults.standard.set(seen, forKey: Self.key)
+    }
+
+    /// Still eligible to show "New": never seen, or first seen today (clears the next day).
+    func isUnreadToday(_ id: String) -> Bool {
+        guard let day = seen[id] else { return true }
+        return day == Self.dayString()
+    }
 }
 
 struct NewsView: View {
     @State private var loader = NewsFeedLoader()
+    @State private var seenStore = NewsSeenStore()
     @State private var searchText = ""
     @State private var category: NewsCategory?
     @State private var myStack = false
@@ -61,15 +107,28 @@ struct NewsView: View {
         }
     }
 
-    private var items: [NewsItem] { feed.trending }
+    // Blended recency + popularity order (see NewsFeed.rankScore): the top stories are the ones
+    // that are both recently published and popular; everything flows newest-leaning from there.
+    private var items: [NewsItem] { feed.ranked() }
     private var isFiltering: Bool {
         !searchText.trimmingCharacters(in: .whitespaces).isEmpty || category != nil || myStack
     }
 
-    /// Featured lead = most popular. "Latest" = everything else, newest first.
-    private var featured: NewsItem? { items.first }
+    /// Featured lead — personalized. If the user is on compounds and any story mentions one of
+    /// them, the highest-ranked matching story leads; otherwise the top editorial story. New
+    /// users (empty stack) always see the editorial Top story.
+    private var featured: NewsItem? {
+        if !userCompounds.isEmpty, let mine = items.first(where: { matchesStack($0) }) { return mine }
+        return items.first
+    }
+    /// True when the lead was chosen because it matches the user's stack (drives the header copy).
+    private var featuredIsPersonalized: Bool {
+        guard let featured, !userCompounds.isEmpty else { return false }
+        return matchesStack(featured)
+    }
+    /// "Latest" = everything else, kept in the feed's blended recency+popularity order.
     private var latest: [NewsItem] {
-        items.filter { $0.id != featured?.id }.sorted { $0.publishedAt > $1.publishedAt }
+        items.filter { $0.id != featured?.id }
     }
     private var results: [NewsItem] {
         items.filter { item in
@@ -100,6 +159,7 @@ struct NewsView: View {
                 .padding(Space.lg)
             }
             .heroScreen()
+            .scrollsToTopOnReselect(.news)
             .toolbar(.hidden, for: .navigationBar)
             .task { await loader.load() }
         }
@@ -157,8 +217,8 @@ struct NewsView: View {
             resultsList
         } else {
             if let featured {
-                SectionHeader(title: "Top story")
-                newsLink(featured) { FeaturedNewsCard(item: featured) }
+                SectionHeader(title: featuredIsPersonalized ? "Top story for you" : "Top story")
+                newsLink(featured) { FeaturedNewsCard(item: featured, seenStore: seenStore) }
             }
             SectionHeader(title: "Latest")
             ForEach(latest) { item in rowLink(item) }
@@ -231,7 +291,7 @@ struct NewsView: View {
     /// A list-row link with the shared scroll-edge treatment (rows only — the featured card
     /// stays static). Scale is ternaried out under Reduce Motion; the fade stays.
     private func rowLink(_ item: NewsItem) -> some View {
-        newsLink(item) { NewsRow(item: item) }
+        newsLink(item) { NewsRow(item: item, seenStore: seenStore) }
             .scrollTransition(axis: .vertical) { content, phase in
                 content
                     .opacity(phase.isIdentity ? 1 : 0.8)
@@ -249,10 +309,25 @@ struct NewsView: View {
     }
 }
 
+/// A small "New" tag (red dot + label) flagging a recently-published article.
+private struct NewBadge: View {
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle().fill(BrandColor.danger).frame(width: 6, height: 6)
+            Text("New")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(BrandColor.danger)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("New")
+    }
+}
+
 /// The lead story: a prominent, text-forward card (chips → headline → summary → sources).
 /// Uses theme tokens so it reads correctly in both light and dark mode.
 struct FeaturedNewsCard: View {
     let item: NewsItem
+    var seenStore: NewsSeenStore
 
     var body: some View {
         Card {
@@ -261,6 +336,7 @@ struct FeaturedNewsCard: View {
                     TagChip(text: item.category.rawValue, color: item.category.tint)
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
                     Spacer()
+                    if isRecentNews(item.publishedAt) && seenStore.isUnreadToday(item.id) { NewBadge() }
                     Text(newsDisplayDate(item.publishedAt))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
@@ -269,7 +345,7 @@ struct FeaturedNewsCard: View {
                     .foregroundStyle(BrandColor.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(item.summary)
+                Text(item.listText)
                     .font(Typo.body)
                     .foregroundStyle(BrandColor.textSecondary)
                     .lineLimit(3)
@@ -283,12 +359,16 @@ struct FeaturedNewsCard: View {
                 .foregroundStyle(BrandColor.success)
             }
         }
+        .onScrollVisibilityChange(threshold: 0.6) { visible in
+            if visible, isRecentNews(item.publishedAt) { seenStore.markSeen(item.id) }
+        }
     }
 }
 
 /// A list row: square thumbnail + headline + meta.
 struct NewsRow: View {
     let item: NewsItem
+    var seenStore: NewsSeenStore
 
     var body: some View {
         Card {
@@ -301,6 +381,7 @@ struct NewsRow: View {
                     HStack {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
+                        if isRecentNews(item.publishedAt) && seenStore.isUnreadToday(item.id) { NewBadge() }
                         Text(newsDisplayDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)
@@ -311,11 +392,18 @@ struct NewsRow: View {
                         .multilineTextAlignment(.leading)
                         .lineLimit(2)
                         .minimumScaleFactor(0.85)
+                    Text(item.listText)
+                        .font(.caption)
+                        .foregroundStyle(BrandColor.textSecondary)
+                        .lineLimit(2)
                     Text("\(item.sources.count) source\(item.sources.count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(BrandColor.success)
                 }
             }
+        }
+        .onScrollVisibilityChange(threshold: 0.6) { visible in
+            if visible, isRecentNews(item.publishedAt) { seenStore.markSeen(item.id) }
         }
     }
 }
@@ -370,6 +458,12 @@ struct NewsDetailView: View {
                             }
                         }
                     }
+                }
+
+                if !item.disclaimer.isEmpty {
+                    Text(item.disclaimer)
+                        .font(.caption2)
+                        .foregroundStyle(BrandColor.textSecondary)
                 }
             }
             .padding(Space.lg)

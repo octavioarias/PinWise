@@ -17,6 +17,11 @@ public struct PreparedDoseResult: Codable, Hashable, Sendable {
     public let exactDosesPerVial: Double?
 }
 
+extension PreparedDoseResult: DoseDrawResult {
+    /// Only derivable when a total volume was supplied; otherwise `nil`.
+    public var exactDosesPerVialOrNil: Double? { exactDosesPerVial }
+}
+
 /// Dosing math for **pre-mixed / ready-to-use** products (e.g. compounded-pharmacy vials
 /// labeled in mg/mL) — no reconstitution needed. Complements ``ReconstitutionCalculator``,
 /// which derives the concentration from powder + water; here the concentration is given.

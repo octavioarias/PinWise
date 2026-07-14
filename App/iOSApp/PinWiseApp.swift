@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+import UIKit
+import StoreKit
+import UserNotifications
 import PeptideKit
 
 // App entry point for the iOS target. Add this file (and the rest of App/iOSApp/)
@@ -7,6 +10,9 @@ import PeptideKit
 // Fastest setup: `cd App && xcodegen generate` (see App/iOSApp/README.md).
 @main
 struct PinWiseApp: App {
+    // Owns the notification-center delegate so dose reminders show even when PinWise is open.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -14,7 +20,24 @@ struct PinWiseApp: App {
         // Local-first store. To enable iCloud private-database sync later, add the iCloud
         // + CloudKit capability and a ModelConfiguration(cloudKitDatabase:) — the model is
         // already CloudKit-safe (see LoggedDose).
-        .modelContainer(for: [LoggedDose.self, SavedProtocol.self, StoredVial.self, SymptomEntry.self, BiomarkerEntry.self, CustomCompound.self])
+        .modelContainer(for: [LoggedDose.self, SavedProtocol.self, StoredVial.self, SymptomEntry.self, BiomarkerEntry.self, CustomCompound.self, PhysiquePhoto.self])
+    }
+}
+
+/// Registers as the notification-center delegate so scheduled dose reminders present while
+/// PinWise is in the foreground — iOS suppresses them by default, which makes an in-app dose
+/// reminder useless (people often have the app open around dose time).
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        return true
+    }
+
+    // Foreground presentation: banner + sound + Notification Center entry, same as when closed.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound]
     }
 }
 
@@ -27,7 +50,41 @@ struct RootView: View {
     @AppStorage("completedIntroTour") private var completedIntroTour = false
     @AppStorage("completedProfileSetup") private var completedProfileSetup = false
     @AppStorage("didMigrateProfileSetup") private var didMigrateProfileSetup = false
+    // App Store review prompts at tenure milestones (day 8/30/60), once each — logic in
+    // PeptideKit.ReviewPrompt. firstLaunchAt anchors "days of use"; reviewLastMilestone records
+    // the last milestone requested so none repeats.
+    @AppStorage("firstLaunchAt") private var firstLaunchAt: Double = 0
+    @AppStorage("reviewLastMilestone") private var reviewLastMilestone: Int = 0
+    @Environment(\.scenePhase) private var scenePhase
     @State private var auth = AuthManager.shared
+
+    /// The app starts the week on MONDAY — so every calendar/date-picker grid lays out
+    /// Mon-first. Display only: stored weekday numbers stay absolute (1 = Sun … 7 = Sat) and
+    /// all scheduling math uses `Calendar.current`, unaffected by this environment override.
+    private static var mondayFirstCalendar: Calendar {
+        var c = Calendar.current
+        c.firstWeekday = 2
+        return c
+    }
+
+    /// True once the user is all the way into the app (past sign-in, disclaimer, profile, tour) —
+    /// we never ask for a review during any first-run gate.
+    private var gatesClear: Bool {
+        auth.isAuthenticated && acceptedVersion >= Disclaimer.currentVersion
+            && completedProfileSetup && completedIntroTour
+    }
+
+    /// Ask for an App Store review if a tenure milestone (day 8/30/60) is due and hasn't fired.
+    @MainActor private func maybeRequestReview() {
+        guard gatesClear, firstLaunchAt > 0 else { return }
+        let days = Int((Date().timeIntervalSinceReferenceDate - firstLaunchAt) / 86_400)
+        guard let milestone = ReviewPrompt.due(daysSinceInstall: days, lastFired: reviewLastMilestone),
+              let scene = UIApplication.shared.connectedScenes
+                  .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+        else { return }
+        reviewLastMilestone = milestone   // record only once we actually request, so it never repeats
+        AppStore.requestReview(in: scene)
+    }
 
     var body: some View {
         ZStack {
@@ -70,12 +127,23 @@ struct RootView: View {
                 if completedIntroTour && !completedProfileSetup { completedProfileSetup = true }
                 didMigrateProfileSetup = true
             }
+            // Stamp the install/first-use date once — anchors the review-prompt milestones.
+            if firstLaunchAt == 0 { firstLaunchAt = Date().timeIntervalSinceReferenceDate }
             // If Health was connected in a past session, refresh silently — no re-prompt.
             await HealthManager.shared.refreshIfConnected()
+            // Cold-launch review check, after a natural pause (scenePhase.onChange covers warm
+            // resumes). requestReview is a request — Apple decides whether to actually show it.
+            try? await Task.sleep(for: .seconds(3))
+            maybeRequestReview()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { maybeRequestReview() }
         }
         .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)
         // Also force the window's UIKit style so dynamic BrandColor tokens resolve to the same
         // appearance as SwiftUI-native views (prevents invisible native text on mismatch).
         .background(AppearanceApplier(mode: AppearanceMode.from(appearanceRaw)))
+        // Week starts on Monday everywhere the app renders a calendar grid.
+        .environment(\.calendar, Self.mondayFirstCalendar)
     }
 }
