@@ -175,6 +175,7 @@ struct VialBuilderView: View {
     /// Free-text notes on the vial (e.g. a scanned lot/batch number). Round-trips through save.
     @State private var notes: String
     @State private var showScanner = false
+    @State private var showVoice = false
     @State private var resetDoseCount = false
     /// Set for one cycle when a scan flips the pre-mixed/powder segment itself, so the
     /// `onChange(of: isPremixed)` unit converter doesn't re-scale the value the scan just wrote.
@@ -370,17 +371,15 @@ struct VialBuilderView: View {
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if isPremixed {
-                        Button { showScanner = true } label: {
-                            Label("Scan the pharmacy label", systemImage: "text.viewfinder")
-                                .font(.body.weight(.semibold))
-                                .frame(maxWidth: .infinity).padding(.vertical, Space.md)
-                                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-                                .foregroundStyle(BrandColor.accentText)
-                        }
-                        .buttonStyle(.plain)
+                    // Fill from a photo or by voice — available in both modes. What's read decides
+                    // pre-mixed vs powder, so a scan/voice result routes to the right mode itself.
+                    HStack(spacing: Space.md) {
+                        captureButton("Scan", icon: "text.viewfinder") { showScanner = true }
+                        captureButton("Speak", icon: "mic.fill") { showVoice = true }
                     }
+                    Text("Snap the label or say the details — PinWise fills in what it can, on your device.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
@@ -608,7 +607,23 @@ struct VialBuilderView: View {
             .sheet(isPresented: $showScanner) {
                 LabelScannerView(extraCompoundNames: customCompounds.map(\.name)) { applyScan($0) }
             }
+            .sheet(isPresented: $showVoice) {
+                VoiceInputView(extraCompoundNames: customCompounds.map(\.name)) { applyScan($0) }
+            }
         }
+    }
+
+    /// Photo/voice capture button — shared style for the "Scan" and "Speak" entry points.
+    private func captureButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity).padding(.vertical, Space.md)
+                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                .foregroundStyle(BrandColor.accentText)
+        }
+        .buttonStyle(.plain)
     }
 
     /// Fill the form from an on-device label scan (user confirmed). Everything stays editable.
