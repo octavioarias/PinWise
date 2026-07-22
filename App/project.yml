@@ -16,6 +16,12 @@ packages:
   MuscleMap:
     url: https://github.com/melihcolpan/MuscleMap.git
     from: "1.6.4"
+  # Supabase Swift SDK — used for auth only (Apple id-token sign-in, anonymous guest sessions,
+  # token refresh). The AI streaming call is hand-rolled over URLSession in CloudAIClient, since
+  # the SDK's function-invoke doesn't stream SSE.
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: "2.0.0"
 
 targets:
   PinWise:
@@ -40,6 +46,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSHealthShareUsageDescription: "PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs."
         NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label or take a progress photo. Photos stay on your device."
+        NSMicrophoneUsageDescription: "PinWise uses the microphone so you can speak a vial's details to fill them in. Audio is transcribed on your device and isn't uploaded."
+        NSSpeechRecognitionUsageDescription: "PinWise transcribes your speech on your device to fill in vial details. Nothing is sent to Apple or any server."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
     entitlements:
@@ -60,6 +68,8 @@ targets:
         product: PeptideKit
       - package: MuscleMap
         product: MuscleMap
+      - package: Supabase
+        product: Supabase
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pinwise.app

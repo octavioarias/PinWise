@@ -83,12 +83,22 @@ final class AuthManager {
             set(provider: .apple, uid: cred.user,
                 name: parts.isEmpty ? nil : parts.joined(separator: " "),
                 email: cred.email)
+            // Bridge to the backend: exchange Apple's identity token for a Supabase session so the
+            // hosted AI can authenticate the user. Best-effort — the on-device session set above
+            // stands regardless, and this is a no-op until the backend is configured.
+            if let tokenData = cred.identityToken, let idToken = String(data: tokenData, encoding: .utf8) {
+                Task { try? await SupabaseService.shared.signInWithApple(idToken: idToken) }
+            }
         case .failure:
             notice = nil   // user canceled — don't nag
         }
     }
 
-    func continueAsGuest() { set(provider: .guest, uid: "guest", name: nil, email: nil) }
+    func continueAsGuest() {
+        set(provider: .guest, uid: "guest", name: nil, email: nil)
+        // Anonymous Supabase session so guests get a small server-tracked AI quota.
+        Task { try? await SupabaseService.shared.signInAnonymously() }
+    }
 
     // MARK: Google / Email (pending backend)
 
@@ -103,7 +113,10 @@ final class AuthManager {
         notice = "Email accounts are almost ready — they need the backend to finish. For now, use Apple or continue without an account."
     }
 
-    func signOut() { set(provider: nil, uid: nil, name: nil, email: nil) }
+    func signOut() {
+        set(provider: nil, uid: nil, name: nil, email: nil)
+        Task { await SupabaseService.shared.signOut() }
+    }
 
     /// Guest tapped "Sign in": drop the guest session so the welcome screen shows, but keep
     /// the typed name (and memberSince) so they survive the upgrade to a real account.

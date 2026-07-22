@@ -26,6 +26,10 @@
 	<string>PinWise uses the camera so you can photograph a vial label or take a progress photo. Photos stay on your device.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PinWise uses the microphone so you can speak a vial's details to fill them in. Audio is transcribed on your device and isn't uploaded.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>PinWise transcribes your speech on your device to fill in vial details. Nothing is sent to Apple or any server.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreenV12</string>
 	<key>UISupportedInterfaceOrientations</key>
