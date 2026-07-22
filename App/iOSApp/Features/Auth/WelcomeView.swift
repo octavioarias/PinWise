@@ -10,6 +10,7 @@ import PeptideKit
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
     @State private var showLegal = false
+    @State private var showEmail = false
 
     var body: some View {
         ZStack {
@@ -74,7 +75,7 @@ struct WelcomeView: View {
                     HStack(spacing: 5) {
                         Text("Have an account?")
                             .foregroundStyle(BrandColor.textSecondary)
-                        Button { auth.startEmailSignIn() } label: {
+                        Button { showEmail = true } label: {
                             Text("Log in").fontWeight(.semibold).foregroundStyle(Color(hex: 0x18E39A))
                         }
                         .buttonStyle(.plain)
@@ -100,5 +101,6 @@ struct WelcomeView: View {
             Button("OK", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
         .sheet(isPresented: $showLegal) { LegalDocumentView() }
+        .sheet(isPresented: $showEmail) { EmailSignInView() }
     }
 }

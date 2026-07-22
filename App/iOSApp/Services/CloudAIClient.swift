@@ -39,15 +39,9 @@ final class CloudAIClient {
             let work = Task { @MainActor in
                 do {
                     guard AppConfig.isBackendConfigured else { throw CloudAIError.notConfigured }
-                    // Self-heal: if there's no Supabase session yet (e.g. a user who signed in
-                    // before this backend existed, or a fresh guest), start an anonymous one so the
-                    // assistant works at the free/trial tier without forcing a re-login.
-                    var token = await SupabaseService.shared.accessToken()
-                    if token == nil {
-                        try? await SupabaseService.shared.signInAnonymously()
-                        token = await SupabaseService.shared.accessToken()
-                    }
-                    guard let token else { throw CloudAIError.notSignedIn }
+                    // The assistant requires a real account (Apple or email), so a session should
+                    // always exist here — the UI gates guests out before they can reach this.
+                    guard let token = await SupabaseService.shared.accessToken() else { throw CloudAIError.notSignedIn }
 
                     var req = URLRequest(url: AppConfig.aiChatURL)
                     req.httpMethod = "POST"

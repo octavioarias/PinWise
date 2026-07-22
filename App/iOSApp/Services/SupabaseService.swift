@@ -3,6 +3,11 @@ import Foundation
 import Supabase
 #endif
 
+/// The signed-in user returned after an email-code verification.
+struct SupabaseAuthedUser { let id: String; let email: String? }
+
+enum SupabaseAuthError: Error { case notConfigured }
+
 /// Thin wrapper around the Supabase Swift SDK, used for AUTH only — Apple id-token sign-in,
 /// anonymous (guest) sessions, and token refresh. The SDK persists + refreshes the session in the
 /// Keychain for us. The actual AI streaming call is hand-rolled in `CloudAIClient` (the SDK's
@@ -31,12 +36,26 @@ final class SupabaseService {
         )
     }
 
-    /// Start (or resume) an anonymous session so guests get a small AI quota tracked server-side.
+    /// Start (or resume) an anonymous session. (Currently unused — the assistant requires a real
+    /// account — kept for potential future use.)
     func signInAnonymously() async throws {
         guard let client else { return }
-        // If a session already exists (anonymous or real), keep it.
         if (try? await client.auth.session) != nil { return }
         _ = try await client.auth.signInAnonymously()
+    }
+
+    /// Send a one-time login code to the given email (creates the account if new).
+    func sendEmailCode(_ email: String) async throws {
+        guard let client else { throw SupabaseAuthError.notConfigured }
+        try await client.auth.signInWithOTP(email: email, shouldCreateUser: true)
+    }
+
+    /// Verify the emailed code and establish a session. Returns the signed-in user.
+    func verifyEmailCode(email: String, code: String) async throws -> SupabaseAuthedUser {
+        guard let client else { throw SupabaseAuthError.notConfigured }
+        _ = try await client.auth.verifyOTP(email: email, token: code, type: .email)
+        guard let user = client.auth.currentUser else { throw SupabaseAuthError.notConfigured }
+        return SupabaseAuthedUser(id: user.id.uuidString, email: user.email)
     }
 
     /// A valid access token for the current session, refreshing if needed. `nil` if not signed in
@@ -54,6 +73,8 @@ final class SupabaseService {
     private init() {}
     func signInWithApple(idToken: String) async throws {}
     func signInAnonymously() async throws {}
+    func sendEmailCode(_ email: String) async throws { throw SupabaseAuthError.notConfigured }
+    func verifyEmailCode(email: String, code: String) async throws -> SupabaseAuthedUser { throw SupabaseAuthError.notConfigured }
     func accessToken() async -> String? { nil }
     func signOut() async {}
     #endif

@@ -117,6 +117,7 @@ struct AssistantView: View {
     @Query(sort: \SymptomEntry.timestamp, order: .reverse) private var symptoms: [SymptomEntry]
     @Query(sort: \BiomarkerEntry.timestamp, order: .reverse) private var biomarkers: [BiomarkerEntry]
     @State private var health = HealthManager.shared
+    @State private var auth = AuthManager.shared
     // Versioned so a change in how the assistant handles data (e.g. this move to cloud processing)
     // can force re-acceptance. Tied to `Disclaimer.currentVersion` — bumping it re-prompts here too.
     @AppStorage("aiConsentVersion") private var aiConsentVersion = 0
@@ -213,10 +214,12 @@ struct AssistantView: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.sm)
 
-            if aiAccepted {
+            if auth.isGuest {
+                signInGate
+            } else if aiAccepted {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Space.md) {
-                        Text("On-device — informational only, never dosing or medical advice.")
+                        Text("Informational only — never dosing or medical advice.")
                             .font(.caption2).foregroundStyle(BrandColor.textSecondary)
 
                         if engine.messages.isEmpty {
@@ -241,6 +244,30 @@ struct AssistantView: View {
         .task { if health.authorized { await health.refresh() } }
         .sheet(isPresented: $showCompounds) { NavigationStack { CompoundsView() } }
         .sheet(isPresented: $showLegend) { CompoundLegendView() }
+    }
+
+    /// Guests can use the free tracker, but the assistant is account-only. Prompt sign-in and drop
+    /// back to the welcome screen (beginAccountUpgrade clears the guest session so it reappears).
+    private var signInGate: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
+                    Image(systemName: "sparkles.rectangle.stack")
+                        .font(.largeTitle).foregroundStyle(BrandColor.accentText)
+                    Text("Sign in to use the assistant")
+                        .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
+                    Text("The assistant is part of your PinWise account. Sign in with Apple or your email to start chatting — the rest of the app stays free as a guest.")
+                        .font(.callout).foregroundStyle(BrandColor.textSecondary)
+                }
+                .padding(Space.lg)
+            }
+            PrimaryButton(title: "Sign in", systemImage: "person.crop.circle") {
+                auth.beginAccountUpgrade()
+                close()
+            }
+            .padding(.horizontal, Space.lg).padding(.top, Space.sm).padding(.bottom, Space.lg)
+            .background(BrandColor.surface)
+        }
     }
 
     /// First-use liability gate — the assistant is unusable until the user accepts.
