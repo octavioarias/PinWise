@@ -62,7 +62,7 @@ struct WelcomeView: View {
                     .clipShape(Capsule())
 
                     Button { showEmail = true } label: {
-                        Text("Continue with email")
+                        Label("Continue with email", systemImage: "envelope.fill")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
