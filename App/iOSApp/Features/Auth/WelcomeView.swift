@@ -63,7 +63,7 @@ struct WelcomeView: View {
 
                     Button { showEmail = true } label: {
                         Label("Continue with email", systemImage: "envelope.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 19, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -74,7 +74,7 @@ struct WelcomeView: View {
 
                     Button { auth.continueAsGuest() } label: {
                         Text("Continue as guest")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 19, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
