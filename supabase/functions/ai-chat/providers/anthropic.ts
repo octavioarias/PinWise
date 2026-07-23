@@ -36,7 +36,10 @@ export class AnthropicProvider implements ChatProvider {
       { type: "text", text: req.system, cache_control: { type: "ephemeral" } },
     ];
     if (req.context && req.context.trim()) {
-      systemBlocks.push({ type: "text", text: req.context, cache_control: { type: "ephemeral" } });
+      // NOT cached: the context now carries per-query RAG sources, so it changes every turn —
+      // caching it would just pay the write overhead for a hit that never comes. Guardrails (the
+      // big, stable block above) stay cached.
+      systemBlocks.push({ type: "text", text: req.context });
     }
 
     const resp = await fetch(API_URL, {

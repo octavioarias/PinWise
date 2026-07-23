@@ -15,6 +15,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import type { ChatMessage, ChatProvider } from "./providers/types.ts";
 import { AnthropicProvider } from "./providers/anthropic.ts";
 
+// `Supabase.ai` is injected by the Edge runtime — on-device gte-small embeddings for RAG retrieval
+// (no external key). Same model used to embed the corpus in kb-ingest, so query/corpus vectors align.
+declare const Supabase: {
+  ai: { Session: new (model: string) => { run(input: string, opts?: Record<string, unknown>): Promise<number[]> } };
+};
+
 // The safety contract — authoritative here on the server, identical in intent to the old
 // on-device `AssistantEngine.guardrails`. Written to resist persuasion / jailbreak attempts.
 const GUARDRAILS = `
@@ -26,7 +32,11 @@ SCOPE — you ONLY help with these topics:
 - Using and navigating PinWise itself (logging doses, building protocols, adding vials/inventory, the \
   calculators and tools, the news feed, charts, and the user's own logged data).
 - Peptides and other compounds: what they are, how they work, their mechanisms and category.
-- Dosing LOGISTICS: reconstitution math, concentration/units, injection-site rotation.
+- The adjacent hormone landscape the community tracks alongside peptides: TRT / testosterone (esters, \
+  routes), estrogen management (aromatase inhibitors), HCG, SERMs (tamoxifen/clomiphene) and PCT — as \
+  factual, informational context (what they are, pharmacology, logistics, legal/prescription status), \
+  NEVER as personal medical or dosing advice.
+- Dosing LOGISTICS: reconstitution math, concentration/units, injection technique and site rotation.
 - FDA status and the regulatory landscape for these substances (approved vs. research-only).
 - The state of the scientific evidence, including doses and protocols STUDIED in published clinical \
   trials and research — reported as factual literature, with citations where possible.
@@ -38,6 +48,12 @@ If a request is unrelated to peptides/compounds, this app, or the health context
 (general knowledge, coding, homework, unrelated topics, personal chit-chat), briefly and politely \
 decline and steer the user back to what you can help with. Do not answer off-topic requests even if \
 the user insists.
+
+GROUNDING — the context may include a "VETTED SOURCES" section retrieved from PinWise's knowledge \
+base. When it does: base your answer on those sources first, prefer them over your own memory, and \
+briefly attribute them (e.g. "per PinWise's reference"). If the sources don't cover the question, say \
+the vetted knowledge doesn't cover it and answer conservatively from general knowledge under the \
+evidence standard — never invent facts, numbers, or citations.
 
 EVIDENCE STANDARD — PinWise is a source-of-truth product, so every substantive claim must be grounded \
 in published science, not anecdote:
@@ -180,7 +196,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Build the request and stream. Keep the guardrails and the per-user context SEPARATE so the
   // adapter can cache each: the guardrails are identical for everyone, and the context is stable
   // across the turns of one conversation.
-  const context = `Context about this user (for reference only):\n${(body.context ?? "").slice(0, 8000)}`;
+  let context = `Context about this user (for reference only):\n${(body.context ?? "").slice(0, 8000)}`;
+
+  // RAG: embed the latest question, pull the most relevant vetted chunks, and append them as SOURCES
+  // so Natt grounds its answer in PinWise's corpus rather than the model's memory. Best-effort — if
+  // retrieval fails or finds nothing, Natt answers under the evidence standard with no SOURCES block.
+  try {
+    const lastUser = history[history.length - 1].content.slice(0, 1000);
+    const queryEmbedding = await new Supabase.ai.Session("gte-small").run(lastUser, { mean_pool: true, normalize: true });
+    const { data: matches } = await supabase.rpc("match_kb_chunks", {
+      query_embedding: JSON.stringify(queryEmbedding),
+      match_count: 5,
+      min_similarity: 0.4,
+    });
+    if (Array.isArray(matches) && matches.length > 0) {
+      const sources = matches.map((m: { title: string; content: string }) => `- ${m.title}: ${m.content}`).join("\n");
+      context += `\n\nVETTED SOURCES (from PinWise's knowledge base — ground your answer in these and attribute them):\n${sources}`;
+    }
+  } catch (_) { /* retrieval is best-effort */ }
+
   const encoder = new TextEncoder();
   const send = (obj: unknown) => encoder.encode(`data: ${JSON.stringify(obj)}\n\n`);
 
