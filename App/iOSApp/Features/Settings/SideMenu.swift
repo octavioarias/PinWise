@@ -121,13 +121,12 @@ struct SideMenuDrawer: View {
             Button("Sign out", role: .destructive) {
                 auth.signOut()
                 ProfilePhotoStore.shared.clear()   // don't leave the previous user's face behind
-                // Reset personal details and re-arm the setup screen so the next account
-                // personalizes fresh instead of inheriting this user's profile.
+                // Reset personal details so the next account personalizes fresh instead of
+                // inheriting this user's profile.
                 let d = UserDefaults.standard
                 d.removeObject(forKey: "profileBirthday")
                 d.removeObject(forKey: "profileHeightCm")
                 d.set("male", forKey: "bodyGender")
-                d.set(false, forKey: "completedProfileSetup")
                 isOpen = false
             }
             Button("Cancel", role: .cancel) {}

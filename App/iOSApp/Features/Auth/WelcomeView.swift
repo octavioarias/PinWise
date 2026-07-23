@@ -83,13 +83,24 @@ struct WelcomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button { showLegal = true } label: {
-                        Text("Terms & Privacy")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(BrandColor.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 2)
+                    // Sign-in wrap: continuing with any option above accepts the Terms + 18+.
+                    // Conspicuous, immediately adjacent to the buttons; tapping opens the docs.
+                    (
+                        Text("By continuing, you confirm you're 18+ and agree to our ")
+                            .foregroundColor(BrandColor.textSecondary)
+                        + Text("Terms of Service").foregroundColor(BrandColor.accentText)
+                        + Text(" & ").foregroundColor(BrandColor.textSecondary)
+                        + Text("Privacy Policy").foregroundColor(BrandColor.accentText)
+                        + Text(".").foregroundColor(BrandColor.textSecondary)
+                    )
+                    .font(.caption2.weight(.medium))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+                    .contentShape(Rectangle())
+                    .onTapGesture { showLegal = true }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("Opens the Terms of Service and Privacy Policy")
                 }
 
                 Spacer(minLength: 0)
