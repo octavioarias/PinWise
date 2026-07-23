@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PhotosUI
 
 /// One-time profile personalization — shown after terms acceptance and before the intro
@@ -20,7 +21,14 @@ struct ProfileSetupView: View {
     @State private var heightFeetText = ""
     @State private var heightInchesText = ""
     @State private var heightText = ""
+    @State private var weightValue = 160          // in the current unit; default a sensible lb value
+    @State private var weightTouched = false
+    @State private var convertingUnit = false      // guards the weight wheel's onChange during unit flips
     @State private var doneTrigger = 0
+    @Environment(\.modelContext) private var context
+
+    /// Weight wheel range for the current unit.
+    private var weightRange: [Int] { weightInPounds ? Array(80...400) : Array(35...250) }
 
     var body: some View {
         ZStack {
@@ -67,6 +75,7 @@ struct ProfileSetupView: View {
                         DatePicker("", selection: $birthday, in: ProfileFields.birthdayRange,
                                    displayedComponents: [.date])
                             .labelsHidden()
+                            .datePickerStyle(.wheel)
                             .onChange(of: birthday) { _, _ in birthdayTouched = true }
                     }
 
@@ -75,12 +84,23 @@ struct ProfileSetupView: View {
                             Text("Male").tag("male")
                             Text("Female").tag("female")
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.wheel).frame(height: 120)
                     }
 
                     FieldRow("Height") {
                         HeightField(feetText: $heightFeetText, inchesText: $heightInchesText,
                                     cmText: $heightText, imperial: weightInPounds)
+                    }
+
+                    FieldRow("Starting weight (optional)", hint: "Logs your first weight so your trend starts here.") {
+                        Picker("", selection: $weightValue) {
+                            ForEach(weightRange, id: \.self) { Text("\($0) \(weightInPounds ? "lb" : "kg")").tag($0) }
+                        }
+                        .pickerStyle(.wheel).frame(height: 120)
+                        .onChange(of: weightValue) { _, _ in
+                            // A programmatic unit conversion shouldn't count as the user setting a weight.
+                            if convertingUnit { convertingUnit = false } else { weightTouched = true }
+                        }
                     }
 
                     FieldRow("Body weight unit") {
@@ -108,11 +128,17 @@ struct ProfileSetupView: View {
         .sensoryFeedback(.success, trigger: doneTrigger)
         // Keep the typed height meaning the same measurement when the unit toggle flips.
         .onChange(of: weightInPounds) { old, new in
-            guard old != new,
-                  let cm = ProfileFields.parseHeightCm(feetText: heightFeetText, inchesText: heightInchesText,
-                                                       cmText: heightText, imperial: old) else { return }
-            let f = ProfileFields.heightFields(fromCm: cm)
-            heightFeetText = f.feet; heightInchesText = f.inches; heightText = f.cm
+            guard old != new else { return }
+            // Keep the height measurement identical across a unit flip.
+            if let cm = ProfileFields.parseHeightCm(feetText: heightFeetText, inchesText: heightInchesText,
+                                                    cmText: heightText, imperial: old) {
+                let f = ProfileFields.heightFields(fromCm: cm)
+                heightFeetText = f.feet; heightInchesText = f.inches; heightText = f.cm
+            }
+            // Convert the weight wheel to the new unit (guarded so it doesn't mark weight as user-set).
+            convertingUnit = true
+            weightValue = new ? Int((Double(weightValue) * 2.20462).rounded())   // kg → lb
+                              : Int((Double(weightValue) / 2.20462).rounded())   // lb → kg
         }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
@@ -132,6 +158,12 @@ struct ProfileSetupView: View {
         if let cm = ProfileFields.parseHeightCm(feetText: heightFeetText, inchesText: heightInchesText,
                                                 cmText: heightText, imperial: weightInPounds) {
             heightCm = cm
+        }
+        // Seed the starting weight as the first weight entry, so the Labs & metrics trend begins here.
+        if weightTouched {
+            context.insert(BiomarkerEntry(typeRaw: "Weight", value: Double(weightValue),
+                                          notes: "Starting weight", unitRaw: weightInPounds ? "lb" : "kg"))
+            try? context.save()
         }
         doneTrigger += 1
         withAnimation(.easeInOut(duration: 0.55)) { completedProfileSetup = true }

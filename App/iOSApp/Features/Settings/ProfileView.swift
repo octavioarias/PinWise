@@ -151,20 +151,33 @@ struct HeightField: View {
     let imperial: Bool
 
     var body: some View {
-        if imperial {
-            HStack(spacing: Space.sm) {
-                TextField("5", text: $feetText).keyboardType(.numberPad).pinwiseField()
-                Text("ft").foregroundStyle(BrandColor.textSecondary)
-                TextField("10", text: $inchesText).keyboardType(.decimalPad).pinwiseField()
-                Text("in").foregroundStyle(BrandColor.textSecondary)
-            }
-        } else {
-            HStack {
-                TextField("e.g. 178", text: $cmText).keyboardType(.decimalPad).pinwiseField()
-                Text("cm").foregroundStyle(BrandColor.textSecondary)
+        Group {
+            if imperial {
+                HStack(spacing: 0) {
+                    Picker("Feet", selection: feetSel) {
+                        ForEach(3...8, id: \.self) { Text("\($0) ft").tag($0) }
+                    }
+                    .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                    Picker("Inches", selection: inchSel) {
+                        ForEach(0...11, id: \.self) { Text("\($0) in").tag($0) }
+                    }
+                    .pickerStyle(.wheel).frame(maxWidth: .infinity)
+                }
+            } else {
+                Picker("Centimeters", selection: cmSel) {
+                    ForEach(120...220, id: \.self) { Text("\($0) cm").tag($0) }
+                }
+                .pickerStyle(.wheel)
             }
         }
+        .frame(height: 120)
     }
+
+    // Wheels select whole numbers; bridge to the existing String bindings so ProfileFields'
+    // parse/format helpers keep working. Empty text shows a sensible default (5 ft 10 in / 170 cm).
+    private var feetSel: Binding<Int> { Binding(get: { Int(feetText) ?? 5 }, set: { feetText = String($0) }) }
+    private var inchSel: Binding<Int> { Binding(get: { Int(Double(inchesText) ?? 10) }, set: { inchesText = String($0) }) }
+    private var cmSel: Binding<Int> { Binding(get: { Int(Double(cmText) ?? 170) }, set: { cmText = String($0) }) }
 }
 
 /// My Profile — the account home. A hero header (photo, name, membership badge) over cards
@@ -308,12 +321,13 @@ struct ProfileView: View {
                         Text("Male").tag("male")
                         Text("Female").tag("female")
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.wheel).frame(height: 120)
                 }
                 FieldRow("Birthday", hint: ProfileFields.age(fromTimestamp: birthdayTS).map { "Age \($0)" }) {
                     DatePicker("", selection: birthdayBinding, in: ProfileFields.birthdayRange,
                                displayedComponents: [.date])
                         .labelsHidden()
+                        .datePickerStyle(.wheel)
                 }
                 FieldRow("Height") {
                     HeightField(feetText: $heightFeetText, inchesText: $heightInchesText,
