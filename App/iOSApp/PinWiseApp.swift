@@ -47,9 +47,6 @@ struct RootView: View {
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
     @AppStorage("weightInPounds") private var weightInPounds = true
     @AppStorage("didInitWeightUnit") private var didInitWeightUnit = false
-    @AppStorage("completedIntroTour") private var completedIntroTour = false
-    @AppStorage("completedProfileSetup") private var completedProfileSetup = false
-    @AppStorage("didMigrateProfileSetup") private var didMigrateProfileSetup = false
     // App Store review prompts at tenure milestones (day 8/30/60), once each — logic in
     // PeptideKit.ReviewPrompt. firstLaunchAt anchors "days of use"; reviewLastMilestone records
     // the last milestone requested so none repeats.
@@ -69,11 +66,10 @@ struct RootView: View {
         return c
     }
 
-    /// True once the user is all the way into the app (past sign-in, disclaimer, profile, tour) —
-    /// we never ask for a review during any first-run gate.
+    /// True once the user is all the way into the app (past sign-in, which also carries Terms
+    /// acceptance) — we never ask for a review during the first-run sign-in gate.
     private var gatesClear: Bool {
         auth.isAuthenticated && acceptedVersion >= Disclaimer.currentVersion
-            && completedProfileSetup && completedIntroTour
     }
 
     /// Ask for an App Store review if a tenure milestone (day 8/30/60) is due and hasn't fired.
@@ -91,24 +87,14 @@ struct RootView: View {
     var body: some View {
         ZStack {
             RootTabView()
-            // First-run gates, shown one at a time in order: sign-in → disclaimer → profile
-            // personalization (optional, skippable) → the intro tour → the app (Home).
+            // Single first-run gate: sign-in. Accepting the Terms is folded into signing up
+            // (see WelcomeView's consent line) — a successful sign-in stamps the accepted
+            // disclaimer version below and drops the user straight into the app, with no
+            // further onboarding screens.
             if !auth.isAuthenticated {
                 WelcomeView()
                     .transition(.opacity)
                     .zIndex(4)
-            } else if acceptedVersion < Disclaimer.currentVersion {
-                OnboardingView(acceptedVersion: $acceptedVersion)
-                    .transition(.opacity)
-                    .zIndex(3)
-            } else if !completedProfileSetup {
-                ProfileSetupView()
-                    .transition(.opacity)
-                    .zIndex(2)
-            } else if !completedIntroTour {
-                IntroTourView()
-                    .transition(.opacity)
-                    .zIndex(1)
             }
             // Optional Face ID / Touch ID lock (opt-in under Security & Privacy). Covers everything
             // once the user is signed in; clears on a successful biometric check, re-locks on background.
@@ -121,20 +107,17 @@ struct RootView: View {
         // Slow, eased cross-dissolves between gates so the hand-off feels premium (not abrupt).
         .animation(.easeInOut(duration: 0.55), value: auth.isAuthenticated)
         .animation(.easeInOut(duration: 0.55), value: acceptedVersion)
-        .animation(.easeInOut(duration: 0.55), value: completedProfileSetup)
-        .animation(.easeInOut(duration: 0.55), value: completedIntroTour)
         // One-time: seed the weight unit from the device region (user can override in Settings).
         .task {
             if !didInitWeightUnit {
                 weightInPounds = Locale.current.measurementSystem != .metric
                 didInitWeightUnit = true
             }
-            // ONE-TIME migration: existing users (tour already done) shouldn't be interrupted
-            // by the new profile-setup gate. Must not repeat — sign-out re-arms the gate on
-            // purpose, and a repeating migration would immediately disarm it again.
-            if !didMigrateProfileSetup {
-                if completedIntroTour && !completedProfileSetup { completedProfileSetup = true }
-                didMigrateProfileSetup = true
+            // Signing up counts as accepting the Terms (WelcomeView shows the consent line), so
+            // keep the accepted disclaimer version current for anyone already signed in on launch
+            // (onChange below covers a fresh sign-in mid-session).
+            if auth.isAuthenticated && acceptedVersion < Disclaimer.currentVersion {
+                acceptedVersion = Disclaimer.currentVersion
             }
             // Stamp the install/first-use date once — anchors the review-prompt milestones.
             if firstLaunchAt == 0 { firstLaunchAt = Date().timeIntervalSinceReferenceDate }
@@ -148,6 +131,13 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { maybeRequestReview() }
             else if phase == .background { unlocked = false }   // re-lock behind Face ID next foreground
+        }
+        // Sign-in IS Terms acceptance (WelcomeView's consent line). The moment auth succeeds,
+        // record the accepted disclaimer version so consent is on file without a separate screen.
+        .onChange(of: auth.isAuthenticated) { _, isAuth in
+            if isAuth && acceptedVersion < Disclaimer.currentVersion {
+                acceptedVersion = Disclaimer.currentVersion
+            }
         }
         .preferredColorScheme(AppearanceMode.from(appearanceRaw).colorScheme)
         // Also force the window's UIKit style so dynamic BrandColor tokens resolve to the same
