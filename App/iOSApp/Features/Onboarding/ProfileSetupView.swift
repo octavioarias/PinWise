@@ -70,7 +70,7 @@ struct ProfileSetupView: View {
                             .onChange(of: birthday) { _, _ in birthdayTouched = true }
                     }
 
-                    FieldRow("Sex", hint: "Helps tailor the app to you.") {
+                    FieldRow("Sex assigned at birth", hint: "Helps tailor the app to you.") {
                         Picker("", selection: $bodyGenderRaw) {
                             Text("Male").tag("male")
                             Text("Female").tag("female")
