@@ -96,7 +96,7 @@ function classify(text, sourceKind) {
   )
     return "Safety";
   if (
-    /\b(fda|ema|mhra|503a|503b|compounding pharmac\w*|marketing auth\w*|granted approval|newly approved|drug approval|regulatory action|import alert)\b/.test(
+    /\b(fda|ema|mhra|503a|503b|compounding pharmac\w*|marketing auth\w*|granted approval|newly approved|drug approval|regulatory action|import alert|dea|controlled substance|reschedul\w*|scheduling (decision|action|notice)|advisory committee|adcom|pdufa|complete response letter|federal register|warning letter|form 483|orphan[- ]drug designation|breakthrough therapy|fast[- ]track|de novo (clearance|authorization)|biosimilar approval)\b/.test(
       t
     )
   )
@@ -282,6 +282,44 @@ async function fromPubMed(term, fallbackName) {
 }
 
 // -------------------------------------------------------------------------------------
+// Federal Register — real US regulatory documents (FDA rules & notices: approvals, compounding,
+// advisory-committee actions, scheduling). Public API, no key. Feeds the Regulatory category.
+// -------------------------------------------------------------------------------------
+async function fromFederalRegister(term, fallbackName) {
+  const params = new URLSearchParams({
+    "conditions[term]": term,
+    "conditions[agencies][]": "food-and-drug-administration",
+    per_page: "3",
+    order: "newest",
+  });
+  for (const f of ["title", "abstract", "html_url", "publication_date", "document_number", "type"]) {
+    params.append("fields[]", f);
+  }
+  const res = await fetch(`https://www.federalregister.gov/api/v1/documents.json?${params}`, {
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`FR ${res.status}`);
+  const json = await res.json();
+  return (json.results || []).map((d) => {
+    const body = firstSentences(clean(d.abstract || d.title || ""), 2, 320);
+    const classText = `${d.title} ${d.abstract || ""} ${d.type || ""} federal register fda regulatory`;
+    return {
+      id: `fr-${d.document_number}`,
+      headline: wordCap((d.title || "Regulatory notice").replace(/\.$/, ""), HEADLINE_CAP),
+      summary: body || firstSentences(clean(d.title || ""), 1, 200),
+      teaser: teaserFrom(body || d.title || ""),
+      category: classify(classText, "regulatory"),
+      compounds: extractCompounds(`${d.title || ""} ${d.abstract || ""}`, fallbackName),
+      sources: [
+        { name: `U.S. Federal Register (${d.type || "document"})`, url: d.html_url, kind: "regulatory" },
+      ],
+      publishedAt: toISO(d.publication_date) || ISO_NOW,
+      disclaimer: DISCLAIMER,
+    };
+  });
+}
+
+// -------------------------------------------------------------------------------------
 // Curated base — read the shipping sampleJSON straight from the Swift source (one truth).
 // -------------------------------------------------------------------------------------
 async function loadCuratedBase() {
@@ -326,7 +364,7 @@ async function main() {
   const terms = await loadFreshTerms();
   const collected = [];
   for (const { term, name } of terms) {
-    for (const fn of [fromClinicalTrials, fromPubMed]) {
+    for (const fn of [fromClinicalTrials, fromPubMed, fromFederalRegister]) {
       try {
         collected.push(...(await fn(term, name)));
       } catch (e) {
