@@ -151,7 +151,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: usage } = await supabase
     .from("ai_usage").select("message_count").eq("user_id", userId).eq("usage_date", today).maybeSingle();
   const used = usage?.message_count ?? 0;
-  if (used >= limit) {
+  // Developer bypass: user IDs listed in the UNLIMITED_USER_IDS secret (comma-separated) skip the
+  // daily quota entirely. Set it to your own Supabase user id for unlimited testing. Server-side
+  // and secret-controlled, so it can't be exploited by clients — only IDs you list get through.
+  const unlimitedIds = (Deno.env.get("UNLIMITED_USER_IDS") ?? "").split(",").map((s) => s.trim());
+  const isUnlimited = unlimitedIds.includes(userId);
+  if (!isUnlimited && used >= limit) {
     return json({ error: "limit_reached", limit, tier, used }, 429);
   }
 
