@@ -56,8 +56,6 @@ struct ToolsView: View {
             Text("Tools")
                 .font(Typo.screenTitle)
                 .foregroundStyle(BrandColor.textPrimary)
-            Text("Simple calculators — pick one and answer a couple of questions.")
-                .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
