@@ -172,8 +172,14 @@ struct VialBuilderView: View {
     @State private var coaAssayText: String
     @State private var coaContentText: String
     @State private var coaPurityText: String
+    /// Free-text notes on the vial (e.g. a scanned lot/batch number). Round-trips through save.
+    @State private var notes: String
     @State private var showScanner = false
+    @State private var showVoice = false
     @State private var resetDoseCount = false
+    /// Set for one cycle when a scan flips the pre-mixed/powder segment itself, so the
+    /// `onChange(of: isPremixed)` unit converter doesn't re-scale the value the scan just wrote.
+    @State private var suppressModeConversion = false
     /// The ingredient the user "doses by" in a blend — its dose is the number they type, and every
     /// other compound scales to it. nil = the first ingredient. Tracked by id so it survives
     /// add/remove/reorder.
@@ -206,6 +212,7 @@ struct VialBuilderView: View {
             _coaAssayText = State(initialValue: "")
             _coaContentText = State(initialValue: "")
             _coaPurityText = State(initialValue: "")
+            _notes = State(initialValue: "")
             return
         }
         let vol = v.solventVolumeMilliliters ?? 0
@@ -243,6 +250,7 @@ struct VialBuilderView: View {
         _coaAssayText = State(initialValue: v.coaAssayPercent.map(Self.fmt) ?? "")
         _coaContentText = State(initialValue: v.coaContentPercent.map(Self.fmt) ?? "")
         _coaPurityText = State(initialValue: v.coaPurityPercent.map(Self.fmt) ?? "")
+        _notes = State(initialValue: v.notes)
     }
 
     /// Catalog + the user's own compounds, one alphabetical list for the ingredient picker.
@@ -349,8 +357,8 @@ struct VialBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
-                        FieldRow("Nickname (optional)", hint: "What you'll see everywhere — e.g. \"GLOW\" or \"Wolverine 3/3\".") {
-                            TextField("GLOW", text: $label).pinwiseField()
+                        FieldRow("Nickname (optional)") {
+                            TextField("e.g. GLOW or Wolverine 3/3", text: $label).pinwiseField()
                         }
                     }
 
@@ -363,17 +371,15 @@ struct VialBuilderView: View {
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if isPremixed {
-                        Button { showScanner = true } label: {
-                            Label("Scan the pharmacy label", systemImage: "text.viewfinder")
-                                .font(.body.weight(.semibold))
-                                .frame(maxWidth: .infinity).padding(.vertical, Space.md)
-                                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
-                                .foregroundStyle(BrandColor.accentText)
-                        }
-                        .buttonStyle(.plain)
+                    // Fill from a photo or by voice — available in both modes. What's read decides
+                    // pre-mixed vs powder, so a scan/voice result routes to the right mode itself.
+                    HStack(spacing: Space.md) {
+                        captureButton("Scan", icon: "text.viewfinder") { showScanner = true }
+                        captureButton("Speak", icon: "mic.fill") { showVoice = true }
                     }
+                    Text("Snap the label or say the details — PinWise fills in what it can, on your device.")
+                        .font(.caption).foregroundStyle(BrandColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Card {
                         VStack(alignment: .leading, spacing: Space.lg) {
@@ -570,6 +576,9 @@ struct VialBuilderView: View {
             // The amount fields mean different things per mode (total mass vs mg/mL strength) —
             // convert entered values on toggle so flipping the segment never rescales the vial.
             .onChange(of: isPremixed) { _, premixed in
+                // A scan-driven mode flip already wrote values in the target mode's meaning — skip
+                // the conversion once so it isn't double-applied.
+                if suppressModeConversion { suppressModeConversion = false; return }
                 let vol = solventText.decimalValue ?? 0
                 entries = entries.map { e in
                     var e = e
@@ -598,24 +607,64 @@ struct VialBuilderView: View {
             .sheet(isPresented: $showScanner) {
                 LabelScannerView(extraCompoundNames: customCompounds.map(\.name)) { applyScan($0) }
             }
+            .sheet(isPresented: $showVoice) {
+                VoiceInputView(extraCompoundNames: customCompounds.map(\.name)) { applyScan($0) }
+            }
         }
     }
 
+    /// Photo/voice capture button — shared style for the "Scan" and "Speak" entry points.
+    private func captureButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity).padding(.vertical, Space.md)
+                .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+                .foregroundStyle(BrandColor.accentText)
+        }
+        .buttonStyle(.plain)
+    }
+
     /// Fill the form from an on-device label scan (user confirmed). Everything stays editable.
-    /// Only reachable in pre-mixed mode, so strength maps straight onto the entry field.
+    /// The scanned strength decides the mode: a per-mL concentration is a pre-mixed vial; a bare
+    /// total mass is powder. A bare mass is never treated as a concentration (that would be a large
+    /// dosing error), so the reader's mass/concentration distinction is honored here 1:1.
     private func applyScan(_ r: ScannedLabel) {
         guard !entries.isEmpty else { return }
         if let name = r.compoundName, let c = allCompounds.first(where: { $0.name == name }) {
             entries[0].compound = c
         }
-        if let conc = r.concentrationMgPerMl {
+        switch r.strength {
+        case .concentrationMgPerMl(let conc):
+            setPremixed(true)
             // Scanned strength is mg/mL — force the strength unit so the value is read correctly.
             concentrationUnit = .milligram
             entries[0].amountText = Self.fmt(conc)
             entries[0].unit = .milligram
+        case .massMilligrams(let mg):
+            setPremixed(false)          // bare total mass ⇒ powder you reconstitute
+            entries[0].amountText = Self.fmt(mg)
+            entries[0].unit = .milligram
+        case nil:
+            break
         }
         if let vol = r.volumeMl { solventText = Self.fmt(vol) }
         if let exp = r.expiration { hasExpiration = true; expiration = exp }
+        if let lot = r.lotNumber, !lot.isEmpty {
+            let tag = "Lot \(lot)"
+            if !notes.localizedCaseInsensitiveContains(tag) {
+                notes = notes.isEmpty ? tag : notes + "\n" + tag
+            }
+        }
+    }
+
+    /// Flip the pre-mixed/powder segment from a scan, suppressing the unit converter for that one
+    /// change so the value the scan is about to write isn't re-scaled. No-op if already in `v`.
+    private func setPremixed(_ v: Bool) {
+        guard isPremixed != v else { return }
+        suppressModeConversion = true
+        isPremixed = v
     }
 
     /// Strength-unit chooser for pre-mixed vials: "mcg/mL" | "mg/mL".
@@ -759,6 +808,7 @@ struct VialBuilderView: View {
         target.coaContentPercent = isPremixed ? nil : coaContentText.decimalValue
         target.coaPurityPercent = isPremixed ? nil : coaPurityText.decimalValue
         target.expirationDate = hasExpiration ? expiration : nil
+        target.notes = notes
         target.isPremixed = isPremixed
         // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing
         // date across edits; clear it if the vial isn't a reconstituted powder (premixed / no water).

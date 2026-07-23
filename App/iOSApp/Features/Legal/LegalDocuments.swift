@@ -20,7 +20,7 @@ struct LegalSection: Identifiable {
 }
 
 enum LegalDocuments {
-    static let effectiveDate = "July 6, 2026"
+    static let effectiveDate = "July 21, 2026"
     // No legal entity, contact email, or person is referenced yet (none exists pre-launch,
     // per founder). Before App Store submission: substitute the registered legal entity,
     // add a real contact channel, and have counsel review. "PinWise" stands in as the party.
@@ -59,8 +59,10 @@ enum LegalDocuments {
         pharmacist–patient, or other clinical or fiduciary relationship is created by your use \
         of the Service. All calculations are arithmetic performed on values you supply and must \
         be independently verified before any reliance. The optional assistant feature is \
-        generative software that runs on your device; its responses may be inaccurate or \
-        incomplete and must not be relied upon. THE SERVICE IS NOT DESIGNED FOR EMERGENCIES — \
+        generative AI software; to produce a response it transmits your questions and a snapshot \
+        of the data you have entered in the app to third-party providers for cloud processing (see \
+        the Privacy Policy). Its responses may be inaccurate or incomplete and must not be relied \
+        upon. THE SERVICE IS NOT DESIGNED FOR EMERGENCIES — \
         if you believe you are experiencing a medical emergency, call your local emergency \
         number immediately. You are solely responsible for all decisions concerning your \
         health, and you should consult a licensed healthcare professional before starting, \
@@ -267,10 +269,15 @@ enum LegalDocuments {
         and, at your election, the name and email address Apple provides. (c) Apple Health \
         data: with your explicit permission granted through the Health authorization sheet, \
         the app READS the categories shown in that sheet (such as weight, heart-rate metrics, \
-        sleep, and steps); the app does not write to Apple Health. (d) Usage and diagnostic \
-        data: THE APP CURRENTLY INTEGRATES NO ANALYTICS OR CRASH-REPORTING SERVICE AND \
-        TRANSMITS NO USAGE DATA. If a future update introduces analytics or diagnostics, we \
-        will describe them here before they take effect, they will be limited to \
+        sleep, and steps); the app does not write to Apple Health. (d) Account and AI-usage \
+        data: if you create an account, we store your account identifier and a per-day count of \
+        assistant messages with our cloud provider to operate sign-in and enforce usage limits. \
+        (e) Assistant inputs: when you use the optional cloud assistant, we transmit your \
+        questions and a snapshot of the data you entered in the app for processing, as described \
+        in Section 3. (f) Usage and diagnostic data: THE APP INTEGRATES NO ANALYTICS OR \
+        CRASH-REPORTING SERVICE AND TRANSMITS NO GENERAL USAGE OR TELEMETRY DATA beyond the \
+        account and assistant data in (d)–(e). If a future update introduces analytics or \
+        diagnostics, we will describe them here before they take effect, they will be limited to \
         feature-usage events and technical logs, and they will never include your health \
         records or Apple Health data.
         """),
@@ -283,9 +290,15 @@ enum LegalDocuments {
         introduced in a future update, measure usage and improve the Service using aggregated \
         or de-identified usage information — never your health records — to evaluate and \
         refine features and plan app updates; (e) detect, prevent, and address technical \
-        issues, fraud, and abuse; and (f) comply with legal obligations. The assistant \
-        feature is processed on-device by the operating system's models; your conversations \
-        are not transmitted to us. Legal bases where the GDPR applies: your explicit consent \
+        issues, fraud, and abuse; and (f) comply with legal obligations. The optional assistant \
+        feature is cloud-based: when you use it, your questions and a bounded snapshot of the data \
+        you have entered in the app (such as your protocols, dose logs, symptoms, and lab/body \
+        values) are transmitted over an encrypted connection to our cloud infrastructure provider \
+        and to a third-party AI model provider — each acting as our processor under confidentiality \
+        and data-protection obligations — solely to generate the response shown to you. We instruct \
+        these providers not to use your data to train or improve their models and to retain it only \
+        transiently as needed to process your request. YOUR APPLE HEALTH DATA IS NOT INCLUDED IN \
+        WHAT IS SENT TO THE ASSISTANT; it remains on your device. Legal bases where the GDPR applies: your explicit consent \
         (Articles 6(1)(a) and 9(2)(a)) for health-related data and optional features; \
         performance of our contract with you (Article 6(1)(b)) for operating the Service; and \
         our legitimate interests (Article 6(1)(f)) in securing and debugging the Service. \
@@ -301,10 +314,14 @@ enum LegalDocuments {
         devices, if and when a synchronization or backup feature ships and you enable it — \
         your data would be transmitted to and stored with the provider you choose (for \
         example, your personal iCloud account) so the Service can offer a consistent \
-        experience on your devices; (b) to service providers acting on our behalf under \
-        contractual confidentiality and data-protection obligations — today that is limited \
-        to Apple (authentication and, where you enable it, device backup); any future \
-        provider (such as hosting or crash reporting) will be bound by the same obligations; \
+        experience on your devices; (b) to service providers/processors acting on our behalf \
+        under contractual confidentiality and data-protection obligations — currently Apple \
+        (authentication and, where you enable it, device backup), our cloud infrastructure and \
+        authentication provider (which hosts your account identifier and AI-usage counts and \
+        relays assistant requests), and a third-party AI model provider (which processes assistant \
+        requests to generate responses); these providers are instructed not to use your data for \
+        their own purposes or to train their models, and any future provider will be bound by the \
+        same obligations; \
         (c) in aggregated or de-identified form that cannot reasonably be used to identify \
         you, for product improvement and analytics, and only if such data is collected under \
         Section 2(d); (d) to comply with law, regulation, legal process, or enforceable \
@@ -316,11 +333,16 @@ enum LegalDocuments {
         """),
 
         LegalSection(heading: "5. Where Your Data Lives", body: """
-        The Service is local-first: as of the effective date above, your records are stored \
-        on your device and in any device backup you choose to enable, and the app transmits \
-        none of your records to us. Features that would transmit data off-device — account \
-        sync, cloud backup, diagnostics — are disabled until you enable them, and this Policy \
-        will be updated before any such feature launches.
+        Your records are created and stored on your device. Two things are transmitted off-device: \
+        (a) if you create an account, your account identifier and per-day assistant-usage counts \
+        are stored with our cloud provider to operate sign-in and enforce usage limits; and (b) \
+        when you use the optional cloud assistant, the questions and data snapshot described in \
+        Section 3 are transmitted to our providers to generate a response and are not retained by \
+        them beyond processing your request. Everything else — your full dose, protocol, inventory, \
+        symptom, and lab history — remains on your device and in any device backup you choose to \
+        enable, and your Apple Health data is not transmitted off your device by the assistant. \
+        Additional off-device features (such as cross-device sync or backup) remain disabled until \
+        you enable them, and this Policy will be updated before any such feature launches.
         """),
 
         LegalSection(heading: "6. Retention and Deletion", body: """
@@ -364,10 +386,10 @@ enum LegalDocuments {
         """),
 
         LegalSection(heading: "10. International Transfers", body: """
-        If a future feature transmits your data off-device and that data is processed in a \
-        country other than your own, we will implement safeguards recognized by applicable \
-        law (such as standard contractual clauses) for the transfer and update this Policy \
-        accordingly.
+        The cloud assistant and account features may process your data in a country other than \
+        your own. Where required, we rely on safeguards recognized by applicable law (such as \
+        standard contractual clauses) for these transfers, and we will update this Policy if our \
+        providers or transfer mechanisms change.
         """),
 
         LegalSection(heading: "11. Changes to This Policy; Contact", body: """

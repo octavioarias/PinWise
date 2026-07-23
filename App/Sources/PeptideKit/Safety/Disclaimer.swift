@@ -11,7 +11,9 @@ public enum Disclaimer {
     /// Bump when the acceptance copy materially changes, to re-prompt users for consent.
     /// v3: full Terms of Service + Privacy Policy (LegalDocuments) replace the short text.
     /// v4: contact/notice mechanisms reworded (no email/entity references pre-launch).
-    public static let currentVersion = 4
+    /// v5: hosted (cloud) AI assistant — user data now leaves the device for AI processing;
+    ///     Privacy Policy updated with sub-processors + data-sent disclosures.
+    public static let currentVersion = 5
 
     /// The short, always-visible line for calculator and dosing surfaces.
     public static let calculator = """

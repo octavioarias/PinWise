@@ -163,7 +163,7 @@ struct BiomarkersView: View {
                             SectionHeader(title: "Recent")
                             ForEach(Array(entries.prefix(14)), id: \.id) { e in
                                 let type = BiomarkerType(rawValue: e.typeRaw)
-                                HStack {
+                                HStack(spacing: Space.sm) {
                                     Text(type?.displayName ?? e.typeRaw).font(.body).foregroundStyle(BrandColor.textPrimary)
                                     Spacer()
                                     // Honor the unit stored at entry time (provenance); legacy rows
@@ -172,6 +172,16 @@ struct BiomarkersView: View {
                                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.data)
                                     Text(e.timestamp, format: .dateTime.month().day())
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                    // Visible delete — a wrong entry (e.g. a mistyped weight) can be
+                                    // removed here, then re-logged above. (Context menu kept as a backup.)
+                                    Button { context.delete(e); try? context.save() } label: {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundStyle(BrandColor.textSecondary)
+                                            .padding(.leading, Space.xs)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Delete this \(type?.displayName ?? e.typeRaw) entry")
                                 }
                                 .contextMenu {
                                     Button(role: .destructive) { context.delete(e); try? context.save() } label: { Label("Delete", systemImage: "trash") }

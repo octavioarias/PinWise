@@ -83,6 +83,12 @@ final class AuthManager {
             set(provider: .apple, uid: cred.user,
                 name: parts.isEmpty ? nil : parts.joined(separator: " "),
                 email: cred.email)
+            // Bridge to the backend: exchange Apple's identity token for a Supabase session so the
+            // hosted AI can authenticate the user. Best-effort — the on-device session set above
+            // stands regardless, and this is a no-op until the backend is configured.
+            if let tokenData = cred.identityToken, let idToken = String(data: tokenData, encoding: .utf8) {
+                Task { try? await SupabaseService.shared.signInWithApple(idToken: idToken) }
+            }
         case .failure:
             notice = nil   // user canceled — don't nag
         }
@@ -98,12 +104,39 @@ final class AuthManager {
         notice = "Google sign-in is almost ready — it needs the Google client ID + backend to finish. For now, use Apple or continue without an account."
     }
 
-    func startEmailSignIn() {
-        // TODO(backend): email/password accounts require a backend (Supabase Auth recommended).
-        notice = "Email accounts are almost ready — they need the backend to finish. For now, use Apple or continue without an account."
+    /// Email one-time-code sign-in (Supabase, passwordless). Step 1: request a 6-digit code.
+    /// Returns true if the code was sent. `notice` carries any user-facing error.
+    func requestEmailCode(_ email: String) async -> Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard trimmed.contains("@"), trimmed.contains(".") else { notice = "Enter a valid email address."; return false }
+        do {
+            try await SupabaseService.shared.sendEmailCode(trimmed)
+            notice = nil
+            return true
+        } catch {
+            notice = "Couldn't send the code. Check the email address and try again."
+            return false
+        }
     }
 
-    func signOut() { set(provider: nil, uid: nil, name: nil, email: nil) }
+    /// Step 2: verify the emailed code and sign in. Returns true on success.
+    func verifyEmailCode(_ email: String, _ code: String) async -> Bool {
+        let e = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let c = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let user = try await SupabaseService.shared.verifyEmailCode(email: e, code: c)
+            set(provider: .email, uid: user.id, name: nil, email: user.email ?? e)
+            return true
+        } catch {
+            notice = "That code didn't work. Double-check it or request a new one."
+            return false
+        }
+    }
+
+    func signOut() {
+        set(provider: nil, uid: nil, name: nil, email: nil)
+        Task { await SupabaseService.shared.signOut() }
+    }
 
     /// Guest tapped "Sign in": drop the guest session so the welcome screen shows, but keep
     /// the typed name (and memberSince) so they survive the upgrade to a real account.

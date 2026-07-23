@@ -10,6 +10,7 @@ import PeptideKit
 struct WelcomeView: View {
     @State private var auth = AuthManager.shared
     @State private var showLegal = false
+    @State private var showEmail = false
 
     var body: some View {
         ZStack {
@@ -60,9 +61,9 @@ struct WelcomeView: View {
                     .frame(height: 52)
                     .clipShape(Capsule())
 
-                    Button { auth.continueAsGuest() } label: {
-                        Text("Continue as guest")
-                            .font(.system(size: 16, weight: .semibold))
+                    Button { showEmail = true } label: {
+                        Label("Continue with email", systemImage: "envelope.fill")
+                            .font(.system(size: 19, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -71,16 +72,16 @@ struct WelcomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    HStack(spacing: 5) {
-                        Text("Have an account?")
-                            .foregroundStyle(BrandColor.textSecondary)
-                        Button { auth.startEmailSignIn() } label: {
-                            Text("Log in").fontWeight(.semibold).foregroundStyle(Color(hex: 0x18E39A))
-                        }
-                        .buttonStyle(.plain)
+                    Button { auth.continueAsGuest() } label: {
+                        Text("Continue as guest")
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.white.opacity(0.06), in: Capsule())
+                            .overlay(Capsule().strokeBorder(Color.white.opacity(0.22), lineWidth: 1))
                     }
-                    .font(.system(size: 14))
-                    .padding(.top, Space.xs)
+                    .buttonStyle(.plain)
 
                     Button { showLegal = true } label: {
                         Text("Terms & Privacy")
@@ -100,5 +101,6 @@ struct WelcomeView: View {
             Button("OK", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
         .sheet(isPresented: $showLegal) { LegalDocumentView() }
+        .sheet(isPresented: $showEmail) { EmailSignInView() }
     }
 }
