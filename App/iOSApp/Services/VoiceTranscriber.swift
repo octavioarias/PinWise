@@ -88,15 +88,6 @@ final class VoiceTranscriber {
 
         let input = audioEngine.inputNode
         let format = input.outputFormat(forBus: 0)
-        // No valid mic input (common when the iOS app runs on a Mac / simulator, where CoreAudio
-        // can't map an input device — the "no device with given ID" case). Fail cleanly instead of
-        // crashing the audio engine; voice input is a real-iPhone feature.
-        guard format.channelCount > 0, format.sampleRate > 0 else {
-            errorText = "No microphone is available here — try voice on an iPhone."
-            status = .unavailable
-            teardown()
-            return
-        }
         // Capture `req` directly (not self) so the audio-thread tap needs no actor hop.
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
             req.append(buffer)
