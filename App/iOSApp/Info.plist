@@ -24,6 +24,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>PinWise uses the camera so you can photograph a vial label or take a progress photo. Photos stay on your device.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>PinWise uses Face ID to lock the app, so only you can open it. This is optional and off by default.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>PinWise displays the weight, resting heart rate, HRV, sleep, and step values you choose to share from Health alongside your dose logs.</string>
 	<key>NSMicrophoneUsageDescription</key>

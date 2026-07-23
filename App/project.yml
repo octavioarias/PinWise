@@ -48,6 +48,7 @@ targets:
         NSCameraUsageDescription: "PinWise uses the camera so you can photograph a vial label or take a progress photo. Photos stay on your device."
         NSMicrophoneUsageDescription: "PinWise uses the microphone so you can speak a vial's details to fill them in. Audio is transcribed on your device and isn't uploaded."
         NSSpeechRecognitionUsageDescription: "PinWise transcribes your speech on your device to fill in vial details. Nothing is sent to Apple or any server."
+        NSFaceIDUsageDescription: "PinWise uses Face ID to lock the app, so only you can open it. This is optional and off by default."
     # HealthKit read access (weight, resting HR, HRV). XcodeGen generates the entitlements
     # file; the usage string lives in info.NSHealthShareUsageDescription above.
     entitlements:

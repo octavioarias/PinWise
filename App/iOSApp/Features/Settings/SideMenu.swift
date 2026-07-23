@@ -103,10 +103,8 @@ struct SideMenuDrawer: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Connections, About & Legal, and Software info now live inside Settings.
                     row("slider.horizontal.3", "Settings", .settings)
-                    row("heart.text.square", "Connections", .health)
-                    Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
-                    row("info.circle", "About & Legal", .about)
                     Divider().overlay(BrandColor.stroke).padding(.vertical, Space.sm)
                     actionRow(auth.isGuest ? "arrow.right.square" : "rectangle.portrait.and.arrow.right",
                               auth.isGuest ? "Sign in" : "Sign out") {
