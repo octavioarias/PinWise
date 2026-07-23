@@ -97,7 +97,7 @@ final class AssistantEngine {
             case CloudAIError.notConfigured:
                 text = "The assistant isn't available yet."
             case CloudAIError.notSignedIn:
-                text = "Please sign in to use the assistant."
+                text = "Please sign in to chat with Natt."
             default:
                 text = "Sorry — something went wrong. Please try again."
             }
@@ -201,14 +201,14 @@ struct AssistantView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Label("Assistant", systemImage: "sparkles")
+                Label("Natt", systemImage: "sparkles")
                     .font(.system(size: 22, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
                 Spacer()
                 Button { close() } label: {
                     Image(systemName: "xmark").font(.headline.weight(.semibold))
                         .foregroundStyle(BrandColor.textSecondary).frame(width: 40, height: 40).contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).accessibilityLabel("Close assistant")
+                .buttonStyle(.plain).accessibilityLabel("Close Natt")
             }
             .padding(.top, topInset + Space.md)
             .padding(.horizontal, Space.xl)
@@ -254,7 +254,7 @@ struct AssistantView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Image(systemName: "sparkles.rectangle.stack")
                         .font(.largeTitle).foregroundStyle(BrandColor.accentText)
-                    Text("Sign in to use the assistant")
+                    Text("Sign in to chat with Natt")
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
                     Text("The assistant is part of your PinWise account. Sign in with Apple or your email to start chatting — the rest of the app stays free as a guest.")
                         .font(.callout).foregroundStyle(BrandColor.textSecondary)
@@ -277,13 +277,13 @@ struct AssistantView: View {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Image(systemName: "exclamationmark.bubble")
                         .font(.largeTitle).foregroundStyle(BrandColor.accentText)
-                    Text("Before you use the assistant")
+                    Text("Before you chat with Natt")
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
                     VStack(alignment: .leading, spacing: Space.md) {
                         gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, labs, and any connected Health metrics — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
                         gatePoint("It's AI, and it can be wrong. Responses may be inaccurate, incomplete, or out of date — always fact-check them against the linked/primary sources.")
                         gatePoint("It is not medical advice. It does not diagnose, treat, or recommend doses. Decisions about your health belong with a licensed healthcare professional.")
-                        gatePoint("You use it at your own risk. PinWise and its makers are not liable for any actions or outcomes based on the assistant's responses.")
+                        gatePoint("You use it at your own risk. PinWise and its makers are not liable for any actions or outcomes based on Natt's responses.")
                     }
                     Text("By continuing you acknowledge and accept the above.")
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
@@ -363,7 +363,7 @@ struct AssistantView: View {
 
     private var inputBar: some View {
         HStack(spacing: Space.sm) {
-            TextField("Ask the assistant…", text: $input, axis: .vertical)
+            TextField("Ask Natt…", text: $input, axis: .vertical)
                 .focused($inputFocused)
                 .lineLimit(1...4)
                 .padding(.horizontal, Space.md).padding(.vertical, Space.sm)

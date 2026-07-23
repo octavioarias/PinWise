@@ -118,7 +118,7 @@ struct HomeView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Assistant")
+                .accessibilityLabel("Chat with Natt")
             }
 
             VStack(alignment: .leading, spacing: Space.xs) {
