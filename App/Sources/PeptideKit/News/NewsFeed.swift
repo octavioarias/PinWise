@@ -155,17 +155,17 @@ public extension NewsFeed {
       "items": [
         {
           "id": "fda-bpc157-pcac-2026-07",
-          "headline": "FDA panel to review BPC-157 compounding",
-          "summary": "The FDA treats BPC-157 as a bulk drug substance that 'may present significant safety risks,' keeping its compounding outside the agency's enforcement discretion. Its Pharmacy Compounding Advisory Committee is scheduled to meet July 23–24, 2026 to evaluate several nominated peptides, including BPC-157, Semax, and epitalon. None of these peptides is FDA-approved.",
+          "headline": "FDA panel backs compounded BPC-157 and KPV",
+          "summary": "At its July 23–24, 2026 meeting, the FDA's Pharmacy Compounding Advisory Committee reviewed BPC-157, KPV, TB-500, and MOTS-c for the 503A bulk-substances list, and the panel voted to recommend allowing compounding pharmacies to make BPC-157 and KPV. The votes are advisory and non-binding — the FDA makes the final decision. These peptides had been removed from Category 2 in April 2026, and none is FDA-approved.",
           "category": "Regulatory",
-          "compounds": ["BPC-157", "Semax", "Epithalon"],
+          "compounds": ["BPC-157", "KPV", "TB-500", "MOTS-c"],
           "sources": [
-            {"name": "U.S. FDA — bulk substances that may present significant safety risks", "url": "https://www.fda.gov/drugs/human-drug-compounding/certain-bulk-drug-substances-use-compounding-may-present-significant-safety-risks", "kind": "regulatory"},
+            {"name": "STAT — FDA panel backs compounded BPC-157, KPV peptides", "url": "https://www.statnews.com/2026/07/23/fda-panel-okays-peptides-compound-pharmacies-bpc-157-kpv/", "kind": "news"},
             {"name": "U.S. FDA — July 23–24, 2026 Pharmacy Compounding Advisory Committee", "url": "https://www.fda.gov/advisory-committees/advisory-committee-calendar/july-23-24-2026-meeting-pharmacy-compounding-advisory-committee-07232026", "kind": "regulatory"}
           ],
-          "publishedAt": "2026-07-09T00:00:00Z",
-          "teaser": "FDA's compounding advisory committee meets July 23–24, 2026 to weigh BPC-157 and other peptides.",
-          "popularity": 98,
+          "publishedAt": "2026-07-23T00:00:00Z",
+          "teaser": "FDA advisory panel recommended allowing compounded BPC-157 and KPV; TB-500 and MOTS-c also reviewed.",
+          "popularity": 99,
           "isMajorUpdate": true,
           "disclaimer": "Neutral informational summary. Not medical advice. Read the linked sources and consult a clinician."
         },
