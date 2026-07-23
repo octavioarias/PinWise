@@ -117,8 +117,8 @@ struct ProtocolBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
-                        FieldRow("Name this protocol", hint: "So you can spot it quickly, e.g. \"Weekly Tirz\" or \"Recovery stack\".") {
-                            TextField("Name", text: $name).pinwiseField()
+                        FieldRow("Name this protocol") {
+                            TextField("e.g. Weekly Tirz or Recovery stack", text: $name).pinwiseField()
                         }
                     }
 

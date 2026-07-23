@@ -357,8 +357,8 @@ struct VialBuilderView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.lg) {
                     Card {
-                        FieldRow("Nickname (optional)", hint: "What you'll see everywhere — e.g. \"GLOW\" or \"Wolverine 3/3\".") {
-                            TextField("GLOW", text: $label).pinwiseField()
+                        FieldRow("Nickname (optional)") {
+                            TextField("e.g. GLOW or Wolverine 3/3", text: $label).pinwiseField()
                         }
                     }
 
