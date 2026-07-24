@@ -211,8 +211,8 @@ struct MembershipView: View {
                 VStack(alignment: .leading, spacing: Space.md) {
                     SectionHeader(title: "Plans")
                     planRow("Monthly", "$7.99 / month")
-                    planRow("Yearly", "$39.99 / year")
-                    Text("A 3-week free trial starts you off. After the trial, a subscription keeps the app and Natt unlocked.")
+                    planRow("Yearly", "$4.20 / month")
+                    Text("Yearly is billed once a year at $50.40 — about 47% off monthly. A 3-week free trial starts you off; after the trial, a subscription keeps the app and Natt unlocked.")
                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                 }
             }
