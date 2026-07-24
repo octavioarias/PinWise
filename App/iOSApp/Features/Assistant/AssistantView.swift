@@ -320,7 +320,8 @@ struct AssistantView: View {
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
                     VStack(alignment: .leading, spacing: Space.md) {
                         gatePoint("Daily limits. On the free trial, Natt answers up to 2 messages a day. Pro — monthly or yearly — raises that to 10 a day.")
-                        gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, labs, and any connected Health metrics — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
+                        gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, and labs — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
+                        gatePoint("It can use your Apple Health. By continuing, you turn on sharing your connected Apple Health metrics — weight, resting heart rate, HRV, sleep, steps — with Natt so it can personalize its answers. You can turn this off anytime in Settings › Security & Privacy.")
                         gatePoint("It's AI, and it can be wrong. Responses may be inaccurate, incomplete, or out of date — always fact-check them against the linked/primary sources.")
                         gatePoint("It is not medical advice. It does not diagnose, treat, or recommend doses. Decisions about your health belong with a licensed healthcare professional.")
                         gatePoint("You use it at your own risk. PinWise and its makers are not liable for any actions or outcomes based on Natt's responses.")
@@ -330,7 +331,12 @@ struct AssistantView: View {
                 }
                 .padding(Space.lg)
             }
-            PrimaryButton(title: "Accept & continue", systemImage: "checkmark") { aiConsentVersion = Disclaimer.currentVersion }
+            PrimaryButton(title: "Accept & continue", systemImage: "checkmark") {
+                // Continuing past the gate also opts into sharing Apple Health with Natt (disclosed
+                // in the gate point above); revocable anytime in Settings › Security & Privacy.
+                shareHealthWithNatt = true
+                aiConsentVersion = Disclaimer.currentVersion
+            }
                 .padding(.horizontal, Space.lg)
                 .padding(.top, Space.sm)
                 .padding(.bottom, Space.lg)

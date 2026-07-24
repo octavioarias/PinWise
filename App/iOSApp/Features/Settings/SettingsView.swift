@@ -101,7 +101,7 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Share Apple Health with Natt")
                                         .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
-                                    Text("Off by default. When on, the Apple Health metrics PinWise reads (weight, resting heart rate, HRV, sleep, steps) are sent to the assistant so it can personalize answers. Requires Apple Health connected; turn off anytime.")
+                                    Text("Turns on when you start using Natt (you agree to it at the assistant's disclosure). When on, the Apple Health metrics PinWise reads (weight, resting heart rate, HRV, sleep, steps) are sent to Natt so it can personalize answers. Turn it off here anytime.")
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                                 }
                             }
