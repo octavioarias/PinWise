@@ -195,6 +195,10 @@ struct VialBuilderView: View {
     @State private var doseUnit: MassUnit
     /// Strength unit for a pre-mixed vial: mg ⇒ mg/mL, mcg ⇒ mcg/mL.
     @State private var concentrationUnit: MassUnit
+    /// Volume basis a pre-mixed strength is written over — the "/mL" denominator. Defaults to 1 (so a
+    /// plain "8 mg/mL" label still works), and set to e.g. 0.5 to enter a "4 mg / 0.5 mL" pharmacy
+    /// label verbatim. Folded into the stored per-mL concentration at save; not persisted separately.
+    @State private var strengthPerVolumeText: String
     @State private var costText: String
     @State private var hasExpiration: Bool
     @State private var expiration: Date
@@ -233,6 +237,7 @@ struct VialBuilderView: View {
             _doseText = State(initialValue: "")
             _doseUnit = State(initialValue: .milligram)
             _concentrationUnit = State(initialValue: .milligram)
+            _strengthPerVolumeText = State(initialValue: "1")
             _costText = State(initialValue: "")
             // Default a new vial to the USP 28-day beyond-use date (recommended), pre-filled and on.
             _hasExpiration = State(initialValue: true)
@@ -253,6 +258,8 @@ struct VialBuilderView: View {
         // Reopen a pre-mixed vial's strength in the unit it was entered in.
         let cu: MassUnit = v.concentrationUnit
         _concentrationUnit = State(initialValue: cu)
+        // Stored concentration is already per-mL, so a reopened vial shows its strength over 1 mL.
+        _strengthPerVolumeText = State(initialValue: "1")
         _entries = State(initialValue: v.apis.map { api in
             if v.isPremixed && vol > 0 {
                 // Back out the label strength (in the vial's concentration unit) from stored mass.
@@ -453,9 +460,14 @@ struct VialBuilderView: View {
                                         }
                                     }
                                     if isPremixed {
-                                        HStack {
+                                        // Enter the strength the way the label reads — "4 mg per 0.5 mL".
+                                        // Leave the volume at 1 for a plain "8 mg/mL" label.
+                                        HStack(spacing: Space.xs) {
                                             TextField("Strength", text: $entry.amountText).keyboardType(.decimalPad).pinwiseField()
-                                            Text("\(concentrationUnit.rawValue)/mL").foregroundStyle(BrandColor.textSecondary)
+                                            Text(concentrationUnit.rawValue).foregroundStyle(BrandColor.textSecondary)
+                                            Text("per").foregroundStyle(BrandColor.textSecondary)
+                                            TextField("1", text: $strengthPerVolumeText).keyboardType(.decimalPad).pinwiseField().frame(maxWidth: 60)
+                                            Text("mL").foregroundStyle(BrandColor.textSecondary)
                                         }
                                     } else {
                                         HStack {
@@ -879,11 +891,14 @@ struct VialBuilderView: View {
         if let idx = ordered.firstIndex(where: { $0.id == effectiveAnchorID }), idx != 0 {
             ordered.insert(ordered.remove(at: idx), at: 0)
         }
+        // Pre-mixed strength is written as "amt <unit> per <basis> mL"; per-mL concentration =
+        // amt / basis (basis defaults to 1). Powder entries are a total mass in the entry's own unit.
+        let strengthBasisML = Swift.max(strengthPerVolumeText.decimalValue ?? 1, .leastNonzeroMagnitude)
         let apis = ordered.compactMap { e -> VialAPI? in
             guard let amt = e.amountText.decimalValue, amt > 0 else { return nil }
-            // Pre-mixed entries are a label strength in `concentrationUnit` per mL: total content
-            // = strength × volume. Powder entries are a total mass in the entry's own unit.
-            let micrograms = isPremixed ? Mass(amt, concentrationUnit).micrograms * vol : Mass(amt, e.unit).micrograms
+            let micrograms = isPremixed
+                ? Mass(amt, concentrationUnit).micrograms / strengthBasisML * vol
+                : Mass(amt, e.unit).micrograms
             return VialAPI(name: e.compound.name, massMicrograms: micrograms)
         }
         guard !apis.isEmpty, let pd = doseText.decimalValue, pd > 0, !isPremixed || vol > 0 else { return false }
