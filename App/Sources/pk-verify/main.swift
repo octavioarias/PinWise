@@ -122,6 +122,45 @@ do {
     check(prn.wholeDosesRemaining == 20, "5mg @ 250mcg ⇒ 20 whole doses")
 }
 
+// MARK: - Inventory: reconcile doses vs expiration vs beyond-use
+section("Inventory: doses vs expiration vs beyond-use")
+do {
+    // 10mg vial, 2.5mg dose, 1 taken ⇒ 3 doses left; weekly (1/wk) ⇒ dose run-out 2026-07-25.
+    let vial = Vial(compoundID: UUID(), mass: .mg(10), solventVolumeMilliliters: 1)
+    let ref = day(2026, 7, 4)
+
+    // Doses bind: expiration far in the future ⇒ all 3 doses usable, ends at dose run-out.
+    let dosesBind = InventoryEstimator.project(
+        vial: vial, dose: .mg(2.5), dosesTaken: 1, schedule: .weekly,
+        referenceDate: ref, expirationDate: day(2026, 12, 1), beyondUseDate: day(2026, 8, 1), calendar: cal)
+    check(dosesBind.limitingFactor == .doses, "far expiration ⇒ doses bind")
+    check(dosesBind.usableWholeDoses == 3, "doses bind ⇒ all 3 doses usable")
+    check(dosesBind.effectiveEndDate == day(2026, 7, 25), "doses bind ⇒ end = dose run-out")
+    check(dosesBind.beyondUseDate == day(2026, 8, 1), "beyond-use date echoed (advisory)")
+
+    // Expiration binds: expires 2026-07-18 (14 days) at 1 dose/week ⇒ only 2 usable, ends at expiry.
+    let expBind = InventoryEstimator.project(
+        vial: vial, dose: .mg(2.5), dosesTaken: 1, schedule: .weekly,
+        referenceDate: ref, expirationDate: day(2026, 7, 18), calendar: cal)
+    check(expBind.limitingFactor == .expiration, "near expiration ⇒ expiration binds")
+    check(expBind.usableWholeDoses == 2, "expires in 14d @ 1/wk ⇒ 2 usable (< 3 left)")
+    check(expBind.effectiveEndDate == day(2026, 7, 18), "expiration binds ⇒ end = expiration")
+    check(expBind.wholeDosesRemaining == 3, "dose count stays 3; only USABLE is capped")
+
+    // Already expired ⇒ 0 usable regardless of doses left.
+    let expired = InventoryEstimator.project(
+        vial: vial, dose: .mg(2.5), dosesTaken: 1, schedule: .weekly,
+        referenceDate: ref, expirationDate: day(2026, 7, 1), calendar: cal)
+    check(expired.usableWholeDoses == 0, "already expired ⇒ 0 usable doses")
+    check(expired.limitingFactor == .expiration, "already expired ⇒ expiration binds")
+
+    // Beyond-use is advisory: it never reduces usable doses.
+    let bud = InventoryEstimator.project(
+        vial: vial, dose: .mg(2.5), dosesTaken: 1, schedule: .weekly,
+        referenceDate: ref, expirationDate: day(2026, 12, 1), beyondUseDate: day(2026, 7, 6), calendar: cal)
+    check(bud.usableWholeDoses == 3, "beyond-use (advisory) does NOT reduce usable doses")
+}
+
 // MARK: - Adherence
 section("Adherence calculator")
 do {
