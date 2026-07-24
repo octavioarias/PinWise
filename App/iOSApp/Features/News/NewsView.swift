@@ -148,7 +148,8 @@ struct NewsView: View {
 
                     if searchActive {
                         VStack(spacing: Space.lg) {
-                            searchBar
+                            SearchField(placeholder: "Search peptides, topics, or sources",
+                                        text: $searchText, focus: $searchFocused)
                             categoryFilter
                         }
                         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -215,6 +216,32 @@ struct NewsView: View {
     @ViewBuilder private var content: some View {
         if isFiltering {
             resultsList
+        } else if items.isEmpty {
+            // No content yet — distinguish "still loading" from "load failed / nothing there" so a
+            // cold start never renders a bare "Latest" header with nothing beneath it.
+            if loader.isLoading {
+                VStack(spacing: Space.md) {
+                    ProgressView()
+                    Text("Loading the latest…")
+                        .font(.callout).foregroundStyle(BrandColor.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Space.xxl)
+            } else {
+                Card {
+                    VStack(spacing: Space.md) {
+                        ThemedEmptyState(icon: "newspaper",
+                                         title: "News couldn't load",
+                                         message: "Check your connection and try again.")
+                        Button { Task { await loader.load() } } label: {
+                            Text("Try again")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(BrandColor.accentText)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         } else {
             if let featured {
                 SectionHeader(title: featuredIsPersonalized ? "Top story for you" : "Top story")
@@ -223,29 +250,6 @@ struct NewsView: View {
             SectionHeader(title: "Latest")
             ForEach(latest) { item in rowLink(item) }
         }
-    }
-
-    private var searchBar: some View {
-        HStack(spacing: Space.sm) {
-            Image(systemName: "magnifyingglass").foregroundStyle(BrandColor.textSecondary)
-            TextField("Search peptides, topics, or sources", text: $searchText)
-                .foregroundStyle(BrandColor.textPrimary)
-                .focused($searchFocused)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .submitLabel(.search)
-            if !searchText.isEmpty {
-                Button { searchText = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(BrandColor.textSecondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, Space.md)
-        .padding(.vertical, Space.md - 2)
-        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
     }
 
     private var categoryFilter: some View {

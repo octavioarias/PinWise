@@ -100,24 +100,7 @@ struct CompoundsView: View {
     }
 
     private var searchBar: some View {
-        HStack(spacing: Space.sm) {
-            Image(systemName: "magnifyingglass").foregroundStyle(BrandColor.textSecondary)
-            TextField("Search compounds", text: $search)
-                .foregroundStyle(BrandColor.textPrimary)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-            if !search.isEmpty {
-                Button { search = "" } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(BrandColor.textSecondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.horizontal, Space.md)
-        .padding(.vertical, Space.md - 2)
-        .background(BrandColor.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(BrandColor.stroke, lineWidth: 1))
+        SearchField(placeholder: "Search compounds", text: $search)
     }
 }
 
