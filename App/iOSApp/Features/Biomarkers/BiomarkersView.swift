@@ -170,7 +170,7 @@ struct BiomarkersView: View {
                                     // (nil) fall back to the current global lb/kg preference.
                                     Text(format(e.value) + " " + (e.unitRaw ?? type?.unit(pounds: weightInPounds) ?? ""))
                                         .font(.caption.weight(.semibold)).foregroundStyle(BrandColor.data)
-                                    Text(e.timestamp, format: .dateTime.month().day())
+                                    Text(e.timestamp.relativeLabel())
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                                     // Visible delete — a wrong entry (e.g. a mistyped weight) can be
                                     // removed here, then re-logged above. (Context menu kept as a backup.)

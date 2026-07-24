@@ -109,7 +109,7 @@ final class AssistantEngine {
                 }
             }
             if assistantText.isEmpty {
-                messages.append(Message(isUser: false, text: "Sorry — I couldn't answer that just now. Please try again."))
+                messages.append(Message(isUser: false, text: "I couldn't answer that — please try again."))
             }
         } catch {
             let text: String

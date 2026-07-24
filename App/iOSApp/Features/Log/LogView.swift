@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-Time Pin" }
+private enum LogMode: String, CaseIterable { case protocolBased = "Protocol", compound = "One-time pin" }
 
 /// The Log tab — record a dose against a protocol (all its compounds at once) or a one-time
 /// pin. Protocol-first: pick a protocol, its entry fields appear, you log it, and it returns
@@ -197,7 +197,7 @@ struct LogView: View {
     private var protocolCard: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.md) {
-                Text("Select a Protocol").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
+                Text("Select a protocol").font(Typo.body).foregroundStyle(BrandColor.textPrimary)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Space.sm) {
                         ForEach(loggableProtocols, id: \.id) { p in

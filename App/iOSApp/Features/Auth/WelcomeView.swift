@@ -108,8 +108,8 @@ struct WelcomeView: View {
             .padding(.horizontal, Space.xl)
         }
         .tint(BrandColor.accent)
-        .alert("Almost there", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
-            Button("OK", role: .cancel) { auth.notice = nil }
+        .alert("Heads up", isPresented: Binding(get: { auth.notice != nil }, set: { if !$0 { auth.notice = nil } })) {
+            Button("Got it", role: .cancel) { auth.notice = nil }
         } message: { Text(auth.notice ?? "") }
         .sheet(isPresented: $showLegal) { LegalDocumentView() }
         .sheet(isPresented: $showEmail) { EmailSignInView() }

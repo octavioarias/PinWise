@@ -63,7 +63,7 @@ struct DoseHistoryView: View {
                     }
                 }
                 Spacer()
-                Text(entry.timestamp, format: .dateTime.month().day().hour().minute())
+                Text(entry.timestamp.relativeLabel())
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
         }
