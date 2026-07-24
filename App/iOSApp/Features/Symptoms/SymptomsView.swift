@@ -148,7 +148,7 @@ struct SymptomsView: View {
                             .chartXAxis {
                                 AxisMarks { _ in
                                     AxisGridLine().foregroundStyle(BrandColor.stroke.opacity(0.5))
-                                    AxisValueLabel()
+                                    AxisValueLabel(format: .dateTime.month(.abbreviated).day())
                                         .font(.system(size: 10))
                                         .foregroundStyle(BrandColor.textSecondary)
                                 }

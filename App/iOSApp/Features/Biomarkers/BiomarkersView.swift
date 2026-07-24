@@ -295,7 +295,7 @@ struct BiomarkersView: View {
         .chartXAxis {
             AxisMarks { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(BrandColor.stroke)
-                AxisValueLabel().font(.system(size: 10)).foregroundStyle(BrandColor.textSecondary)
+                AxisValueLabel(format: .dateTime.month(.abbreviated).day()).font(.system(size: 10)).foregroundStyle(BrandColor.textSecondary)
             }
         }
         .chartYAxis {
