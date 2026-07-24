@@ -102,6 +102,16 @@ struct VialRow: View {
                 Text(supplyLine)
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
 
+                // Two-line split: when the expiration date binds before the doses run out, call it
+                // out on its own warning line instead of cramming "N of M usable" into the line above.
+                if projection.limitingFactor == .expiration, projection.usableWholeDoses > 0,
+                   let end = projection.effectiveEndDate {
+                    Label("Expires \(end.formatted(.dateTime.month().day())) · ~\(projection.usableWholeDoses) usable by then",
+                          systemImage: "exclamationmark.circle")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(BrandColor.warning)
+                }
+
                 if let conc = vial.concentrationSummary {
                     Text(conc).font(.caption2.weight(.medium)).foregroundStyle(BrandColor.textPrimary)
                 }
@@ -126,24 +136,17 @@ struct VialRow: View {
         }
     }
 
-    /// Doses line — shows doses left, but when the EXPIRATION date binds before the doses run out
-    /// it shows how many are actually usable before it expires (the doses-vs-expiration synergy).
+    /// Primary doses line — always what you HAVE. The expiration reality (when it binds first) is a
+    /// separate warning line, so the two ideas never collide in one dense sentence.
     private var supplyLine: String {
-        let whole = projection.wholeDosesRemaining
-        if projection.limitingFactor == .expiration, projection.usableWholeDoses < whole {
-            return "\(projection.usableWholeDoses) of \(whole) doses usable before it expires"
-        }
-        return "\(whole) of \(vial.totalDoses) doses left"
+        "\(projection.wholeDosesRemaining) of \(vial.totalDoses) doses left"
     }
 
     private var metaLine: some View {
         HStack(spacing: Space.md) {
-            if let end = projection.effectiveEndDate {
-                let expires = projection.limitingFactor == .expiration
-                Label(expires ? "expires \(end.formatted(.dateTime.month().day()))"
-                              : "out \(end.formatted(.dateTime.month().day()))",
-                      systemImage: expires ? "exclamationmark.circle" : "calendar")
-                    .foregroundStyle(expires ? BrandColor.warning : BrandColor.textSecondary)
+            // Dose run-out date only when doses bind — the expiration case has its own warning line.
+            if projection.limitingFactor == .doses, let end = projection.effectiveEndDate {
+                Label("out \(end.formatted(.dateTime.month().day()))", systemImage: "calendar")
             }
             if let cpd = projection.costPerDose {
                 Label(costText(cpd), systemImage: "dollarsign.circle")
