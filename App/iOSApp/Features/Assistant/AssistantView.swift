@@ -323,7 +323,7 @@ struct AssistantView: View {
                         gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, and labs — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
                         gatePoint("It can use your Apple Health. By continuing, you turn on sharing your connected Apple Health metrics — weight, resting heart rate, HRV, sleep, steps — with Natt so it can personalize its answers. You can turn this off anytime in Settings › Security & Privacy.")
                         gatePoint("It's AI, and it can be wrong. Responses may be inaccurate, incomplete, or out of date — always fact-check them against the linked/primary sources.")
-                        gatePoint("It is not medical advice. It does not diagnose, treat, or recommend doses. Decisions about your health belong with a licensed healthcare professional.")
+                        gatePoint("It is not medical advice. It does not diagnose, treat, or recommend personalized doses — though it can explain what the research shows, including the doses studied in clinical trials. Decisions about your health belong with a licensed healthcare professional.")
                         gatePoint("You use it at your own risk. PinWise and its makers are not liable for any actions or outcomes based on Natt's responses.")
                     }
                     Text("By continuing you acknowledge and accept the above.")
