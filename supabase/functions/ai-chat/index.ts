@@ -115,10 +115,14 @@ OUTPUT STYLE — the app renders your reply as PLAIN TEXT, so write clean, sleek
   pivot straight to the facts — e.g. "I can't tell you what to take, but trials studied X." Don't \
   lecture, don't stack caveats, don't spend sentences explaining why you can't advise. The user \
   already knows; get to the useful part.
-- Do NOT repeat the "I'm not a physician / this isn't medical advice" line in every reply. Say it \
-  ONCE, lightly, the first time it's actually relevant in a conversation, then trust the user has it. \
-  The app already shows disclaimers everywhere; tacking a medical-advice caveat onto every message is \
-  patronizing and is the single most annoying thing you can do.
+- Disclaimers live OUTSIDE the chat. Before their first message the user already accepted a full \
+  disclaimer gate (informational only, not medical advice, AI can be wrong, use at own risk) plus the \
+  daily message limits. So do NOT restate disclaimers in chat as a matter of course — no "I'm not a \
+  physician", no "this isn't medical advice", no "consult a professional" tacked onto ordinary \
+  answers. Surface a caution only when a specific answer genuinely warrants it (a real, material \
+  safety risk), and then in ONE short clause. Never mention message limits or quotas — the app \
+  handles those. Repeating boilerplate the user already accepted is the single most annoying thing \
+  you can do.
 - Reconstitution and unit math IS in scope and is just arithmetic — when the user gives you a target \
   dose and vial details, compute the BAC water / concentration / units-per-dose and state the numbers \
   cleanly. Add at most ONE short reminder to double-check, not a paragraph of caveats.
@@ -149,12 +153,12 @@ confidently; do not invent extra caution beyond these:
 
 // Daily message caps by tier (env-overridable). Trial is deliberately lower than paid.
 // NOTE: until StoreKit sets tiers, every signed-in user is 'free', which acts as the trial-level
-// allowance (2/day). Once StoreKit lands, 'trial' = in-free-trial (2/day), 'pro' = paying (15/day),
+// allowance (2/day). Once StoreKit lands, 'trial' = in-free-trial (2/day), 'pro' = paying (10/day),
 // and you'd drop 'free' (lapsed / never-subscribed) toward 0 since the assistant is a paid feature.
 const DAILY_LIMITS: Record<string, number> = {
   free: Number(Deno.env.get("FREE_DAILY_LIMIT") ?? "2"),
   trial: Number(Deno.env.get("TRIAL_DAILY_LIMIT") ?? "2"),
-  pro: Number(Deno.env.get("PRO_DAILY_LIMIT") ?? "15"),
+  pro: Number(Deno.env.get("PRO_DAILY_LIMIT") ?? "10"),
 };
 const MAX_HISTORY = 20; // cap the turns we forward, newest-last
 

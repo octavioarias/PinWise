@@ -319,6 +319,7 @@ struct AssistantView: View {
                     Text("Before you chat with Natt")
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
                     VStack(alignment: .leading, spacing: Space.md) {
+                        gatePoint("Daily limits. On the free trial, Natt answers up to 2 messages a day. Pro — monthly or yearly — raises that to 10 a day.")
                         gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, labs, and any connected Health metrics — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
                         gatePoint("It's AI, and it can be wrong. Responses may be inaccurate, incomplete, or out of date — always fact-check them against the linked/primary sources.")
                         gatePoint("It is not medical advice. It does not diagnose, treat, or recommend doses. Decisions about your health belong with a licensed healthcare professional.")
