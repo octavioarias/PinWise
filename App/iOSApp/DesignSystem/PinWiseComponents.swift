@@ -529,6 +529,35 @@ extension String {
     var decimalValue: Double? { Double(replacingOccurrences(of: ",", with: ".")) }
 }
 
+extension Date {
+    /// Conversational relative time, per the UX-writing principle of expressing time the way you'd
+    /// say it out loud ("just now", "5 minutes ago", "yesterday", "3 days ago", "2 weeks ago"),
+    /// rounding to the largest sensible unit and falling back to an absolute date past ~a month.
+    /// The precise date stays available elsewhere (e.g. an article's detail view), so nothing is lost.
+    func relativeLabel(reference now: Date = Date()) -> String {
+        let seconds = now.timeIntervalSince(self)
+        guard seconds >= 0 else { return formatted(date: .abbreviated, time: .omitted) }
+        let minute = 60.0, hour = 3_600.0, day = 86_400.0
+        switch seconds {
+        case ..<minute:
+            return "just now"
+        case ..<hour:
+            let m = Int(seconds / minute); return m <= 1 ? "1 minute ago" : "\(m) minutes ago"
+        case ..<day:
+            let h = Int(seconds / hour); return h <= 1 ? "1 hour ago" : "\(h) hours ago"
+        default:
+            let d = Int(seconds / day)
+            switch d {
+            case 1: return "yesterday"
+            case 2..<7: return "\(d) days ago"
+            case 7..<14: return "1 week ago"
+            case 14..<30: return "\(d / 7) weeks ago"
+            default: return formatted(date: .abbreviated, time: .omitted)
+            }
+        }
+    }
+}
+
 /// Trailing-window selector shared by the trend charts (Labs & Symptoms). `.all` = full history
 /// (nil cutoff). Superset of both former view-local copies; each view iterates only the options
 /// it offers — Symptoms omits `.all`, Labs includes it — so this is a pure definition-dedup, not
