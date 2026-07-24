@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("weightInPounds") private var weightInPounds = true
     @AppStorage("appearance") private var appearanceRaw = AppearanceMode.dark.rawValue
     @AppStorage(BiometricLock.prefKey) private var faceIDLock = false
+    @AppStorage("shareHealthWithNatt") private var shareHealthWithNatt = false
 
     private var suggestsPounds: Bool { Locale.current.measurementSystem != .metric }
     private var suggestedUnitLabel: String { suggestsPounds ? "pounds (lb)" : "kilograms (kg)" }
@@ -16,6 +17,7 @@ struct SettingsView: View {
     @State private var showConnections = false
     @State private var showLegal = false
     @State private var showBackupNote = false
+    @State private var showExport = false
 
     var body: some View {
         NavigationStack {
@@ -29,6 +31,8 @@ struct SettingsView: View {
                             settingsRow("Manage membership", icon: "creditcard", detail: "Free trial") { showMembership = true }
                             Divider().overlay(BrandColor.stroke)
                             settingsRow("Back up all data", icon: "arrow.up.doc.on.clipboard") { showBackupNote = true }
+                            Divider().overlay(BrandColor.stroke)
+                            settingsRow("Export data (CSV)", icon: "square.and.arrow.up") { showExport = true }
                         }
                     }
 
@@ -93,6 +97,16 @@ struct SettingsView: View {
                                 .tint(BrandColor.accent)
                                 Divider().overlay(BrandColor.stroke)
                             }
+                            Toggle(isOn: $shareHealthWithNatt) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Share Apple Health with Natt")
+                                        .font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                                    Text("Off by default. When on, the Apple Health metrics PinWise reads (weight, resting heart rate, HRV, sleep, steps) are sent to the assistant so it can personalize answers. Requires Apple Health connected; turn off anytime.")
+                                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                }
+                            }
+                            .tint(BrandColor.accent)
+                            Divider().overlay(BrandColor.stroke)
                             settingsRow("Privacy Policy & Terms of Use", icon: "doc.text") { showLegal = true }
                         }
                     }
@@ -118,6 +132,7 @@ struct SettingsView: View {
             .sheet(isPresented: $showMembership) { MembershipView() }
             .sheet(isPresented: $showConnections) { HealthConnectionsView() }
             .sheet(isPresented: $showLegal) { LegalDocumentView() }
+            .sheet(isPresented: $showExport) { DataExportView() }
             .alert("Backup isn't available yet", isPresented: $showBackupNote) {
                 Button("OK", role: .cancel) {}
             } message: {

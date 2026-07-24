@@ -20,7 +20,7 @@ struct PinWiseApp: App {
         // Local-first store. To enable iCloud private-database sync later, add the iCloud
         // + CloudKit capability and a ModelConfiguration(cloudKitDatabase:) — the model is
         // already CloudKit-safe (see LoggedDose).
-        .modelContainer(for: [LoggedDose.self, SavedProtocol.self, StoredVial.self, SymptomEntry.self, BiomarkerEntry.self, CustomCompound.self, PhysiquePhoto.self])
+        .modelContainer(for: [LoggedDose.self, SavedProtocol.self, StoredVial.self, SymptomEntry.self, BiomarkerEntry.self, CustomCompound.self, PhysiquePhoto.self, HealthSnapshot.self])
     }
 }
 
@@ -56,6 +56,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var auth = AuthManager.shared
     @State private var unlocked = false   // biometric session state; re-locks when backgrounded
+    @Environment(\.modelContext) private var modelContext
 
     /// The app starts the week on MONDAY — so every calendar/date-picker grid lays out
     /// Mon-first. Display only: stored weekday numbers stay absolute (1 = Sun … 7 = Sat) and
@@ -121,7 +122,9 @@ struct RootView: View {
             }
             // Stamp the install/first-use date once — anchors the review-prompt milestones.
             if firstLaunchAt == 0 { firstLaunchAt = Date().timeIntervalSinceReferenceDate }
-            // If Health was connected in a past session, refresh silently — no re-prompt.
+            // Give HealthManager the store so a refresh can persist a daily on-device snapshot,
+            // then refresh silently if Health was connected in a past session (no re-prompt).
+            HealthManager.shared.modelContext = modelContext
             await HealthManager.shared.refreshIfConnected()
             // Cold-launch review check, after a natural pause (scenePhase.onChange covers warm
             // resumes). requestReview is a request — Apple decides whether to actually show it.

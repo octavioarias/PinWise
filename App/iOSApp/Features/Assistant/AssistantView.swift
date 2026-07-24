@@ -144,6 +144,9 @@ struct AssistantView: View {
     // can force re-acceptance. Tied to `Disclaimer.currentVersion` — bumping it re-prompts here too.
     @AppStorage("aiConsentVersion") private var aiConsentVersion = 0
     private var aiAccepted: Bool { aiConsentVersion >= Disclaimer.currentVersion }
+    // Opt-in (Settings → Security & Privacy), OFF by default: when on, the Apple Health metrics
+    // PinWise reads are included in Natt's context so she can personalize with them.
+    @AppStorage("shareHealthWithNatt") private var shareHealthWithNatt = false
     @State private var engine = AssistantEngine.shared
     @State private var input = ""
     @FocusState private var inputFocused: Bool
@@ -211,10 +214,22 @@ struct AssistantView: View {
             for b in biomarkers where latestByType[b.typeRaw] == nil { latestByType[b.typeRaw] = b }
             lines.append("LATEST LABS/METRICS: " + latestByType.values.map { "\($0.typeRaw) \($0.value)" }.joined(separator: ", "))
         }
-        // NOTE: Apple Health (HealthKit-read) metrics are deliberately NOT included here. This
-        // context is sent to the cloud assistant, and Apple guideline 5.1.3 restricts sharing
-        // HealthKit-derived data with third parties — so it stays on-device only. Data the user
-        // typed into PinWise (above) is fair game to send; HealthKit-sourced data is walled off.
+        // Apple Health (HealthKit-read) metrics are included ONLY when the user has explicitly
+        // opted in (Settings → Security & Privacy) AND connected Health. Guideline 5.1.3 permits
+        // sharing HealthKit data with a third party (the cloud assistant) with the user's consent
+        // for managing their health; it's off by default and otherwise stays walled off on-device.
+        // Data the user typed into PinWise (above) is always fair game to send.
+        if shareHealthWithNatt && health.authorized {
+            var h: [String] = []
+            if let w = health.latestWeightKg {
+                h.append(String(format: "weight %.1f kg (%.1f lb)", w, w * 2.2046226))
+            }
+            if let hr = health.restingHeartRate { h.append("resting HR \(Int(hr.rounded())) bpm") }
+            if let hrv = health.hrvMilliseconds { h.append("HRV \(Int(hrv.rounded())) ms") }
+            if let s = health.sleepHoursLastNight { h.append(String(format: "%.1f h sleep last night", s)) }
+            if let st = health.stepsToday { h.append("\(Int(st.rounded())) steps today") }
+            if !h.isEmpty { lines.append("APPLE HEALTH (from the user's connected Health app): " + h.joined(separator: ", ")) }
+        }
         return lines.isEmpty ? "The user hasn't logged anything yet." : lines.joined(separator: "\n")
     }
 
