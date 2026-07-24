@@ -579,7 +579,9 @@ extension StoredVial {
             vial: vial, dose: perDose, dosesTaken: dosesTaken,
             schedule: schedule, referenceDate: referenceDate,
             expirationDate: expirationDate,
-            beyondUseDate: beyondUseDate
+            // The user-set discard date IS the beyond-use limit when present; only fall back to the
+            // soft 28-day guideline advisory when they haven't set one (avoids a double discard date).
+            beyondUseDate: expirationDate == nil ? beyondUseDate : nil
         )
     }
 
