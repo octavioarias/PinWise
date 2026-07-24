@@ -267,7 +267,7 @@ struct LogView: View {
 
     private func doseMetric(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+            MicroLabel(label)
             Text(value).font(Typo.numberMD).foregroundStyle(color)
                 .lineLimit(1).minimumScaleFactor(0.7)
         }
@@ -410,7 +410,7 @@ struct LogView: View {
             .pickerStyle(.segmented)
             ForEach(regionsOnFace, id: \.self) { region in
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(region.label.uppercased()).font(.caption2).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+                    MicroLabel(region.label)
                     HStack(spacing: Space.sm) {
                         ForEach(sites(in: region)) { s in
                             // Tapping the selected spot clears it — a log must never carry a

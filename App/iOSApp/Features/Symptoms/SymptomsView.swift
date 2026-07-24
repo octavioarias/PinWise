@@ -211,16 +211,7 @@ struct SymptomsView: View {
     }
 
     private func chip(_ s: SymptomType) -> some View {
-        let isOn = selected == s
-        return Button { selected = s } label: {
-            Label(s.displayName, systemImage: s.icon)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
-                .background(isOn ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                .foregroundStyle(isOn ? BrandColor.onAccent : BrandColor.textSecondary)
-                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: isOn ? 0 : 1))
-        }
-        .buttonStyle(.plain)
+        SelectableChip(title: s.displayName, isSelected: selected == s, systemImage: s.icon) { selected = s }
     }
 
     private func save() {

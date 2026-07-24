@@ -267,6 +267,7 @@ struct SelectableChip: View {
     let isSelected: Bool
     var shape: ChipShape = .capsule
     var fillWidth: Bool = false
+    var systemImage: String? = nil
     let action: () -> Void
 
     private var cornerRadius: CGFloat {
@@ -276,9 +277,13 @@ struct SelectableChip: View {
         }
     }
 
+    @ViewBuilder private var label: some View {
+        if let systemImage { Label(title, systemImage: systemImage) } else { Text(title) }
+    }
+
     var body: some View {
         Button(action: action) {
-            Text(title)
+            label
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(isSelected ? BrandColor.onAccent : BrandColor.textPrimary)
                 .padding(.horizontal, Space.md)
