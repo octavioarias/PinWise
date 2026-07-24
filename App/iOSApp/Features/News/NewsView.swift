@@ -344,6 +344,7 @@ struct FeaturedNewsCard: View {
                     .font(Typo.title)
                     .foregroundStyle(BrandColor.textPrimary)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(item.listText)
                     .font(Typo.body)
@@ -408,7 +409,8 @@ struct NewsRow: View {
     }
 }
 
-/// Article detail — full summary, compounds, tappable sources, per-item disclaimer.
+/// Article detail, top-to-bottom: title → compounds mentioned → plain-language key finding →
+/// fuller summary → tappable sources → per-item disclaimer.
 struct NewsDetailView: View {
     let item: NewsItem
 
@@ -424,6 +426,7 @@ struct NewsDetailView: View {
                             .padding(Space.md)
                     }
 
+                // 1 — Title
                 VStack(alignment: .leading, spacing: Space.sm) {
                     Text(newsDisplayDate(item.publishedAt))
                         .font(.caption)
@@ -431,19 +434,35 @@ struct NewsDetailView: View {
                     Text(item.headline)
                         .font(Typo.title)
                         .foregroundStyle(BrandColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // 2 — Compounds mentioned, right under the title
+                if !item.compounds.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Space.sm) {
+                            ForEach(item.compounds, id: \.self) { c in
+                                TagChip(text: c, color: BrandColor.accentText)
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
+                }
+
+                // 3 — Key finding / call to action, plain language, emphasized
+                if let key = item.teaser, !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(key)
+                        .font(Typo.headline)
+                        .foregroundStyle(BrandColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                // 4 — Fuller summary of the findings
                 Text(item.summary)
                     .font(Typo.body)
-                    .foregroundStyle(BrandColor.textPrimary)
+                    .foregroundStyle(BrandColor.textSecondary)
 
-                if !item.compounds.isEmpty {
-                    SectionHeader(title: "Compounds mentioned")
-                    Text(item.compounds.joined(separator: " · "))
-                        .font(Typo.body)
-                        .foregroundStyle(BrandColor.textSecondary)
-                }
-
+                // 5 — Sources at the bottom
                 SectionHeader(title: "Sources")
                 VStack(alignment: .leading, spacing: Space.sm) {
                     ForEach(item.sources) { source in

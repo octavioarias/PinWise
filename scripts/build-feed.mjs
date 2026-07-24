@@ -8,7 +8,11 @@
 //
 // The curated base carries the prose quality (the hero/Top-story items); the fresh items keep
 // the feed current in the "Latest" stream. Neutral, cited summaries only — no recommendations.
-// Fully deterministic: no API keys, no LLM. Matches the NewsFeed contract in
+// Fresh items are then rewritten by a small LLM step (Claude Haiku) into short, punchy,
+// plain-language headlines + a key finding + a clean summary — accuracy-first (facts only, never
+// fabricated results), and it falls back to the raw extracted text if ANTHROPIC_API_KEY is unset
+// or a call fails, so the build never depends on it. Only the three prose fields are touched;
+// compounds, sources, and dates stay deterministic. Matches the NewsFeed contract in
 // App/Sources/PeptideKit/News/NewsFeed.swift.
 //
 // Usage:  node scripts/build-feed.mjs   ->  writes feed/feed.json
@@ -340,6 +344,84 @@ async function loadFreshTerms() {
     .map((f) => ({ term: f.aliases?.[0] || f.name, name: f.name }));
 }
 
+// -------------------------------------------------------------------------------------
+// LLM rewrite (Claude Haiku) — turn raw clinical titles/abstracts into short, punchy,
+// plain-language copy. Applied ONLY to fresh items. Accuracy-first: the model may use ONLY facts
+// present in the source and must never invent results. Requires ANTHROPIC_API_KEY; without it, or
+// on any per-item error, the item keeps its deterministic raw text (the build never fails here).
+// Never touches compounds/sources/dates — only headline, teaser (key finding), and summary.
+// -------------------------------------------------------------------------------------
+const REWRITE_MODEL = process.env.NEWS_REWRITE_MODEL || "claude-haiku-4-5";
+const REWRITE_SYSTEM = `You rewrite biomedical news items for PinWise, a peptide/GLP-1 dose-tracking app. Turn a raw clinical-trial or journal title and summary into clear, engaging, ACCURATE copy for an informed layperson.
+Hard rules:
+- Use ONLY facts present in the provided text. NEVER invent numbers, percentages, outcomes, drug names, approvals, dates, or any claim that is not there.
+- If the source is a trial registration or has no results yet, describe what the study IS (its phase, population, and what it tests) — do NOT fabricate findings.
+- Neutral and factual, not clickbait or hype. No medical advice, no recommendations, do not address the reader as "you".
+- Plain language: explain or avoid jargon.
+Return ONLY a JSON object (no prose, no code fences) with exactly these keys:
+{"headline": string, 60 characters or fewer, punchy but accurate, no trailing period;
+ "keyFinding": string, ONE short sentence, 110 characters or fewer, the single most important takeaway in plain language;
+ "summary": string, 2-4 sentences expanding on the findings or on what the study is}`;
+
+async function rewriteOne(item, apiKey) {
+  const prompt = `Category: ${item.category}
+Compounds: ${item.compounds.join(", ") || "n/a"}
+Raw headline: ${item.headline}
+Raw summary: ${item.summary}`;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({
+      model: REWRITE_MODEL,
+      max_tokens: 400,
+      temperature: 0.3,
+      system: REWRITE_SYSTEM,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`anthropic ${res.status}`);
+  const json = await res.json();
+  const text = (json.content || []).map((b) => b.text || "").join("").trim();
+  const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  if (a < 0 || b < 0) throw new Error("no JSON in response");
+  const obj = JSON.parse(text.slice(a, b + 1));
+  const headline = clean(obj.headline || "");
+  const keyFinding = clean(obj.keyFinding || "");
+  const summary = clean(obj.summary || "");
+  if (!headline || !keyFinding || !summary) throw new Error("empty rewritten field");
+  // Safety caps in case the model overruns: headline stays short; teaser MUST be <=110 chars or the
+  // feed validator hard-fails and refuses to publish (wordCap returns the string unchanged when it's
+  // already within the limit, so a well-behaved one-sentence finding is untouched).
+  return {
+    ...item,
+    headline: wordCap(headline.replace(/\.$/, ""), 80),
+    teaser: wordCap(keyFinding, 108),
+    summary,
+  };
+}
+
+async function rewriteFresh(items) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.warn("ANTHROPIC_API_KEY not set — skipping LLM rewrite; using raw extracted text.");
+    return items;
+  }
+  const out = [];
+  let ok = 0;
+  for (const item of items) {
+    try {
+      out.push(await rewriteOne(item, apiKey));
+      ok++;
+    } catch (e) {
+      console.error(`rewrite failed for ${item.id}, keeping raw: ${e.message}`);
+      out.push(item);
+    }
+    await sleep(200); // gentle pacing; ~15 items/run
+  }
+  console.log(`LLM rewrite: ${ok}/${items.length} items rewritten (rest kept raw).`);
+  return out;
+}
+
 async function main() {
   const curated = await loadCuratedBase();
   console.log(`Curated base: ${curated.length} items.`);
@@ -392,9 +474,13 @@ async function main() {
     // dates float them to the top of the date-sorted "Latest" stream.
     .map((it, i) => ({ ...it, popularity: Math.max(20, 44 - i * 2), isMajorUpdate: false }));
 
-  console.log(`Fresh items appended: ${fresh.length}.`);
+  console.log(`Fresh items collected: ${fresh.length}.`);
 
-  const items = [...curated, ...fresh];
+  // Rewrite the fresh items into punchy, plain-language copy (the curated base is already
+  // hand-written, so it's left untouched). Best-effort — falls back to raw text per item.
+  const rewritten = await rewriteFresh(fresh);
+
+  const items = [...curated, ...rewritten];
   const feed = { version: 1, generatedAt: ISO_NOW, items };
   await mkdir(resolve(REPO, "feed"), { recursive: true });
   await writeFile(resolve(REPO, "feed/feed.json"), JSON.stringify(feed, null, 2) + "\n");
