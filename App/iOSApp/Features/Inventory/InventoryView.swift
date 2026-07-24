@@ -533,17 +533,27 @@ struct VialBuilderView: View {
                                     FieldRow("Discard by") {
                                         DatePicker("", selection: $expiration, displayedComponents: [.date]).labelsHidden()
                                     }
-                                    Text("US Pharmacopeia (USP) recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Extended expiration dates are not advised.")
+                                    Text("US Pharmacopeia (USP) recommends discarding a multi-dose vial about 28 days after opening or mixing, to limit bacterial or fungal growth. Robust peptides may stay potent longer, but 28 days is the standard safe window.")
                                         .font(.caption2)
                                         .foregroundStyle(BrandColor.textSecondary)
-                                    Button {
-                                        expiration = Calendar.current.date(byAdding: .day, value: Self.recommendedBeyondUseDays, to: Date()) ?? Date()
-                                    } label: {
-                                        Label("Use recommended 28-day date", systemImage: "arrow.counterclockwise")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(BrandColor.accentText)
+                                    // One-tap window presets (28 = the USP default). Sets the discard
+                                    // date to today + N days; fine-tune with the picker above.
+                                    HStack(spacing: Space.sm) {
+                                        Text("Window").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                        ForEach([14, 28, 60, 90], id: \.self) { d in
+                                            Button {
+                                                expiration = Calendar.current.date(byAdding: .day, value: d, to: Date()) ?? Date()
+                                            } label: {
+                                                Text("\(d)d")
+                                                    .font(.caption.weight(.semibold))
+                                                    .padding(.horizontal, Space.sm).padding(.vertical, 4)
+                                                    .background(BrandColor.surfaceElevated, in: Capsule())
+                                                    .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: 1))
+                                                    .foregroundStyle(BrandColor.accentText)
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
                                     }
-                                    .buttonStyle(.plain)
                                 }
                                 FieldRow("Cost", hint: "Optional — shows cost per dose.") {
                                     HStack {
