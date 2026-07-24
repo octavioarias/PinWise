@@ -38,7 +38,7 @@ struct ToolsView: View {
                         ToolCard(title: "How you feel", subtitle: "Track side effects over time", systemImage: "heart.text.square", hue: BrandColor.warning) {
                             SymptomsView()
                         }
-                        ToolCard(title: "Labs & metrics", subtitle: "Weight, A1c, lipids, BP trends", systemImage: "chart.xyaxis.line", hue: BrandColor.data) {
+                        ToolCard(title: "Labs & metrics", subtitle: "Weight, A1c, lipids, blood pressure trends", systemImage: "chart.xyaxis.line", hue: BrandColor.data) {
                             BiomarkersView()
                         }
                     }

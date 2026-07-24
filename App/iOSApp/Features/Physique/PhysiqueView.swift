@@ -141,7 +141,7 @@ struct PhysiqueView: View {
                         .aspectRatio(3.0 / 4.0, contentMode: .fill)
                         .overlay(Image(systemName: "photo").foregroundStyle(BrandColor.textSecondary))
                 }
-                Text(photo.timestamp, format: .dateTime.month().day().year())
+                Text(photo.timestamp.relativeLabel())
                     .font(.caption2.weight(.semibold))
                     .padding(.horizontal, Space.sm).padding(.vertical, Space.xs)
                     .background(.black.opacity(0.55), in: Capsule())

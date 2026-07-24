@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-// The compound library (reached from My Vials): the verified catalog with evidence tiers,
+// The compound library (reached from Your vials): the verified catalog with evidence tiers,
 // plus the user's own added compounds.
 
 struct CompoundsView: View {
@@ -52,7 +52,7 @@ struct CompoundsView: View {
 
                 if results.isEmpty && customResults.isEmpty {
                     Card {
-                        Text("No compounds match “\(search)”.")
+                        Text("No compounds match “\(search)”. Try a different name, or add your own below.")
                             .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }

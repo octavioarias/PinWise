@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// The Stack tab: your vials and your protocols (a "My Vials / My Protocols" segmented
-/// control, vials default), plus a link into the compound library under My Vials.
+/// The Stack tab: your vials and your protocols (a "Your vials / Your protocols" segmented
+/// control, vials default), plus a link into the compound library under Your vials.
 struct ProtocolsView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \SavedProtocol.startDate, order: .reverse) private var protocols: [SavedProtocol]
@@ -27,8 +27,8 @@ struct ProtocolsView: View {
                     header
 
                     Picker("", selection: $panel) {
-                        Text("My Vials").tag(Panel.inventory)
-                        Text("My Protocols").tag(Panel.protocols)
+                        Text("Your vials").tag(Panel.inventory)
+                        Text("Your protocols").tag(Panel.protocols)
                     }
                     .pickerStyle(.segmented)
 
@@ -170,7 +170,7 @@ struct ProtocolsView: View {
                     .font(Typo.headline)
                     .foregroundStyle(BrandColor.textPrimary)
                 Text(vials.isEmpty
-                     ? "Protocols are built from your vials — add a vial under My Vials first, then create a protocol from it with a dose and schedule."
+                     ? "Protocols are built from your vials — add a vial under Your vials first, then create a protocol from it with a dose and schedule."
                      : "Create one from a vial — pick one of your vials, set the dose per shot, and choose a schedule. You can still log ad-hoc doses without a protocol.")
                     .font(Typo.body)
                     .foregroundStyle(BrandColor.textSecondary)

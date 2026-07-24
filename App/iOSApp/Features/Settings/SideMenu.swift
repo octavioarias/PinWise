@@ -73,7 +73,7 @@ struct SideMenuDrawer: View {
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.sm)
 
-            // Identity header — avatar + name, tappable straight into My Profile (Oura-style).
+            // Identity header — avatar + name, tappable straight into Your profile (Oura-style).
             Button {
                 isOpen = false
                 route = .profile
@@ -97,7 +97,7 @@ struct SideMenuDrawer: View {
             }
             .buttonStyle(.plain)
             // Keep the account identity audible — VoiceOver users check guest vs signed-in here.
-            .accessibilityLabel("My Profile — \(headerName.isEmpty ? "not set up" : headerName), \(auth.accountSubtitle)")
+            .accessibilityLabel("Your profile — \(headerName.isEmpty ? "not set up" : headerName), \(auth.accountSubtitle)")
             .padding(.horizontal, Space.xl)
             .padding(.bottom, Space.lg)
 

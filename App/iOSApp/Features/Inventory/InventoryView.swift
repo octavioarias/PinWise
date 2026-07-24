@@ -149,7 +149,7 @@ struct VialRow: View {
         HStack(spacing: Space.md) {
             // Dose run-out date only when doses bind — the expiration case has its own warning line.
             if projection.limitingFactor == .doses, let end = projection.effectiveEndDate {
-                Label("out \(end.formatted(.dateTime.month().day()))", systemImage: "calendar")
+                Label("Runs out \(end.formatted(.dateTime.month().day()))", systemImage: "calendar")
             }
             if let cpd = projection.costPerDose {
                 Label(costText(cpd), systemImage: "dollarsign.circle")
@@ -337,13 +337,13 @@ struct VialBuilderView: View {
         return isPremixed ? Mass(amt, concentrationUnit).micrograms : Mass(amt, e.unit).micrograms
     }
 
-    /// The escape hatch for a blend, in the app's own vocabulary (Stack ▸ My Vials / My Protocols).
+    /// The escape hatch for a blend, in the app's own vocabulary (Stack ▸ Your vials / Your protocols).
     /// A pre-mixed vial can't be separated — its compounds arrive combined from the pharmacy — so
     /// the advice differs from a powder you mix yourself.
     private var separateVialsSuggestion: String {
         isPremixed
         ? "A pre-mixed vial can't be split — these compounds come combined from the pharmacy. To dose each on its own, you'd need a separate pre-mixed vial for each one."
-        : "Want to dose each compound on its own? Add them as separate vials (Stack ▸ My Vials), then run them together as a protocol (Stack ▸ My Protocols)."
+        : "Want to dose each compound on its own? Add them as separate vials (Stack ▸ Your vials), then run them together as a protocol (Stack ▸ Your protocols)."
     }
 
     /// The blend "hero": what one shot actually delivers of every compound (live), the anchor

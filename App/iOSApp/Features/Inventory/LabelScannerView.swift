@@ -314,7 +314,7 @@ struct LabelScannerView: View {
             VStack(alignment: .leading, spacing: Space.md) {
                 SectionHeader(title: "Found on the label")
                 row("Compound", r.compoundName ?? "—")
-                row("Concentration", concentrationText(r.strength))
+                row("Strength", strengthText(r.strength))
                 row("Vial size", r.volumeMl.map { fmt($0) + " mL" } ?? "—")
                 row("Expires", r.expiration.map { $0.formatted(.dateTime.month().day().year()) } ?? "—")
                 if r.isEmpty {
@@ -329,11 +329,14 @@ struct LabelScannerView: View {
         }
     }
 
-    /// Original card shows a mg/mL concentration; a bare-mass (powder) reading has no concentration
-    /// to display here, so it reads "—" (the mass still flows through to the form via `onApply`).
-    private func concentrationText(_ s: ScannedLabel.Strength?) -> String {
-        if case .concentrationMgPerMl(let c) = s { return String(format: "%.2f mg/mL", c) }
-        return "—"
+    /// Shows the captured strength both ways — a mg/mL concentration OR a bare mass (powder) reading
+    /// — mirroring VoiceInputView so a successfully-read powder strength no longer displays as "—".
+    private func strengthText(_ s: ScannedLabel.Strength?) -> String {
+        switch s {
+        case .concentrationMgPerMl(let c): return String(format: "%.2f mg/mL", c)
+        case .massMilligrams(let m): return fmt(m) + " mg"
+        case nil: return "—"
+        }
     }
 
     private func row(_ key: String, _ value: String) -> some View {

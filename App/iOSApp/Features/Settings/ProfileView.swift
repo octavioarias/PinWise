@@ -102,7 +102,7 @@ struct ProfileAvatar: View {
     }
 }
 
-/// Shared profile-field definitions so onboarding setup and My Profile stay in lockstep.
+/// Shared profile-field definitions so onboarding setup and Your profile stay in lockstep.
 /// Sex is stored under the existing "bodyGender" key — it silently drives the body map.
 enum ProfileFields {
     /// 18+ app: birthdays span 100 years ago through 18 years ago.
@@ -180,7 +180,7 @@ struct HeightField: View {
     private var cmSel: Binding<Int> { Binding(get: { Int(Double(cmText) ?? 170) }, set: { cmText = String($0) }) }
 }
 
-/// My Profile — the account home. A hero header (photo, name, membership badge) over cards
+/// Your profile — the account home. A hero header (photo, name, membership badge) over cards
 /// for account details, personalization, and the on-device privacy promise.
 struct ProfileView: View {
     @AppStorage("bodyGender") private var bodyGenderRaw = "male"
@@ -199,7 +199,7 @@ struct ProfileView: View {
     @State private var name = AuthManager.shared.displayName ?? ""
 
     var body: some View {
-        MenuSheet(title: "My Profile") {
+        MenuSheet(title: "Your profile") {
             header
             accountCard
             personalizationCard
