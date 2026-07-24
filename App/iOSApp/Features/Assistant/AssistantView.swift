@@ -5,7 +5,7 @@ import PeptideKit
 /// A right-anchored slide-in "Assistant" (mirror of the left menu). Conversational, powered by the
 /// hosted AI (Supabase `ai-chat` Edge Function) with server-side guardrails. The conversation is
 /// held in a shared in-memory engine, so it survives closing/reopening the drawer within a session
-/// and resets on app restart or after 24h idle (see AssistantEngine).
+/// and resets on app restart or after 3h idle (see AssistantEngine).
 struct AssistantDrawer: View {
     @Binding var isOpen: Bool
     @Environment(\.colorScheme) private var scheme
@@ -67,13 +67,13 @@ final class AssistantEngine {
 
     private let client = CloudAIClient()
     /// Reset the conversation if nobody has added a message for this long.
-    private static let idleResetWindow: TimeInterval = 24 * 60 * 60
+    private static let idleResetWindow: TimeInterval = 3 * 60 * 60
     /// When the last message (from the user OR Natt) was added; nil when the chat is empty.
     private var lastActivityAt: Date?
 
     /// Clear a stale conversation so the next visit starts fresh. Called when the assistant opens.
     /// Combined with the engine being in-memory (a relaunch starts empty), this gives the intended
-    /// rule: the chat persists across leaving/returning, and resets on app restart OR 24h idle.
+    /// rule: the chat persists across leaving/returning, and resets on app restart OR 3h idle.
     func resetIfStale() {
         guard let last = lastActivityAt,
               Date().timeIntervalSince(last) > Self.idleResetWindow else { return }
@@ -278,7 +278,7 @@ struct AssistantView: View {
                 disclaimerGate
             }
         }
-        // Drop a stale conversation (24h+ idle) so reopening starts fresh; a live one is kept.
+        // Drop a stale conversation (3h+ idle) so reopening starts fresh; a live one is kept.
         .onAppear { engine.resetIfStale() }
         .task { if health.authorized { await health.refresh() } }
         .sheet(isPresented: $showCompounds) { NavigationStack { CompoundsView() } }
