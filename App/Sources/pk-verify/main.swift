@@ -161,6 +161,19 @@ do {
     check(bud.usableWholeDoses == 3, "beyond-use (advisory) does NOT reduce usable doses")
 }
 
+// MARK: - Per-compound beyond-use defaults
+section("Beyond-use guidance (per-compound defaults)")
+do {
+    check(BeyondUseGuidance.defaultDays == 28, "default beyond-use window is 28 days")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "GHK-Cu") == 21, "GHK-Cu ⇒ 21-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "Glutathione") == 14, "glutathione ⇒ 14-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "CJC-1295") == 21, "CJC-1295 ⇒ 21-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "Ipamorelin") == 21, "ipamorelin ⇒ 21-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "IGF-1 LR3") == 21, "IGF-1 LR3 ⇒ 21-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "Semaglutide") == 28, "GLP-1 ⇒ 28-day default")
+    check(BeyondUseGuidance.recommendedDays(forCompound: "BPC-157") == 28, "unlisted robust ⇒ 28-day default")
+}
+
 // MARK: - Adherence
 section("Adherence calculator")
 do {

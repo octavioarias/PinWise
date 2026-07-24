@@ -554,6 +554,22 @@ struct VialBuilderView: View {
                                             .buttonStyle(.plain)
                                         }
                                     }
+                                    // Per-compound suggested window (editable) — some peptides are
+                                    // less stable once mixed and warrant a shorter default than 28d.
+                                    if let name = anchorCompoundName {
+                                        Button {
+                                            expiration = Calendar.current.date(byAdding: .day, value: suggestedBUDDays, to: Date()) ?? Date()
+                                        } label: {
+                                            Label("Suggested for \(name): \(suggestedBUDDays) days", systemImage: "sparkles")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(BrandColor.accentText)
+                                        }
+                                        .buttonStyle(.plain)
+                                        if suggestedBUDDays < BeyondUseGuidance.defaultDays {
+                                            Text("\(name) is less stable once mixed — a shorter window is suggested.")
+                                                .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                                        }
+                                    }
                                 }
                                 FieldRow("Cost", hint: "Optional — shows cost per dose.") {
                                     HStack {
@@ -808,6 +824,18 @@ struct VialBuilderView: View {
         }
     }
     private func pctText(_ f: Double) -> String { String(format: "%.1f%%", f * 100) }
+
+    /// Primary/anchor compound name currently in the form (nil if none chosen) — drives the
+    /// per-compound suggested discard window.
+    private var anchorCompoundName: String? {
+        let e = entries.first(where: { $0.id == effectiveAnchorID }) ?? entries.first
+        let n = e?.compound.name ?? ""
+        return n.isEmpty ? nil : n
+    }
+    /// Suggested beyond-use window (days) for the anchor compound — editable; defaults to 28.
+    private var suggestedBUDDays: Int {
+        anchorCompoundName.map(BeyondUseGuidance.recommendedDays(forCompound:)) ?? BeyondUseGuidance.defaultDays
+    }
 
     private func save() {
         let target = editing ?? StoredVial()
