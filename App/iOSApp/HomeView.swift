@@ -263,7 +263,7 @@ struct HomeView: View {
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold)).foregroundStyle(BrandColor.textSecondary)
                     }
                     ForEach(Array(activeProtocols.prefix(4).enumerated()), id: \.element.id) { i, p in
-                        if i > 0 { Divider().frame(height: 1).overlay(BrandColor.stroke.opacity(0.5)) }
+                        if i > 0 { Divider().overlay(BrandColor.stroke) }
                         HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                             StatusDot(color: statusTint(p), glows: status(p) == .dueToday)
                             VStack(alignment: .leading, spacing: 1) {

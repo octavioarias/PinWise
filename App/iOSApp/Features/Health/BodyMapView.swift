@@ -14,9 +14,9 @@ struct InjectionMapInfoView: View {
                     Card {
                         VStack(alignment: .leading, spacing: Space.md) {
                             SectionHeader(title: "Reading the colors")
-                            colorRow(Color(red: 0.13, green: 0.83, blue: 0.55), "Green — light or well-rotated use. Good to keep using.")
-                            colorRow(Color(red: 1.00, green: 0.69, blue: 0.13), "Amber — you're leaning on this area; start spreading out.")
-                            colorRow(Color(red: 1.00, green: 0.30, blue: 0.30), "Red — heavy reliance on one area. Rotate elsewhere so it can recover.")
+                            colorRow(HeatRamp.swatch(HeatRamp.green), "Green — light or well-rotated use. Good to keep using.")
+                            colorRow(HeatRamp.swatch(HeatRamp.amber), "Amber — you're leaning on this area; start spreading out.")
+                            colorRow(HeatRamp.swatch(HeatRamp.red), "Red — heavy reliance on one area. Rotate elsewhere so it can recover.")
                         }
                     }
                     Card {
@@ -59,6 +59,18 @@ struct InjectionMapInfoView: View {
 
 /// Rolling time window for the heat map. Old injections age off (tissue recovers), so the map
 /// reflects *recent* rotation load rather than lifetime totals — which would crowd it.
+/// The single source of truth for the injection-map heat ramp (light → heavy = green → amber →
+/// red). A heat scale legitimately does NOT flip between light/dark mode, so these are fixed RGB
+/// anchors — defined once here instead of being retyped at the legend, the body scale, and the
+/// per-site dots (previously three hardcoded copies).
+enum HeatRamp {
+    static let green = (r: 0.13, g: 0.83, b: 0.55)
+    static let amber = (r: 1.00, g: 0.69, b: 0.13)
+    static let red = (r: 1.00, g: 0.30, b: 0.30)
+    static func swatch(_ c: (r: Double, g: Double, b: Double)) -> Color { Color(red: c.r, green: c.g, blue: c.b) }
+    static var colors: [Color] { [swatch(green), swatch(amber), swatch(red)] }
+}
+
 enum HeatWindow: String, CaseIterable, Identifiable {
     case twoWeeks = "2 wks", fourWeeks = "4 wks", eightWeeks = "8 wks"
     var id: String { rawValue }
@@ -135,11 +147,7 @@ struct BodyMapView: View {
 
     /// Green (light use) → amber → red (heavy use), so color reads the way the user expects.
     private var heatScale: HeatmapColorScale {
-        HeatmapColorScale(colors: [
-            Color(red: 0.13, green: 0.83, blue: 0.55),
-            Color(red: 1.00, green: 0.69, blue: 0.13),
-            Color(red: 1.00, green: 0.30, blue: 0.30),
-        ])
+        HeatmapColorScale(colors: HeatRamp.colors)
     }
 
     var body: some View {
@@ -243,10 +251,14 @@ struct BodyMapView: View {
         func lerp(_ a: Double, _ b: Double, _ u: Double) -> Double { a + (b - a) * u }
         if x < 0.5 {
             let u = x / 0.5
-            return Color(red: lerp(0.13, 1.00, u), green: lerp(0.83, 0.69, u), blue: lerp(0.55, 0.13, u))
+            return Color(red: lerp(HeatRamp.green.r, HeatRamp.amber.r, u),
+                         green: lerp(HeatRamp.green.g, HeatRamp.amber.g, u),
+                         blue: lerp(HeatRamp.green.b, HeatRamp.amber.b, u))
         } else {
             let u = (x - 0.5) / 0.5
-            return Color(red: lerp(1.00, 1.00, u), green: lerp(0.69, 0.30, u), blue: lerp(0.13, 0.30, u))
+            return Color(red: lerp(HeatRamp.amber.r, HeatRamp.red.r, u),
+                         green: lerp(HeatRamp.amber.g, HeatRamp.red.g, u),
+                         blue: lerp(HeatRamp.amber.b, HeatRamp.red.b, u))
         }
     }
 }
