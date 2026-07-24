@@ -557,7 +557,17 @@ extension StoredVial {
         return max(0, total - Double(dosesTaken) * perDose) / total
     }
 
-    /// Run-out/cost projection (anchored on the primary API) via the verified estimator.
+    /// Advisory beyond-use / discard date for a reconstituted vial: reconstitution date + a 28-day
+    /// window (a USP <797> microbial-safety guideline, NOT a potency limit). Advisory only — the app
+    /// surfaces it as a soft "inspect before use" nudge and never disables the vial. nil when the
+    /// vial isn't reconstituted or has no recorded mix date. (A per-vial editable window is a follow-up.)
+    var beyondUseDate: Date? {
+        guard let mixed = dateReconstituted else { return nil }
+        return Calendar.current.date(byAdding: .day, value: 28, to: mixed)
+    }
+
+    /// Run-out/cost projection (anchored on the primary API) via the verified estimator. Reconciles
+    /// dose run-out with the hard expiration date, and carries the advisory beyond-use date.
     func projection(schedule: DoseSchedule, referenceDate: Date = Date()) -> InventoryEstimator.Projection {
         let vial = Vial(
             compoundID: UUID(),
@@ -567,7 +577,9 @@ extension StoredVial {
         )
         return InventoryEstimator.project(
             vial: vial, dose: perDose, dosesTaken: dosesTaken,
-            schedule: schedule, referenceDate: referenceDate
+            schedule: schedule, referenceDate: referenceDate,
+            expirationDate: expirationDate,
+            beyondUseDate: beyondUseDate
         )
     }
 
