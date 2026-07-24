@@ -176,7 +176,6 @@ struct VialBuilderView: View {
     @State private var notes: String
     @State private var showScanner = false
     @State private var showVoice = false
-    @State private var resetDoseCount = false
     /// Set for one cycle when a scan flips the pre-mixed/powder segment itself, so the
     /// `onChange(of: isPremixed)` unit converter doesn't re-scale the value the scan just wrote.
     @State private var suppressModeConversion = false
@@ -486,12 +485,14 @@ struct VialBuilderView: View {
                         Card {
                             VStack(alignment: .leading, spacing: Space.sm) {
                                 SectionHeader(title: "Refill")
-                                Text("You've drawn \(editing.dosesTaken) dose\(editing.dosesTaken == 1 ? "" : "s") from this vial. If you've refilled it — or swapped in a fresh vial of the same peptide — turn this on to restart “doses left” from full. Your logged dose history isn't affected; only the remaining-dose count resets.")
+                                Text("Finished this vial? Start a fresh one with the same specs — same compound, concentration, and dose — without re-entering anything. This vial is replaced with a full one; your logged doses are kept.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
-                                Toggle("I refilled this vial — restart doses left", isOn: $resetDoseCount)
-                                    .tint(BrandColor.accent)
-                                    .font(.footnote)
-                                    .foregroundStyle(BrandColor.textPrimary)
+                                Button { refill() } label: {
+                                    Label("Refill — new vial, same specs", systemImage: "arrow.triangle.2.circlepath")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(BrandColor.accentText)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -775,6 +776,34 @@ struct VialBuilderView: View {
     private func pctText(_ f: Double) -> String { String(format: "%.1f%%", f * 100) }
 
     private func save() {
+        let target = editing ?? StoredVial()
+        guard applyForm(to: target) else { return }
+        // Keep inventory math coherent after an edit: never more doses taken than the vial now holds.
+        target.dosesTaken = min(target.dosesTaken, target.totalDoses)
+        if editing == nil { context.insert(target) }
+        try? context.save()
+        dismiss()
+    }
+
+    /// Refill: start a FRESH, full vial with the SAME specs as the one being edited (mg of powder,
+    /// concentration, intended dose, units, COA…), then remove the depleted one — so a user swapping
+    /// in an identical vial never re-enters its details. The old vial's logged doses are preserved:
+    /// `reconcileDelete` only unlinks them, it never deletes a `LoggedDose`.
+    private func refill() {
+        guard let old = editing else { return }
+        let fresh = StoredVial()
+        guard applyForm(to: fresh) else { return }
+        fresh.dosesTaken = 0
+        fresh.dateAcquired = .now
+        context.insert(fresh)
+        old.reconcileDelete(in: context, doses: logs, protocols: protocols)
+        try? context.save()
+        dismiss()
+    }
+
+    /// Populate a vial from the current form fields; returns false (leaving the vial untouched) if
+    /// the form is incomplete, matching Save's validation. Shared by save() and refill().
+    private func applyForm(to vial: StoredVial) -> Bool {
         let vol = solventText.decimalValue ?? 0
         // Store the "dose by" anchor FIRST so it becomes the primary API — `perDoseMicrograms` is
         // defined as the primary's dose, and every downstream breakdown scales off apis.first.
@@ -789,37 +818,30 @@ struct VialBuilderView: View {
             let micrograms = isPremixed ? Mass(amt, concentrationUnit).micrograms * vol : Mass(amt, e.unit).micrograms
             return VialAPI(name: e.compound.name, massMicrograms: micrograms)
         }
-        guard !apis.isEmpty, let pd = doseText.decimalValue, pd > 0, !isPremixed || vol > 0 else { return }
-        let target = editing ?? StoredVial()
-        target.label = label
-        target.apis = apis
-        target.solventVolumeMilliliters = vol > 0 ? vol : nil
-        target.perDoseMicrograms = Mass(pd, doseUnit).micrograms
+        guard !apis.isEmpty, let pd = doseText.decimalValue, pd > 0, !isPremixed || vol > 0 else { return false }
+        vial.label = label
+        vial.apis = apis
+        vial.solventVolumeMilliliters = vol > 0 ? vol : nil
+        vial.perDoseMicrograms = Mass(pd, doseUnit).micrograms
         // Remember the unit the user dosed in so every display of this vial (and any protocol
         // drawing from it) shows the same unit rather than auto-switching by magnitude.
-        target.doseUnitRaw = doseUnit.rawValue
+        vial.doseUnitRaw = doseUnit.rawValue
         // Pre-mixed vials carry an explicit strength unit (mg/mL vs mcg/mL); powder vials leave it
         // nil so their concentration display follows the dose unit.
-        target.concentrationUnitRaw = isPremixed ? concentrationUnit.rawValue : nil
-        target.cost = costText.decimalValue.map { Decimal($0) }
+        vial.concentrationUnitRaw = isPremixed ? concentrationUnit.rawValue : nil
+        vial.cost = costText.decimalValue.map { Decimal($0) }
         // COA correction applies only to powder vials — a pre-mixed vial's strength is already
         // corrected, so clear any COA values when the vial is pre-mixed.
-        target.coaAssayPercent = isPremixed ? nil : coaAssayText.decimalValue
-        target.coaContentPercent = isPremixed ? nil : coaContentText.decimalValue
-        target.coaPurityPercent = isPremixed ? nil : coaPurityText.decimalValue
-        target.expirationDate = hasExpiration ? expiration : nil
-        target.notes = notes
-        target.isPremixed = isPremixed
+        vial.coaAssayPercent = isPremixed ? nil : coaAssayText.decimalValue
+        vial.coaContentPercent = isPremixed ? nil : coaContentText.decimalValue
+        vial.coaPurityPercent = isPremixed ? nil : coaPurityText.decimalValue
+        vial.expirationDate = hasExpiration ? expiration : nil
+        vial.notes = notes
+        vial.isPremixed = isPremixed
         // Provenance: a powder vial mixed with solvent is reconstituted now. Preserve an existing
         // date across edits; clear it if the vial isn't a reconstituted powder (premixed / no water).
-        target.dateReconstituted = (!isPremixed && vol > 0) ? (target.dateReconstituted ?? .now) : nil
-        // Keep inventory math coherent after an edit: never more doses taken than the vial now
-        // holds, and a "refilled" vial restarts the drawn-down count from zero (logged doses are
-        // untouched — this is only the vial's remaining-dose counter).
-        target.dosesTaken = resetDoseCount ? 0 : min(target.dosesTaken, target.totalDoses)
-        if editing == nil { context.insert(target) }
-        try? context.save()
-        dismiss()
+        vial.dateReconstituted = (!isPremixed && vol > 0) ? (vial.dateReconstituted ?? .now) : nil
+        return true
     }
 
     private static func resolve(_ name: String) -> Compound {
