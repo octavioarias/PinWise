@@ -13,8 +13,9 @@ public enum Disclaimer {
     /// v4: contact/notice mechanisms reworded (no email/entity references pre-launch).
     /// v5: hosted (cloud) AI assistant — user data now leaves the device for AI processing;
     ///     Privacy Policy updated with sub-processors + data-sent disclosures.
-    /// v6: Natt consent gate now also states the daily message limits (free trial vs Pro) and is the
-    ///     single place disclaimers are surfaced, so Natt stops repeating them in chat.
+    /// v6: Natt consent gate now also states the daily message limits (free trial vs Pro), is the
+    ///     single place disclaimers are surfaced (so Natt stops repeating them in chat), and
+    ///     continuing past it opts into sharing Apple Health with Natt (revocable in Settings).
     public static let currentVersion = 6
 
     /// The short, always-visible line for calculator and dosing surfaces.
