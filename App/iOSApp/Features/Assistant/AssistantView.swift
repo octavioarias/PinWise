@@ -238,8 +238,14 @@ struct AssistantView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Label("Natt", systemImage: "sparkles")
-                    .font(.system(size: 22, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Label("Natt", systemImage: "sparkles")
+                        .font(.system(size: 22, weight: .bold)).foregroundStyle(BrandColor.textPrimary)
+                    Text("PinWise's AI assistant")
+                        .font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Natt, PinWise's AI assistant")
                 Spacer()
                 Button { close() } label: {
                     Image(systemName: "xmark").font(.headline.weight(.semibold))
@@ -295,7 +301,7 @@ struct AssistantView: View {
                         .font(.largeTitle).foregroundStyle(BrandColor.accentText)
                     Text("Sign in to chat with Natt")
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
-                    Text("The assistant is part of your PinWise account. Sign in with Apple or your email to start chatting — the rest of the app stays free as a guest.")
+                    Text("Natt, PinWise's AI assistant, is part of your account. Sign in with Apple or your email to start chatting — the rest of the app stays free as a guest.")
                         .font(.callout).foregroundStyle(BrandColor.textSecondary)
                 }
                 .padding(Space.lg)
@@ -318,6 +324,8 @@ struct AssistantView: View {
                         .font(.largeTitle).foregroundStyle(BrandColor.accentText)
                     Text("Before you chat with Natt")
                         .font(Typo.title).foregroundStyle(BrandColor.textPrimary)
+                    Text("Natt is PinWise's AI assistant.")
+                        .font(Typo.body).foregroundStyle(BrandColor.textSecondary)
                     VStack(alignment: .leading, spacing: Space.md) {
                         gatePoint("Daily limits. On the free trial, Natt answers up to 2 messages a day. Pro — monthly or yearly — raises that to 10 a day.")
                         gatePoint("It runs in the cloud. To answer, your questions and a snapshot of your PinWise data — your stack, dose logs, symptoms, and labs — are sent securely to our AI provider for processing. See the Privacy Policy for what's shared and how it's handled.")
