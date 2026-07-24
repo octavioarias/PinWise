@@ -111,9 +111,8 @@ struct VialRow: View {
 
                 // Two-line split: when the expiration date binds before the doses run out, call it
                 // out on its own warning line instead of cramming "N of M usable" into the line above.
-                if projection.limitingFactor == .expiration, projection.usableWholeDoses > 0,
-                   let end = projection.effectiveEndDate {
-                    Label("~\(projection.usableWholeDoses) doses before it expires \(end.formatted(.dateTime.month().day()))",
+                if projection.limitingFactor == .expiration, projection.usableWholeDoses > 0 {
+                    Label("\(projection.usableWholeDoses) dose\(projection.usableWholeDoses == 1 ? "" : "s") before expiration",
                           systemImage: "exclamationmark.circle")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(BrandColor.warning)
