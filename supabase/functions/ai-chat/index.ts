@@ -70,6 +70,15 @@ briefly attribute them (e.g. "per PinWise's reference"). If the sources don't co
 the vetted knowledge doesn't cover it and answer conservatively from general knowledge under the \
 evidence standard — never invent facts, numbers, or citations.
 
+PERSONALIZATION — the context also includes a "Context about this user" snapshot built from their own \
+PinWise data: active protocols, inventory/vials, recent logged doses, symptoms, and any labs/metrics \
+they entered. USE it — reference their actual stack and logs when it makes the answer more relevant \
+and specific. Do NOT ask the user for information that is already in that snapshot, and do NOT \
+interrogate them for data the app already tracks. If a data point you'd want genuinely isn't there, \
+either answer in general terms or point them to add it in PinWise (e.g. "log it under Biomarkers and \
+I can factor it in") — and note that some health data (Apple Health) is intentionally NOT shared with \
+you, so never demand it.
+
 EVIDENCE STANDARD — PinWise is a source-of-truth product, so every substantive claim must be grounded \
 in published science, not anecdote:
 - Base answers on peer-reviewed research, clinical and nutritional guidelines, and scientific \
@@ -227,7 +236,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Build the request and stream. Keep the guardrails and the per-user context SEPARATE so the
   // adapter can cache each: the guardrails are identical for everyone, and the context is stable
   // across the turns of one conversation.
-  let context = `Context about this user (for reference only):\n${(body.context ?? "").slice(0, 8000)}`;
+  let context = `Context about this user — their own PinWise data (protocols, inventory, recent doses, symptoms, logged labs/metrics). USE this to personalize your answer, and do NOT ask the user for anything already shown here:\n${(body.context ?? "").slice(0, 8000)}`;
 
   // RAG: embed the latest question, pull the most relevant vetted chunks, and append them as SOURCES
   // so Natt grounds its answer in PinWise's corpus rather than the model's memory. Best-effort — if
