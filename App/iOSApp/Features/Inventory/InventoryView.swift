@@ -87,8 +87,15 @@ struct VialRow: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.sm) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.sm) {
                     Text(vial.displayName).font(Typo.headline).foregroundStyle(BrandColor.textPrimary)
+                        .lineLimit(1)
+                    // Concentration sits right beside the compound (frees a line vs. its own row).
+                    if let strength = vial.strengthSummary {
+                        Text(strength)
+                            .font(.caption.weight(.medium)).foregroundStyle(BrandColor.textSecondary)
+                            .lineLimit(1).minimumScaleFactor(0.8)
+                    }
                     Spacer()
                     if projection.needsReorder { TagChip(text: "Low", color: BrandColor.danger) }
                     if let e = vial.expiryState, (e.isWarning || e.isError) {
@@ -106,15 +113,12 @@ struct VialRow: View {
                 // out on its own warning line instead of cramming "N of M usable" into the line above.
                 if projection.limitingFactor == .expiration, projection.usableWholeDoses > 0,
                    let end = projection.effectiveEndDate {
-                    Label("Expires \(end.formatted(.dateTime.month().day())) · ~\(projection.usableWholeDoses) usable by then",
+                    Label("~\(projection.usableWholeDoses) doses before it expires \(end.formatted(.dateTime.month().day()))",
                           systemImage: "exclamationmark.circle")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(BrandColor.warning)
                 }
 
-                if let conc = vial.concentrationSummary {
-                    Text(conc).font(.caption2.weight(.medium)).foregroundStyle(BrandColor.textPrimary)
-                }
 
                 if let perShot = vial.perShotSummary {
                     Text("Per shot: " + perShot)

@@ -545,6 +545,24 @@ extension StoredVial {
         return parts.joined(separator: " / ") + " / mL"
     }
 
+    /// Concentration WITHOUT the compound names — for compact display right beside the vial's name
+    /// in the Stack row: "5 mg/mL" (single) or "5 mg / 3 mg / mL" (blend, in the same order as the
+    /// displayed name). nil until a solvent volume is known.
+    var strengthSummary: String? {
+        guard let vol = solventVolumeMilliliters, vol > 0, !apis.isEmpty else { return nil }
+        let unit = concentrationUnit
+        let perUnit = unit.microgramsPerUnit
+        func fmt(_ perMl: Double) -> String {
+            let rounded = (perMl * 100).rounded() / 100
+            return rounded == rounded.rounded() ? String(Int(rounded)) : String(format: "%g", rounded)
+        }
+        if apis.count == 1, let a = apis.first {
+            return "\(fmt((a.massMicrograms * coaFactor / perUnit) / vol)) \(unit.rawValue)/mL"
+        }
+        let parts = apis.map { "\(fmt(($0.massMicrograms * coaFactor / perUnit) / vol)) \(unit.rawValue)" }
+        return parts.joined(separator: " / ") + " / mL"
+    }
+
     var totalDoses: Int {
         guard let p = primaryAPI, let perDose = perDoseMicrograms, perDose > 0 else { return 0 }
         return Int((p.massMicrograms * coaFactor / perDose).rounded(.down))
