@@ -107,7 +107,7 @@ struct SettingsView: View {
                             }
                             .tint(BrandColor.accent)
                             Divider().overlay(BrandColor.stroke)
-                            settingsRow("Privacy Policy & Terms of Use", icon: "doc.text") { showLegal = true }
+                            settingsRow("Privacy Policy & Terms of Service", icon: "doc.text") { showLegal = true }
                         }
                     }
 
@@ -134,7 +134,7 @@ struct SettingsView: View {
             .sheet(isPresented: $showLegal) { LegalDocumentView() }
             .sheet(isPresented: $showExport) { DataExportView() }
             .alert("Backup isn't available yet", isPresented: $showBackupNote) {
-                Button("OK", role: .cancel) {}
+                Button("Got it", role: .cancel) {}
             } message: {
                 Text("Your data is stored on this device. Cloud backup arrives with account sync — you'll be able to back up and restore across devices then.")
             }

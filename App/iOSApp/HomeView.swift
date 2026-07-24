@@ -190,11 +190,11 @@ struct HomeView: View {
                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
             }
             if streak.longest > 0 {
-                Text("Personal Best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
+                Text("Personal best \(streak.longest)").font(.caption2).foregroundStyle(BrandColor.textSecondary)
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Personal Best \(streak.longest).")
+        .accessibilityLabel("On-time streak: \(streak.current) \(streak.current == 1 ? "dose" : "doses") in a row. Personal best \(streak.longest).")
     }
 
     private func milestoneBadge(_ m: Int) -> some View {
@@ -501,7 +501,7 @@ struct HomeHealthCard: View {
                         }
                         NavigationLink { BiomarkersView() } label: {
                             HStack(spacing: 4) {
-                                Text("Log a Metric")
+                                Text("Log a metric")
                                 Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                             }
                             .font(.caption.weight(.semibold))

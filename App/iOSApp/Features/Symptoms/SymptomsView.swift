@@ -189,7 +189,7 @@ struct SymptomsView: View {
                                     }
                                     Spacer()
                                     Text("\(e.severity)/10").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
-                                    Text(e.timestamp, format: .dateTime.month().day())
+                                    Text(e.timestamp.relativeLabel())
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                                 }
                                 .contextMenu {
