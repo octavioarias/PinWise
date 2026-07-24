@@ -36,7 +36,7 @@ const FRESH_MAX_AGE_DAYS = 270;
 const FRESH_PRIORITY_MAX = 2;
 const MAX_FRESH = 15; // cap appended fresh items so the feed stays scannable
 const MIN_SUMMARY = 60; // drop fresh items with no real abstract/description (thin content)
-const HEADLINE_CAP = 90; // trim long raw trial/paper titles for card display
+const HEADLINE_CAP = 56; // headlines must fit a phone news card on ~2 lines without truncating
 const NOW = Date.now();
 // ISO-8601 without fractional seconds, to match the feed contract (YYYY-MM-DDTHH:MM:SSZ).
 const ISO_NOW = new Date(NOW).toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -359,7 +359,7 @@ Hard rules:
 - Neutral and factual, not clickbait or hype. No medical advice, no recommendations, do not address the reader as "you".
 - Plain language: explain or avoid jargon.
 Return ONLY a JSON object (no prose, no code fences) with exactly these keys:
-{"headline": string, 60 characters or fewer, punchy but accurate, no trailing period;
+{"headline": string, aim for ~48 characters and NEVER exceed 56 — it must fit a phone news card on two short lines without being cut off; make it punchy, specific, and human (lead with the finding or subject, not "A study of…"); no trailing period;
  "keyFinding": string, ONE short sentence, 110 characters or fewer, the single most important takeaway in plain language;
  "summary": string, 2-4 sentences expanding on the findings or on what the study is}`;
 
@@ -394,7 +394,7 @@ Raw summary: ${item.summary}`;
   // already within the limit, so a well-behaved one-sentence finding is untouched).
   return {
     ...item,
-    headline: wordCap(headline.replace(/\.$/, ""), 80),
+    headline: wordCap(headline.replace(/\.$/, ""), HEADLINE_CAP),
     teaser: wordCap(keyFinding, 108),
     summary,
   };
