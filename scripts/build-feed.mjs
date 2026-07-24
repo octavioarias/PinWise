@@ -78,6 +78,21 @@ function firstSentences(text, maxSentences = 2, maxChars = 320) {
   return out || wordCap(t, maxChars);
 }
 
+// Headline-specific cap: unlike wordCap it NEVER appends an ellipsis — it trims to a word boundary
+// and strips a trailing filler word (preposition/article/conjunction) so a too-long title still
+// reads as a complete, dot-free headline that fits the card.
+function headlineTrim(s, n = HEADLINE_CAP) {
+  s = clean(s).replace(/\.$/, "");
+  if (s.length <= n) return s;
+  let cut = s.slice(0, n);
+  const sp = cut.lastIndexOf(" ");
+  if (sp > 0) cut = cut.slice(0, sp);
+  return cut
+    .replace(/[\s,;:–—-]+$/, "")
+    .replace(/\s+(in|of|for|with|and|the|to|a|an|on|at|by|from|as|vs)$/i, "")
+    .trim();
+}
+
 const teaserFrom = (body) => wordCap(firstSentences(body, 1, 100), 100);
 const cap1 = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
@@ -202,7 +217,7 @@ async function fromClinicalTrials(term, fallbackName) {
     const classText = `${title} ${brief} ${outcome} ${phase} ${conditions} ${status}`;
     return {
       id: `ct-${nct}`,
-      headline: wordCap((title || "Clinical trial").replace(/\.$/, ""), HEADLINE_CAP),
+      headline: headlineTrim(title || "Clinical trial"),
       summary: body,
       teaser: teaserFrom(body),
       category: classify(classText, "trial"),
@@ -271,7 +286,7 @@ async function fromPubMed(term, fallbackName) {
       const classText = `${r.title || ""} ${abstract}`;
       return {
         id: `pm-${id}`,
-        headline: wordCap((r.title || "Study").replace(/\.$/, ""), HEADLINE_CAP),
+        headline: headlineTrim(r.title || "Study"),
         summary: body,
         teaser: teaserFrom(body),
         category: classify(classText, "journal"),
@@ -309,7 +324,7 @@ async function fromFederalRegister(term, fallbackName) {
     const classText = `${d.title} ${d.abstract || ""} ${d.type || ""} federal register fda regulatory`;
     return {
       id: `fr-${d.document_number}`,
-      headline: wordCap((d.title || "Regulatory notice").replace(/\.$/, ""), HEADLINE_CAP),
+      headline: headlineTrim(d.title || "Regulatory notice"),
       summary: body || firstSentences(clean(d.title || ""), 1, 200),
       teaser: teaserFrom(body || d.title || ""),
       category: classify(classText, "regulatory"),
@@ -359,7 +374,7 @@ Hard rules:
 - Neutral and factual, not clickbait or hype. No medical advice, no recommendations, do not address the reader as "you".
 - Plain language: explain or avoid jargon.
 Return ONLY a JSON object (no prose, no code fences) with exactly these keys:
-{"headline": string, aim for ~48 characters and NEVER exceed 56 — it must fit a phone news card on two short lines without being cut off; make it punchy, specific, and human (lead with the finding or subject, not "A study of…"); no trailing period;
+{"headline": string, a punchy specific title of AT MOST 52 characters — count them, and if longer cut qualifiers (like the study population) until it fits; lead with the subject and the finding (e.g. "Semaglutide slows type-2 diabetes progression"), never "A study of…"; do not end on a preposition; no trailing period and no ellipsis;
  "keyFinding": string, ONE short sentence, 110 characters or fewer, the single most important takeaway in plain language;
  "summary": string, 2-4 sentences expanding on the findings or on what the study is}`;
 
@@ -394,7 +409,7 @@ Raw summary: ${item.summary}`;
   // already within the limit, so a well-behaved one-sentence finding is untouched).
   return {
     ...item,
-    headline: wordCap(headline.replace(/\.$/, ""), HEADLINE_CAP),
+    headline: headlineTrim(headline),
     teaser: wordCap(keyFinding, 108),
     summary,
   };
