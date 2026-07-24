@@ -300,6 +300,69 @@ struct SelectableChip: View {
     }
 }
 
+/// The one search-input recipe (News, Compounds, …): leading magnifier, a themed field, and a
+/// clear button that appears once there's text. Pass an optional external `FocusState` binding
+/// when the caller drives focus (e.g. focus-on-appear). Uses `pinwiseField()` so the surface,
+/// radius, and hairline match every other input.
+struct SearchField: View {
+    let placeholder: String
+    @Binding var text: String
+    var focus: FocusState<Bool>.Binding? = nil
+
+    var body: some View {
+        HStack(spacing: Space.sm) {
+            Image(systemName: "magnifyingglass").foregroundStyle(BrandColor.textSecondary)
+            field
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(BrandColor.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .pinwiseField()
+    }
+
+    @ViewBuilder private var field: some View {
+        let base = TextField(placeholder, text: $text)
+            .foregroundStyle(BrandColor.textPrimary)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+            .submitLabel(.search)
+        if let focus { base.focused(focus) } else { base }
+    }
+}
+
+/// The one empty / unavailable state: a muted SF Symbol, a title, and an optional line of
+/// guidance, centered. Replaces the ad-hoc `Card`+`Text` and `ContentUnavailableView` forks so
+/// every "nothing here yet" reads the same. Drop it inside a `Card` (or bare) as the caller needs.
+struct ThemedEmptyState: View {
+    let icon: String
+    let title: String
+    var message: String? = nil
+
+    var body: some View {
+        VStack(spacing: Space.sm) {
+            Image(systemName: icon)
+                .font(.largeTitle)
+                .foregroundStyle(BrandColor.textSecondary)
+            Text(title)
+                .font(Typo.headline)
+                .foregroundStyle(BrandColor.textPrimary)
+                .multilineTextAlignment(.center)
+            if let message {
+                Text(message)
+                    .font(.callout)
+                    .foregroundStyle(BrandColor.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Space.xl)
+    }
+}
+
 /// The persistent, non-alarming disclaimer strip used across dosing/calculator surfaces.
 struct DisclaimerBanner: View {
     let text: String

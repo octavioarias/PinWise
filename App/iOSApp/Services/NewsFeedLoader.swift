@@ -7,6 +7,9 @@ import PeptideKit
 @Observable
 final class NewsFeedLoader {
     private(set) var feed: NewsFeed
+    /// True while the first live fetch is in flight — lets the UI show a loading state instead of a
+    /// bare header on a cold start when there's no cache/sample content yet.
+    private(set) var isLoading = false
     private let url: URL?
 
     private static var cacheURL: URL? {
@@ -25,6 +28,8 @@ final class NewsFeedLoader {
     /// Fetches the live feed if a URL is configured; otherwise keeps the sample/cache.
     func load() async {
         guard let url else { return }
+        isLoading = true
+        defer { isLoading = false }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             let decoded = try JSONDecoder().decode(NewsFeed.self, from: data)
