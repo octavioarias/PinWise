@@ -346,16 +346,7 @@ struct BiomarkersView: View {
     // MARK: - Pieces
 
     private func chip(_ t: BiomarkerType) -> some View {
-        let isOn = selected == t
-        return Button { selected = t } label: {
-            Text(t.displayName)
-                .font(.caption.weight(.semibold))
-                .padding(.horizontal, Space.md).padding(.vertical, Space.sm)
-                .background(isOn ? BrandColor.accent : BrandColor.surfaceElevated, in: Capsule())
-                .foregroundStyle(isOn ? BrandColor.onAccent : BrandColor.textSecondary)
-                .overlay(Capsule().strokeBorder(BrandColor.stroke, lineWidth: isOn ? 0 : 1))
-        }
-        .buttonStyle(.plain)
+        SelectableChip(title: t.displayName, isSelected: selected == t) { selected = t }
     }
 
     private func format(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }

@@ -519,7 +519,7 @@ struct HomeHealthCard: View {
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.md), GridItem(.flexible(), spacing: Space.md)], spacing: Space.md) {
                                 ForEach(metrics) { m in
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(m.label.uppercased()).font(Typo.caption).tracking(0.6).foregroundStyle(BrandColor.textSecondary)
+                                        MicroLabel(m.label)
                                         Text(m.value).font(Typo.numberMD).foregroundStyle(BrandColor.textPrimary)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
