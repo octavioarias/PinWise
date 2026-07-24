@@ -29,6 +29,12 @@ func newsDisplayDate(_ iso: String) -> String {
     newsDate(iso).map { $0.formatted(date: .abbreviated, time: .omitted) } ?? String(iso.prefix(10))
 }
 
+/// Conversational relative date for scannable list rows/cards ("yesterday", "3 days ago"). The
+/// article detail keeps the absolute date, so the exact timestamp is always one tap away.
+func newsRelativeDate(_ iso: String) -> String {
+    newsDate(iso).map { $0.relativeLabel() } ?? String(iso.prefix(10))
+}
+
 /// True when an article was published within the last `days` — the eligibility window for the
 /// "New" tag (keeps old/evergreen items from ever being flagged, and avoids a wall of "New" on
 /// first launch). Whether it *actually* shows also depends on the reader's seen state.
@@ -341,7 +347,7 @@ struct FeaturedNewsCard: View {
                     if item.isMajorUpdate { TagChip(text: "Major", color: BrandColor.accentText) }
                     Spacer()
                     if isRecentNews(item.publishedAt) && seenStore.isUnreadToday(item.id) { NewBadge() }
-                    Text(newsDisplayDate(item.publishedAt))
+                    Text(newsRelativeDate(item.publishedAt))
                         .font(.caption).foregroundStyle(BrandColor.textSecondary)
                 }
                 Text(item.headline)
@@ -387,7 +393,7 @@ struct NewsRow: View {
                         TagChip(text: item.category.rawValue, color: item.category.tint)
                         Spacer()
                         if isRecentNews(item.publishedAt) && seenStore.isUnreadToday(item.id) { NewBadge() }
-                        Text(newsDisplayDate(item.publishedAt))
+                        Text(newsRelativeDate(item.publishedAt))
                             .font(.caption)
                             .foregroundStyle(BrandColor.textSecondary)
                     }
