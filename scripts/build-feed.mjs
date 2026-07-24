@@ -93,7 +93,24 @@ function headlineTrim(s, n = HEADLINE_CAP) {
     .trim();
 }
 
-const teaserFrom = (body) => wordCap(firstSentences(body, 1, 100), 100);
+// Dot-free teaser cap: a teaser is a full sentence, so when the text overruns, prefer the first
+// COMPLETE sentence; otherwise cut to a word boundary and strip a trailing filler word — never
+// append "…" (which reads as a cut-off sentence). Kept under the feed validator's 110-char ceiling.
+function teaserTrim(s, n = 108) {
+  s = clean(s);
+  if (s.length <= n) return s;
+  const firstSent = (s.match(/^[^.!?]*[.!?]/) || [])[0];
+  if (firstSent && firstSent.trim().length <= n) return firstSent.trim();
+  let cut = s.slice(0, n);
+  const sp = cut.lastIndexOf(" ");
+  if (sp > 0) cut = cut.slice(0, sp);
+  return cut
+    .replace(/[\s,;:–—-]+$/, "")
+    .replace(/\s+(in|of|for|with|and|the|to|a|an|on|at|by|from|as|vs|or|than|that|whether|into|about)$/i, "")
+    .trim();
+}
+
+const teaserFrom = (body) => teaserTrim(firstSentences(body, 1, 100));
 const cap1 = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 function toISO(raw) {
@@ -375,8 +392,15 @@ Hard rules:
 - Plain language: explain or avoid jargon.
 Return ONLY a JSON object (no prose, no code fences) with exactly these keys:
 {"headline": string, a punchy specific title of AT MOST 52 characters — count them, and if longer cut qualifiers (like the study population) until it fits; lead with the subject and the finding (e.g. "Semaglutide slows type-2 diabetes progression"), never "A study of…"; do not end on a preposition; no trailing period and no ellipsis;
- "keyFinding": string, ONE short sentence, 110 characters or fewer, the single most important takeaway in plain language;
- "summary": string, 2-4 sentences expanding on the findings or on what the study is}`;
+ "keyFinding": string, ONE complete sentence, AT MOST 90 characters and ideally ~75 — this is a HARD limit; a longer sentence gets cut off, so write a genuinely short one (state the finding, drop qualifiers) and END IT WITH A PERIOD; no ellipsis; the single most important takeaway in plain language;
+ "summary": string, 2-4 sentences expanding on the findings or on what the study is}
+
+LENGTH IS STRICT: a keyFinding or headline over its limit gets cut off and looks broken, so keep them short and complete. For a trial with no results yet, state what it TESTS in a short line — not a long "Study evaluates whether…" run-on.
+Good keyFinding examples (short, complete, punchy — copy this style and length):
+- "Retatrutide drove about 24% weight loss at 48 weeks."
+- "Phase 3 trial is testing tirzepatide for sleep apnea."
+- "GLP-1 drugs are linked to dry mouth and tooth wear."
+Bad (too long, runs on, gets cut): "Study evaluates whether retatrutide reduces back pain and body weight over 80 weeks in adults with obesity."`;
 
 async function rewriteOne(item, apiKey) {
   const prompt = `Category: ${item.category}
@@ -410,7 +434,7 @@ Raw summary: ${item.summary}`;
   return {
     ...item,
     headline: headlineTrim(headline),
-    teaser: wordCap(keyFinding, 108),
+    teaser: teaserTrim(keyFinding),
     summary,
   };
 }

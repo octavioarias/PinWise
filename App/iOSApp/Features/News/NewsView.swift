@@ -406,7 +406,7 @@ struct NewsRow: View {
                     Text(item.listText)
                         .font(.caption)
                         .foregroundStyle(BrandColor.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(3)
                     Text("\(item.sources.count) source\(item.sources.count == 1 ? "" : "s")")
                         .font(.caption)
                         .foregroundStyle(BrandColor.success)
