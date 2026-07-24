@@ -2,9 +2,10 @@ import SwiftUI
 import SwiftData
 import PeptideKit
 
-/// A right-anchored slide-in "Assistant" (mirror of the left menu). Conversational, powered by
-/// Apple's on-device model where available (no cloud, no API keys, no usage cost). Strong
-/// guardrails: informational only, never dosing/medical advice, jailbreak-resistant.
+/// A right-anchored slide-in "Assistant" (mirror of the left menu). Conversational, powered by the
+/// hosted AI (Supabase `ai-chat` Edge Function) with server-side guardrails. The conversation is
+/// held in a shared in-memory engine, so it survives closing/reopening the drawer within a session
+/// and resets on app restart or after 24h idle (see AssistantEngine).
 struct AssistantDrawer: View {
     @Binding var isOpen: Bool
     @Environment(\.colorScheme) private var scheme
@@ -56,17 +57,38 @@ final class AssistantEngine {
         var text: String
     }
 
+    /// Shared so the conversation survives leaving and returning to the assistant within a session.
+    /// It is in-memory only: a fresh app launch gets a fresh engine (empty), and `resetIfStale()`
+    /// clears it after a period of inactivity — whichever comes first. Nothing is written to disk.
+    static let shared = AssistantEngine()
+
     var messages: [Message] = []
     var isThinking = false
 
     private let client = CloudAIClient()
+    /// Reset the conversation if nobody has added a message for this long.
+    private static let idleResetWindow: TimeInterval = 24 * 60 * 60
+    /// When the last message (from the user OR Natt) was added; nil when the chat is empty.
+    private var lastActivityAt: Date?
+
+    /// Clear a stale conversation so the next visit starts fresh. Called when the assistant opens.
+    /// Combined with the engine being in-memory (a relaunch starts empty), this gives the intended
+    /// rule: the chat persists across leaving/returning, and resets on app restart OR 24h idle.
+    func resetIfStale() {
+        guard let last = lastActivityAt,
+              Date().timeIntervalSince(last) > Self.idleResetWindow else { return }
+        messages.removeAll()
+        lastActivityAt = nil
+    }
 
     func send(_ prompt: String, context: String) async {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(Message(isUser: true, text: trimmed))
         isThinking = true
-        defer { isThinking = false }
+        // Stamp last activity on exit (after the reply streams in or an error is shown), so the
+        // 24h idle window measures from the most recent message either party added.
+        defer { isThinking = false; lastActivityAt = Date() }
 
         // Send the full history (ending in the turn just added) so the model has conversational
         // memory — the backend is stateless per request.
@@ -122,7 +144,7 @@ struct AssistantView: View {
     // can force re-acceptance. Tied to `Disclaimer.currentVersion` — bumping it re-prompts here too.
     @AppStorage("aiConsentVersion") private var aiConsentVersion = 0
     private var aiAccepted: Bool { aiConsentVersion >= Disclaimer.currentVersion }
-    @State private var engine = AssistantEngine()
+    @State private var engine = AssistantEngine.shared
     @State private var input = ""
     @FocusState private var inputFocused: Bool
     @State private var showCompounds = false
@@ -241,6 +263,8 @@ struct AssistantView: View {
                 disclaimerGate
             }
         }
+        // Drop a stale conversation (24h+ idle) so reopening starts fresh; a live one is kept.
+        .onAppear { engine.resetIfStale() }
         .task { if health.authorized { await health.refresh() } }
         .sheet(isPresented: $showCompounds) { NavigationStack { CompoundsView() } }
         .sheet(isPresented: $showLegend) { CompoundLegendView() }
