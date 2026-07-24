@@ -60,7 +60,8 @@ enum LegalDocuments {
         of the Service. All calculations are arithmetic performed on values you supply and must \
         be independently verified before any reliance. The optional assistant feature is \
         generative AI software; to produce a response it transmits your questions and a snapshot \
-        of the data you have entered in the app to third-party providers for cloud processing (see \
+        of the data you have entered in the app — and, only if you turn on Apple Health sharing, the \
+        Apple Health metrics the app reads — to third-party providers for cloud processing (see \
         the Privacy Policy). Its responses may be inaccurate or incomplete and must not be relied \
         upon. THE SERVICE IS NOT DESIGNED FOR EMERGENCIES — \
         if you believe you are experiencing a medical emergency, call your local emergency \
@@ -273,8 +274,9 @@ enum LegalDocuments {
         data: if you create an account, we store your account identifier and a per-day count of \
         assistant messages with our cloud provider to operate sign-in and enforce usage limits. \
         (e) Assistant inputs: when you use the optional cloud assistant, we transmit your \
-        questions and a snapshot of the data you entered in the app for processing, as described \
-        in Section 3. (f) Usage and diagnostic data: THE APP INTEGRATES NO ANALYTICS OR \
+        questions and a snapshot of the data you entered in the app — and, only if you turn on \
+        "Share Apple Health with Natt" (off by default), the Apple Health metrics the app reads — \
+        for processing, as described in Section 3. (f) Usage and diagnostic data: THE APP INTEGRATES NO ANALYTICS OR \
         CRASH-REPORTING SERVICE AND TRANSMITS NO GENERAL USAGE OR TELEMETRY DATA beyond the \
         account and assistant data in (d)–(e). If a future update introduces analytics or \
         diagnostics, we will describe them here before they take effect, they will be limited to \
@@ -297,8 +299,13 @@ enum LegalDocuments {
         and to a third-party AI model provider — each acting as our processor under confidentiality \
         and data-protection obligations — solely to generate the response shown to you. We instruct \
         these providers not to use your data to train or improve their models and to retain it only \
-        transiently as needed to process your request. YOUR APPLE HEALTH DATA IS NOT INCLUDED IN \
-        WHAT IS SENT TO THE ASSISTANT; it remains on your device. Legal bases where the GDPR applies: your explicit consent \
+        transiently as needed to process your request. BY DEFAULT, YOUR APPLE HEALTH DATA IS NOT \
+        INCLUDED IN WHAT IS SENT TO THE ASSISTANT; it remains on your device. Only if you turn on \
+        "Share Apple Health with Natt" (Settings — Security & Privacy; off by default) are the Apple \
+        Health metrics the app reads (weight, resting heart rate, HRV, sleep, and steps) then \
+        included in that snapshot, under the same processor confidentiality, no-training, and \
+        transient-retention terms above and solely to generate your response; you can turn it off at \
+        any time. Legal bases where the GDPR applies: your explicit consent \
         (Articles 6(1)(a) and 9(2)(a)) for health-related data and optional features; \
         performance of our contract with you (Article 6(1)(b)) for operating the Service; and \
         our legitimate interests (Article 6(1)(f)) in securing and debugging the Service. \

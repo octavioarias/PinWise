@@ -335,6 +335,37 @@ final class PhysiquePhoto {
     }
 }
 
+/// A daily snapshot of the Apple Health metrics PinWise reads (weight, resting HR, HRV, sleep,
+/// steps), captured on-device so the app has a HISTORY instead of only the latest live value.
+/// This powers CSV export of trends and lets Natt reason about change over time (only when the
+/// user has opted into sharing Health with the assistant). Stays on-device; CloudKit-safe
+/// (defaults, no unique keys, all metrics optional so a partial read still records what it has).
+/// One row per day: `refresh()` upserts the day's snapshot so it doesn't pile up duplicates.
+@Model
+final class HealthSnapshot {
+    var id: UUID = UUID()
+    var timestamp: Date = Date()          // the moment captured; one row per calendar day
+    var weightKg: Double? = nil
+    var restingHeartRate: Double? = nil   // bpm
+    var hrvMilliseconds: Double? = nil    // SDNN
+    var sleepHoursLastNight: Double? = nil
+    var stepsToday: Double? = nil
+
+    init(id: UUID = UUID(), timestamp: Date = Date(), weightKg: Double? = nil,
+         restingHeartRate: Double? = nil, hrvMilliseconds: Double? = nil,
+         sleepHoursLastNight: Double? = nil, stepsToday: Double? = nil) {
+        self.id = id; self.timestamp = timestamp; self.weightKg = weightKg
+        self.restingHeartRate = restingHeartRate; self.hrvMilliseconds = hrvMilliseconds
+        self.sleepHoursLastNight = sleepHoursLastNight; self.stepsToday = stepsToday
+    }
+
+    /// True when at least one metric was captured — an empty snapshot is never persisted.
+    var hasAnyMetric: Bool {
+        weightKg != nil || restingHeartRate != nil || hrvMilliseconds != nil
+            || sleepHoursLastNight != nil || stepsToday != nil
+    }
+}
+
 /// One active pharmaceutical ingredient (API) inside a vial's formula.
 struct VialAPI: Codable, Hashable, Identifiable {
     var id: UUID = UUID()

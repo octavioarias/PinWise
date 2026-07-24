@@ -1,5 +1,6 @@
 import Foundation
 import HealthKit
+import SwiftData
 
 /// Reads the health metrics most relevant when tracking peptides/doses — body weight,
 /// resting heart rate, and HRV. Oura, Whoop, etc. write into Apple Health, so PinWise picks
@@ -11,6 +12,10 @@ final class HealthManager {
 
     private let store = HKHealthStore()
     private static let connectedKey = "healthConnected"
+
+    /// Set by the app at launch so `refresh()` can persist a daily on-device snapshot (history for
+    /// CSV export + trends). Plain reference, not observed. Nil = don't persist (just hold live values).
+    var modelContext: ModelContext?
 
     /// Whether the user has connected Apple Health. Persisted, so it survives app close/refresh
     /// (HealthKit deliberately won't reveal read-permission status, so we remember the choice).
@@ -70,6 +75,36 @@ final class HealthManager {
         hrvMilliseconds = await latest(.heartRateVariabilitySDNN, unit: .secondUnit(with: .milli))
         stepsToday = await sumToday(.stepCount, unit: .count())
         sleepHoursLastNight = await sleepHours()
+        persistSnapshot()
+    }
+
+    /// Upsert TODAY's on-device snapshot from the freshly-read values — one row per calendar day, so
+    /// history builds up without duplicates. On-device only (never uploaded); the AI sees these
+    /// values only if the user opted into sharing Health with Natt. Best-effort: silently no-ops if
+    /// no store is wired or nothing was read.
+    private func persistSnapshot() {
+        guard let context = modelContext else { return }
+        let snapshot = HealthSnapshot(
+            weightKg: latestWeightKg, restingHeartRate: restingHeartRate,
+            hrvMilliseconds: hrvMilliseconds, sleepHoursLastNight: sleepHoursLastNight,
+            stepsToday: stepsToday)
+        guard snapshot.hasAnyMetric else { return }
+
+        let dayStart = Calendar.current.startOfDay(for: Date())
+        let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: dayStart) ?? Date()
+        let descriptor = FetchDescriptor<HealthSnapshot>(
+            predicate: #Predicate { $0.timestamp >= dayStart && $0.timestamp < dayEnd })
+        if let existing = try? context.fetch(descriptor).first {
+            existing.timestamp = Date()
+            existing.weightKg = latestWeightKg
+            existing.restingHeartRate = restingHeartRate
+            existing.hrvMilliseconds = hrvMilliseconds
+            existing.sleepHoursLastNight = sleepHoursLastNight
+            existing.stepsToday = stepsToday
+        } else {
+            context.insert(snapshot)
+        }
+        try? context.save()
     }
 
     /// Cumulative sum for today (steps, active energy…).
