@@ -132,9 +132,7 @@ struct ProtocolCard: View {
                         .foregroundStyle(BrandColor.warning)
                 }
 
-                Rectangle()
-                    .fill(BrandColor.stroke.opacity(0.6))
-                    .frame(height: 1)
+                Divider().overlay(BrandColor.stroke)
 
                 // Only cadence + next pin as stats now; the dose is on the scope line above.
                 HStack(alignment: .top, spacing: Space.md) {
