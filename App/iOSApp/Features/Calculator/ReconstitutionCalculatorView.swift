@@ -60,7 +60,7 @@ final class DoseCalculatorViewModel {
         } catch let e as DosingError {
             errorMessage = Self.message(for: e)
         } catch {
-            errorMessage = "Something went wrong."
+            errorMessage = "Couldn't calculate that. Double-check your numbers and try again."
         }
     }
 

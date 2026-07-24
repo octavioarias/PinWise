@@ -188,7 +188,7 @@ struct SymptomsView: View {
                                         }
                                     }
                                     Spacer()
-                                    Text("\(e.severity)/10").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
+                                    Text("\(e.severity) / 10").font(.caption.weight(.semibold)).foregroundStyle(BrandColor.accentText)
                                     Text(e.timestamp.relativeLabel())
                                         .font(.caption2).foregroundStyle(BrandColor.textSecondary)
                                 }

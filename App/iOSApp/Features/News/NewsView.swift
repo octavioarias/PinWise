@@ -206,7 +206,7 @@ struct NewsView: View {
 
     private var stackToggle: some View {
         HStack(spacing: Space.sm) {
-            SelectableChip(title: "My compounds", isSelected: myStack) {
+            SelectableChip(title: "Your compounds", isSelected: myStack) {
                 withAnimation(.snappy) { myStack.toggle() }
             }
             if myStack {

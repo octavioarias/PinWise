@@ -117,11 +117,11 @@ final class AssistantEngine {
             case CloudAIError.limitReached:
                 text = "You've reached today's message limit. Upgrade to Pro for more, or check back tomorrow."
             case CloudAIError.notConfigured:
-                text = "The assistant isn't available yet."
+                text = "The assistant isn't available yet. Please check back soon."
             case CloudAIError.notSignedIn:
                 text = "Please sign in to chat with Natt."
             default:
-                text = "Sorry — something went wrong. Please try again."
+                text = "Something went wrong. Please try again."
             }
             if let i = assistantIndex, messages.indices.contains(i) { messages[i].text = text }
             else { messages.append(Message(isUser: false, text: text)) }
@@ -382,7 +382,7 @@ struct AssistantView: View {
     private var snapshotCard: some View {
         VStack(spacing: Space.sm) {
             actionRow("Look up a compound", "magnifyingglass") { showCompounds = true }
-            actionRow("Tiers & half-life explained", "questionmark.circle") { showLegend = true }
+            actionRow("Learn tiers & half-life", "questionmark.circle") { showLegend = true }
         }
     }
 

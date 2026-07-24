@@ -49,7 +49,7 @@ struct EmailSignInView: View {
                         }
                         .disabled(isWorking || code.count < 6)
                         .opacity(isWorking || code.count < 6 ? 0.5 : 1)
-                        Button("Use a different email / resend code") {
+                        Button("Change email") {
                             codeSent = false; code = ""; auth.notice = nil
                         }
                         .font(.footnote).foregroundStyle(BrandColor.accentText)
@@ -57,7 +57,7 @@ struct EmailSignInView: View {
                     }
 
                     if isWorking {
-                        HStack(spacing: Space.sm) { ProgressView(); Text("Working…").font(.caption).foregroundStyle(BrandColor.textSecondary) }
+                        HStack(spacing: Space.sm) { ProgressView(); Text(codeSent ? "Signing you in…" : "Sending code…").font(.caption).foregroundStyle(BrandColor.textSecondary) }
                     }
                     if let notice = auth.notice, !notice.isEmpty {
                         Text(notice).font(.footnote).foregroundStyle(BrandColor.warning)
@@ -65,7 +65,7 @@ struct EmailSignInView: View {
                 }
                 .padding(Space.lg)
             }
-            .navigationTitle("Log in")
+            .navigationTitle("Sign in")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { auth.notice = nil; dismiss() } } }
             .onAppear { focused = true }

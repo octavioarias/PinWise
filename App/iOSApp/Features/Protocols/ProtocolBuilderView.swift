@@ -180,7 +180,7 @@ struct ProtocolBuilderView: View {
                             }
 
                             if vials.isEmpty {
-                                Text("No vials yet — add one under My Vials first. Protocols schedule doses from the vials you own.")
+                                Text("No vials yet — add one under Your vials first. Protocols schedule doses from the vials you own.")
                                     .font(.caption).foregroundStyle(BrandColor.textSecondary)
                             } else {
                                 // Exclude vials already on the protocol — adding the same physical
